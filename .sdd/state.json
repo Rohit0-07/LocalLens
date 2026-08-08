@@ -1,0 +1,70 @@
+{
+  "version": 1,
+  "loop_cap": 5,
+  "loop_count": 0,
+  "loop_open": false,
+  "harness": null,
+  "phases": {
+    "0_repo_index": {
+      "status": "pending",
+      "updated_at": null,
+      "depends_on": []
+    },
+    "1_spec": {
+      "status": "pending",
+      "updated_at": null,
+      "depends_on": [
+        "0_repo_index"
+      ]
+    },
+    "2_tech_spec": {
+      "status": "pending",
+      "updated_at": null,
+      "depends_on": [
+        "1_spec",
+        "0_repo_index"
+      ]
+    },
+    "3_test_plan": {
+      "status": "pending",
+      "updated_at": null,
+      "depends_on": [
+        "1_spec"
+      ]
+    },
+    "4_interfaces": {
+      "status": "pending",
+      "updated_at": null,
+      "depends_on": [
+        "2_tech_spec",
+        "0_repo_index"
+      ]
+    },
+    "5_code": {
+      "status": "pending",
+      "updated_at": null,
+      "depends_on": [
+        "2_tech_spec"
+      ]
+    },
+    "6_tests": {
+      "status": "pending",
+      "updated_at": null,
+      "depends_on": [
+        "3_test_plan",
+        "4_interfaces"
+      ]
+    },
+    "7_run": {
+      "status": "pending",
+      "updated_at": null,
+      "depends_on": [
+        "5_code",
+        "6_tests"
+      ]
+    }
+  },
+  "invalidations": [],
+  "escalations": [],
+  "runs": {}
+}

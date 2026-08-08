@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "sdd": {
+      "type": "stdio",
+      "command": "python3",
+      "args": [".sdd/bin/sdd_mcp.py"]
+    }
+  }
+}

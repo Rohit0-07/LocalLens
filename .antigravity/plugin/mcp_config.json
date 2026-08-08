@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "sdd": {
+      "command": "python3",
+      "args": [".sdd/bin/sdd_mcp.py"],
+      "env": {
+        "SDD_ROOT": "/Users/rohit/Desktop/Python/LocalLens"
+      }
+    }
+  }
+}

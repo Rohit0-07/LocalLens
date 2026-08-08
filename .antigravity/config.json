@@ -1,0 +1,24 @@
+{
+  "$schema": "https://antigravity.google/schemas/v1/settings.json",
+  "colorScheme": "terminal",
+  "toolPermission": "strict",
+  "allowNonWorkspaceAccess": false,
+  "enableTerminalSandbox": true,
+  "notifications": false,
+  "permissions": {
+    "allow": [
+      "command(python3 .sdd/bin/sdd.py *)",
+      "command(git status*)",
+      "command(git diff*)",
+      "command(python3 -m pytest *)",
+      "command(python3 -m ruff *)"
+    ],
+    "deny": [
+      "command(git commit*)",
+      "command(git push*)",
+      "command(chmod*)",
+      "command(rm -rf .sdd*)",
+      "command(rm -rf docs)"
+    ]
+  }
+}

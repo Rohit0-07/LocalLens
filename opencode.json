@@ -1,0 +1,23 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "subagent_depth": 1,
+  "experimental": {
+    "continue_loop_on_deny": true
+  },
+  "mcp": {
+    "sdd": {
+      "type": "local",
+      "command": ["python3", ".sdd/bin/sdd_mcp.py"],
+      "cwd": ".",
+      "enabled": true
+    }
+  },
+  "permission": {
+    "read": { "*": "allow" },
+    "edit": { "*": "allow", ".sdd/**": "deny", ".sdd-locks.json": "deny", "logs/**": "deny" },
+    "bash": { "*": "allow", "git commit *": "ask", "git push *": "ask" },
+    "external_directory": { "*": "ask" },
+    "question": "allow"
+  },
+  "instructions": ["AGENTS.md"]
+}

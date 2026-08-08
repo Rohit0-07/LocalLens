@@ -1,0 +1,44 @@
+{
+  "sdd-lock-write": {
+    "PreToolUse": [
+      {
+        "matcher": "write_to_file|replace_file_content|multi_replace_file_content",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/rohit/Desktop/Python/LocalLens/.sdd/bin/hooks.py agy-pre",
+            "timeout": 20
+          }
+        ]
+      }
+    ]
+  },
+  "sdd-commit-secrets": {
+    "PreToolUse": [
+      {
+        "matcher": "run_command",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/rohit/Desktop/Python/LocalLens/.sdd/bin/hooks.py agy-pre",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  },
+  "sdd-audit": {
+    "PostToolUse": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/rohit/Desktop/Python/LocalLens/.sdd/bin/hooks.py agy-post",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}
