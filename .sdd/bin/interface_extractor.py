@@ -129,6 +129,31 @@ def _extract_signatures(tree: ast.Module) -> list[Signature]:
     return sigs
 
 
+def _params(node: ast.arguments) -> list[Param]:
+    """Params with correct has_default flags (defaults live on arguments, not arg).
+
+    Python < 3.13 has no separate `posonly_defaults`: positional defaults align to the
+    right across the combined posonlyargs + args list.
+    """
+    out: list[Param] = []
+    posonly_defaults = getattr(node, "posonly_defaults", None)
+    if posonly_defaults is not None:
+        for p, d in zip(node.posonlyargs, posonly_defaults, strict=False):
+            out.append(Param(p.arg, _ann(p.annotation), d is not None))
+    else:
+        combined = list(node.posonlyargs) + list(node.args)
+        defaults = list(node.defaults) + [None] * (len(combined) - len(node.defaults))
+        for p, d in zip(combined, defaults, strict=False):
+            out.append(Param(p.arg, _ann(p.annotation), d is not None))
+    for p, d in zip(node.kwonlyargs, node.kw_defaults, strict=False):
+        out.append(Param(p.arg, _ann(p.annotation), d is not None))
+    if node.vararg:
+        out.append(Param(node.vararg.arg, _ann(node.vararg.annotation), False))
+    if node.kwarg:
+        out.append(Param(node.kwarg.arg, _ann(node.kwarg.annotation), False))
+    return out
+
+
 def _raises_clauses(node) -> list:
     out = []
     for child in ast.walk(node):
@@ -162,12 +187,12 @@ def _extract_class(node: ast.ClassDef) -> tuple[TypeDef, list[Signature]]:
                 kind_of = "classmethod"
             elif any("property" in ast.unparse(d) for d in child.decorator_list):
                 kind_of = "property"
-            raises = [t.exception for t in _raises_clauses(child)] + _raises(doc, [])
+            raises = [t["exception"] for t in _raises_clauses(child)] + _raises(doc, [])
             sigs.append(
                 Signature(
                     name=child.name,
                     kind=kind_of,
-                    params=[Param(p.arg, _ann(p.annotation), p.default is not None) for p in child.args.args if p.arg != "self" and p.arg != "cls"],
+                    params=[p for p in _params(child.args) if p.name != "self" and p.name != "cls"],
                     returns=_ann(child.returns),
                     raises=raises,
                     side_effects=_side_effects(doc),
@@ -192,8 +217,13 @@ def extract_interfaces(root: Path) -> dict:
     total_raises = 0
 
     sources = [root / s for s in SOURCES if (root / s).is_dir()] or [root]
+    seen: set[Path] = set()
     for base in sources:
         for path in sorted(base.rglob("*.py")):
+            resolved = path.resolve()
+            if resolved in seen:
+                continue
+            seen.add(resolved)
             if any(part in SKIP_DIRS for part in path.parts):
                 continue
             try:
@@ -214,11 +244,11 @@ def extract_interfaces(root: Path) -> dict:
             for node in tree.body:
                 if isinstance(node, ast.FunctionDef):
                     doc = ast.get_docstring(node)
-                    raises = [t.exception for t in _raises_clauses(node)] + _raises(doc, [])
+                    raises = [t["exception"] for t in _raises_clauses(node)] + _raises(doc, [])
                     sigs.append(
                         Signature(
                             name=node.name, kind="function",
-                            params=[Param(p.arg, _ann(p.annotation), p.default is not None) for p in node.args.args],
+                            params=_params(node.args),
                             returns=_ann(node.returns), raises=raises,
                             side_effects=_side_effects(doc), docstring_first_line=_doc_first(doc),
                         )

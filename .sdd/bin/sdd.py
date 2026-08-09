@@ -241,7 +241,7 @@ GATES = {
 
 
 def _opencode_invoke(agent: str, prompt: str) -> int:
-    cmd = ["opencode", "run", "--agent", agent, "--auto", "-p", prompt]
+    cmd = ["opencode", "run", "--agent", agent, "--auto", prompt]
     print(f"  $ {cmd[0]} run --agent {agent} --auto")
     return subprocess.run(cmd, cwd=V.ROOT).returncode
 

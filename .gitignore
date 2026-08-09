@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# SDD bookkeeping (regenerable / runtime state)
+.sdd/runs/
+.sdd/state.json
+logs/*.json
+docs/0_repo_index.json
+docs/4_interfaces.json
+
+# Node / OpenCode plugin
+.opencode/node_modules/
+.opencode/package-lock.json
+.opencode/package.json
+node_modules/
+
+# OS / editor
+.DS_Store
+*.swp
+.idea/
+.vscode/
