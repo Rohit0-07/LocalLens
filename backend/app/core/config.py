@@ -26,6 +26,8 @@ class Settings(BaseSettings):
     otp_ttl_minutes: int = 5
     otp_master_code: str | None = None
 
+    cors_origins: list[str] = ["*"]
+
 
 @lru_cache
 def get_settings() -> Settings:

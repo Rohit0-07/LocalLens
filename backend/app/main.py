@@ -3,11 +3,13 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.router import api_router
 from app.core.config import Settings, get_settings
 from app.core.database import Database
 from app.core.exceptions import AppError, app_error_handler, validation_error_handler
+from app.core.logging import configure_logging
 from app.core.ratelimit import SlidingWindowRateLimiter
 from app.features.media.router import router as media_router
 from app.features.notifications.router import router as notifications_router
@@ -24,9 +26,17 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or get_settings()
+    configure_logging()
     app = FastAPI(title=settings.app_name, version=settings.version, lifespan=lifespan)
     app.state.settings = settings
     app.state.database = Database(settings.database_url)
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.cors_origins,
+        allow_credentials=False,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
     from app.features.issues import service as issues_service
 
     app.state.search_rate_limiter = SlidingWindowRateLimiter(max_requests=60, window_seconds=60)
