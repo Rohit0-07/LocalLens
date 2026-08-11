@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
+  <defs>
+    <linearGradient id="poleSky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#bcd6e6"/>
+      <stop offset="1" stop-color="#eef4f8"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="240" fill="url(#poleSky)"/>
+  <rect y="240" width="800" height="360" fill="#7e8288"/>
+  <rect y="240" width="800" height="8" fill="#989da3"/>
+  <rect x="360" y="120" width="16" height="380" rx="4" fill="#4a4d52"/>
+  <rect x="320" y="150" width="96" height="12" rx="4" fill="#4a4d52"/>
+  <path d="M180 260 q120 60 200 8" stroke="#3a3d42" stroke-width="8" fill="none"/>
+  <path d="M620 250 q-120 70 -240 20" stroke="#3a3d42" stroke-width="8" fill="none"/>
+  <path d="M200 360 q100 30 180 -10" stroke="#3a3d42" stroke-width="7" fill="none"/>
+  <path d="M600 356 q-100 26 -170 -14" stroke="#3a3d42" stroke-width="7" fill="none"/>
+  <circle cx="220" cy="280" r="10" fill="#ffd166"/>
+  <circle cx="600" cy="270" r="10" fill="#ffd166"/>
+  <circle cx="600" cy="300" r="10" fill="#ffd166"/>
+  <rect x="560" y="280" width="90" height="26" rx="6" fill="#c9483b"/>
+  <rect x="660" y="330" width="90" height="26" rx="6" fill="#c9483b"/>
+</svg>

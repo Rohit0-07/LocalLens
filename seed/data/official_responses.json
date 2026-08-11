@@ -1,0 +1,42 @@
+[
+  {
+    "issue_id": 3,
+    "representative_id": "rep_ward45_urban_central",
+    "message": "The electricity crew has inspected the area. The sagging cable near Shivaji Market was secured and the connection point re-fixed. Please report if it sags again after rain.",
+    "estimated_resolution_days": 3,
+    "status_update": "acknowledged",
+    "created_at": "2026-08-09T11:00:00"
+  },
+  {
+    "issue_id": 6,
+    "representative_id": "rep_ward45_urban_central",
+    "message": "The sewer crew has cleared the blocked drain in Gully Lane and jetting is complete. We are monitoring the outflow for the next two days.",
+    "estimated_resolution_days": 2,
+    "status_update": "in_progress",
+    "created_at": "2026-08-07T12:00:00"
+  },
+  {
+    "issue_id": 8,
+    "representative_id": "rep_ward45_urban_central",
+    "message": "Road repair work in front of Z.P. School has been scheduled under the ward resurfacing drive. Work will begin after the rains ease.",
+    "estimated_resolution_days": 10,
+    "status_update": "acknowledged",
+    "created_at": "2026-08-09T15:00:00"
+  },
+  {
+    "issue_id": 16,
+    "representative_id": "rep_ward45_urban_central",
+    "message": "The culvert near the eroded shoulder has been inspected. Temporary barricading is placed and a permanent retaining wall repair is in the ward works list.",
+    "estimated_resolution_days": 7,
+    "status_update": "in_progress",
+    "created_at": "2026-08-07T11:00:00"
+  },
+  {
+    "issue_id": 17,
+    "representative_id": "rep_ward45_urban_central",
+    "message": "The door-to-door pickup schedule for this street has been corrected. The missed collections will be covered in the next round tomorrow morning.",
+    "estimated_resolution_days": 2,
+    "status_update": "in_progress",
+    "created_at": "2026-08-08T17:00:00"
+  }
+]

@@ -1,0 +1,162 @@
+[
+  {
+    "id": "n0000000-0000-4000-8000-000000000001",
+    "user_id": 3,
+    "title": "Your issue is gaining attention",
+    "body": "Your report 'Deep pothole on Hill Road near the main junction' crossed 5 upvotes.",
+    "type": "upvote_milestone",
+    "reference_id": "1",
+    "is_read": false,
+    "created_at": "2026-08-10T10:20:00"
+  },
+  {
+    "id": "n0000000-0000-4000-8000-000000000002",
+    "user_id": 3,
+    "title": "New reply to your comment",
+    "body": "farah_ansari replied: 'I called the helpline too. Let us keep this report visible until it is fixed.'",
+    "type": "comment_reply",
+    "reference_id": "1",
+    "is_read": false,
+    "created_at": "2026-08-10T09:35:00"
+  },
+  {
+    "id": "n0000000-0000-4000-8000-000000000003",
+    "user_id": 3,
+    "title": "Issue escalated",
+    "body": "Your report 'Garbage heap piling up on Market Road corner' has been forwarded to the Ward Office.",
+    "type": "escalation",
+    "reference_id": "5",
+    "is_read": true,
+    "created_at": "2026-08-08T10:00:00"
+  },
+  {
+    "id": "n0000000-0000-4000-8000-000000000004",
+    "user_id": 3,
+    "title": "Welcome to LocalLens",
+    "body": "Thanks for joining. Your street is safer when neighbours report together.",
+    "type": "system_notice",
+    "reference_id": null,
+    "is_read": true,
+    "created_at": "2026-07-05T10:05:00"
+  },
+  {
+    "id": "n0000000-0000-4000-8000-000000000005",
+    "user_id": 4,
+    "title": "Your issue is escalating",
+    "body": "Your report 'Waterlogging on Hill Road after last night's rain' is now escalating. Keep it visible!",
+    "type": "escalation",
+    "reference_id": "2",
+    "is_read": false,
+    "created_at": "2026-08-09T18:20:00"
+  },
+  {
+    "id": "n0000000-0000-4000-8000-000000000006",
+    "user_id": 4,
+    "title": "New reply to your comment",
+    "body": "asha_deshmukh replied: 'Exactly. Cleaning just this one drain would clear the whole stretch.'",
+    "type": "comment_reply",
+    "reference_id": "2",
+    "is_read": false,
+    "created_at": "2026-08-09T07:30:00"
+  },
+  {
+    "id": "n0000000-0000-4000-8000-000000000007",
+    "user_id": 4,
+    "title": "Resolution needs quorum",
+    "body": "A fix has been reported for 'Sewage overflowing into Gully Lane'. Confirm if it is fixed for you too.",
+    "type": "quorum_request",
+    "reference_id": "6",
+    "is_read": false,
+    "created_at": "2026-08-08T09:00:00"
+  },
+  {
+    "id": "n0000000-0000-4000-8000-000000000008",
+    "user_id": 5,
+    "title": "Issue escalated",
+    "body": "Your report 'Fallen power line near Shivaji Market' was acknowledged by the Ward Councillor.",
+    "type": "escalation",
+    "reference_id": "3",
+    "is_read": true,
+    "created_at": "2026-08-09T10:00:00"
+  },
+  {
+    "id": "n0000000-0000-4000-8000-000000000009",
+    "user_id": 5,
+    "title": "Your issue crossed 5 upvotes",
+    "body": "Your report 'Water pipeline leak at Nagar Road crossing' is one of the most supported in the ward.",
+    "type": "upvote_milestone",
+    "reference_id": "7",
+    "is_read": true,
+    "created_at": "2026-07-15T11:00:00"
+  },
+  {
+    "id": "n0000000-0000-4000-8000-000000000010",
+    "user_id": 5,
+    "title": "Resolution needs quorum",
+    "body": "A fix has been reported for 'Road shoulder erosion near the culvert'. Confirm if it is fixed for you too.",
+    "type": "quorum_request",
+    "reference_id": "16",
+    "is_read": false,
+    "created_at": "2026-08-07T10:00:00"
+  },
+  {
+    "id": "n0000000-0000-4000-8000-000000000011",
+    "user_id": 6,
+    "title": "New reply to your comment",
+    "body": "deepak_more replied: 'I reported the same last month. Glad it is finally under review.'",
+    "type": "comment_reply",
+    "reference_id": "3",
+    "is_read": false,
+    "created_at": "2026-08-09T11:00:00"
+  },
+  {
+    "id": "n0000000-0000-4000-8000-000000000012",
+    "user_id": 6,
+    "title": "Your issue crossed 5 upvotes",
+    "body": "Your report 'Entire streetlight cluster out in Sector 4' crossed 5 upvotes.",
+    "type": "upvote_milestone",
+    "reference_id": "9",
+    "is_read": true,
+    "created_at": "2026-08-08T08:00:00"
+  },
+  {
+    "id": "n0000000-0000-4000-8000-000000000013",
+    "user_id": 8,
+    "title": "Welcome to LocalLens",
+    "body": "Thanks for joining LocalLens. Your street is safer when neighbours report together.",
+    "type": "system_notice",
+    "reference_id": null,
+    "is_read": false,
+    "created_at": "2026-08-01T10:05:00"
+  },
+  {
+    "id": "n0000000-0000-4000-8000-000000000014",
+    "user_id": 9,
+    "title": "Your issue is escalating",
+    "body": "Your report 'Stray cattle gathering near the main junction' is now escalating.",
+    "type": "escalation",
+    "reference_id": "14",
+    "is_read": false,
+    "created_at": "2026-08-09T15:00:00"
+  },
+  {
+    "id": "n0000000-0000-4000-8000-000000000015",
+    "user_id": 9,
+    "title": "Official response posted",
+    "body": "The Ward Councillor responded to 'Garbage pickup skipped twice this week'.",
+    "type": "escalation",
+    "reference_id": "17",
+    "is_read": false,
+    "created_at": "2026-08-08T17:00:00"
+  },
+  {
+    "id": "n0000000-0000-4000-8000-000000000016",
+    "user_id": 10,
+    "title": "Your issue crossed 5 upvotes",
+    "body": "Your report 'No water tanker supply in Ward 45 for three days' crossed 5 upvotes.",
+    "type": "upvote_milestone",
+    "reference_id": "15",
+    "is_read": true,
+    "created_at": "2026-07-10T09:00:00"
+  }
+]

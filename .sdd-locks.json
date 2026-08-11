@@ -1,4 +1,15 @@
 {
   "version": 1,
-  "locks": {}
+  "locks": {
+    "docs/1_spec.md": {
+      "locked_at": "2026-08-10T14:55:01+00:00",
+      "approved_by": "user",
+      "change_request": null
+    },
+    "docs/2_tech_spec.md": {
+      "locked_at": "2026-08-10T18:42:47+00:00",
+      "approved_by": "user",
+      "change_request": null
+    }
+  }
 }

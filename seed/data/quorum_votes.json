@@ -1,0 +1,65 @@
+[
+  {
+    "issue_id": 6,
+    "user_id": 10,
+    "vote": "confirm",
+    "reason": "The outflow has stopped after the drain was jetted.",
+    "created_at": "2026-08-08T09:00:00"
+  },
+  {
+    "issue_id": 7,
+    "user_id": 6,
+    "vote": "confirm",
+    "reason": "Leak stopped and the road patch looks solid.",
+    "created_at": "2026-07-19T09:00:00"
+  },
+  {
+    "issue_id": 7,
+    "user_id": 9,
+    "vote": "confirm",
+    "reason": "No more water on the crossing.",
+    "created_at": "2026-07-19T10:00:00"
+  },
+  {
+    "issue_id": 7,
+    "user_id": 10,
+    "vote": "confirm",
+    "reason": "Confirmed, repair is complete.",
+    "created_at": "2026-07-19T11:00:00"
+  },
+  {
+    "issue_id": 10,
+    "user_id": 3,
+    "vote": "dispute",
+    "reason": "The wires were re-secured yesterday, this fix should be confirmed.",
+    "created_at": "2026-08-08T08:30:00"
+  },
+  {
+    "issue_id": 15,
+    "user_id": 3,
+    "vote": "confirm",
+    "reason": "Tanker has started coming again.",
+    "created_at": "2026-07-13T09:00:00"
+  },
+  {
+    "issue_id": 15,
+    "user_id": 4,
+    "vote": "confirm",
+    "reason": "Water supply restored for our lane.",
+    "created_at": "2026-07-14T09:00:00"
+  },
+  {
+    "issue_id": 15,
+    "user_id": 5,
+    "vote": "confirm",
+    "reason": "Confirmed, tanker service is back to normal.",
+    "created_at": "2026-07-15T10:00:00"
+  },
+  {
+    "issue_id": 16,
+    "user_id": 6,
+    "vote": "confirm",
+    "reason": "Barricades are in place near the culvert.",
+    "created_at": "2026-08-07T10:00:00"
+  }
+]

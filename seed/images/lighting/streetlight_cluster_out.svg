@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
+  <defs>
+    <linearGradient id="dimSky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2a3550"/>
+      <stop offset="1" stop-color="#3d4c6b"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="320" fill="url(#dimSky)"/>
+  <rect y="320" width="800" height="280" fill="#61666c"/>
+  <rect y="320" width="800" height="8" fill="#7a8086"/>
+  <rect x="120" y="150" width="12" height="240" rx="4" fill="#3a3d42"/>
+  <rect x="80" y="190" width="100" height="10" rx="5" fill="#3a3d42"/>
+  <circle cx="130" cy="192" r="10" fill="#2a3550" stroke="#222" stroke-width="2"/>
+  <rect x="340" y="130" width="12" height="260" rx="4" fill="#3a3d42"/>
+  <rect x="300" y="170" width="100" height="10" rx="5" fill="#3a3d42"/>
+  <circle cx="350" cy="172" r="10" fill="#2a3550" stroke="#222" stroke-width="2"/>
+  <rect x="560" y="160" width="12" height="230" rx="4" fill="#3a3d42"/>
+  <rect x="520" y="200" width="100" height="10" rx="5" fill="#3a3d42"/>
+  <circle cx="570" cy="202" r="10" fill="#2a3550" stroke="#222" stroke-width="2"/>
+  <path d="M0 470 q80 -14 160 0 q80 14 160 0 q80 -14 160 0 q80 14 160 0 q80 -14 160 0" stroke="#7a8086" stroke-width="4" fill="none"/>
+</svg>

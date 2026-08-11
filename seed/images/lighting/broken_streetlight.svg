@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
+  <defs>
+    <radialGradient id="nightGlow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#fff3b0"/>
+      <stop offset="1" stop-color="#233047"/>
+    </radialGradient>
+    <linearGradient id="nightSky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1b2436"/>
+      <stop offset="1" stop-color="#2c3a55"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="300" fill="url(#nightSky)"/>
+  <rect y="300" width="800" height="300" fill="#565a60"/>
+  <rect y="300" width="800" height="8" fill="#6f747a"/>
+  <circle cx="180" cy="90" r="30" fill="#e8ecf2" opacity="0.9"/>
+  <rect x="160" y="160" width="14" height="220" rx="4" fill="#3a3d42"/>
+  <rect x="110" y="200" width="120" height="12" rx="5" fill="#3a3d42"/>
+  <circle cx="170" cy="205" r="14" fill="url(#nightGlow)" stroke="#e6c84c" stroke-width="3"/>
+  <path d="M170 205 q-60 30 -80 110" stroke="#e6c84c" stroke-width="6" opacity="0.5" fill="none"/>
+  <rect x="600" y="220" width="14" height="160" rx="4" fill="#3a3d42"/>
+  <circle cx="607" cy="214" r="12" fill="#2c3a55" stroke="#333" stroke-width="2"/>
+  <rect x="360" y="400" width="60" height="34" rx="6" fill="#8fa3b5"/>
+  <rect x="470" y="420" width="50" height="28" rx="6" fill="#8fa3b5"/>
+</svg>

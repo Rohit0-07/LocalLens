@@ -1,0 +1,219 @@
+from datetime import datetime
+from enum import StrEnum
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+
+class FlagCategory(StrEnum):
+    SPAM = "spam"
+    ABUSE = "abuse"
+    PII = "pii"
+    FAKE_REPORT = "fake_report"
+    OTHER = "other"
+
+
+class ModerationAction(StrEnum):
+    DISMISS = "dismiss"
+    HIDE_ISSUE = "hide_issue"
+    BAN_REPORTER = "ban_reporter"
+
+
+class FlaggedQueueStatusFilter(StrEnum):
+    PENDING = "pending"
+    REVIEWED = "reviewed"
+    DISMISSED = "dismissed"
+    HIDDEN = "hidden"
+    ALL = "all"
+
+
+class FlagCreate(BaseModel):
+    category: FlagCategory
+    details: str | None = Field(None, max_length=500)
+
+
+class FlagOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    issue_id: int
+    category: str
+    details: str | None = None
+    created_at: datetime
+
+
+class FlaggedIssueItem(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    issue_id: int
+    title: str
+    description: str
+    reporter_id: int
+    flag_count: int
+    categories: list[str]
+    is_hidden: bool
+    latest_flag_at: datetime
+    created_at: datetime
+
+
+class FlaggedQueueResponse(BaseModel):
+    items: list[FlaggedIssueItem]
+    total: int
+    limit: int
+    offset: int
+
+
+class ModerationActionRequest(BaseModel):
+    action: ModerationAction
+    reason: str | None = Field(None, max_length=500)
+
+
+class ModerationResultOut(BaseModel):
+    success: bool
+    issue_id: int
+    action: str
+    is_hidden: bool
+    reporter_banned: bool
+    message: str
+
+
+class IssueCreate(BaseModel):
+    title: str = Field(min_length=5, max_length=100)
+    description: str = Field(default="", max_length=1000)
+    category: str = Field(default="other", max_length=32)
+    latitude: float = Field(ge=-90, le=90)
+    longitude: float = Field(ge=-180, le=180)
+    is_anonymous: bool = False
+    fuzz_location: bool = False
+    is_fuzzed: bool = False
+    is_shielded: bool = False
+
+
+class IssueOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    title: str
+    description: str
+    category: str
+    status: str
+    latitude: float
+    longitude: float
+    geohash: str | None = None
+    ward: str = "Ward 45, Urban Central"
+    is_anonymous: bool
+    fuzz_location: bool = False
+    is_fuzzed: bool = False
+    is_shielded: bool = False
+    reporter_label: str
+    anonymous_identity: str | None = None
+    created_at: datetime
+    acknowledged_at: datetime | None = None
+    resolved_at: datetime | None = None
+    upvotes_count: int = 0
+    comments_count: int = 0
+    confirmations_count: int = 0
+    disputes_count: int = 0
+    resolution_proof: str | None = None
+    resolution_notes: str | None = None
+    has_upvoted: bool = False
+    has_official_response: bool = False
+
+
+class NearDuplicateOut(BaseModel):
+    id: int
+    title: str
+    category: str
+    status: str
+    latitude: float
+    longitude: float
+    geohash: str | None = None
+    distance_meters: float
+    created_at: datetime
+
+
+class NearDuplicateCheckResponse(BaseModel):
+    is_duplicate_detected: bool
+    candidates: list[NearDuplicateOut]
+
+
+class ResolutionSubmit(BaseModel):
+    resolution_proof: str = Field(min_length=5)
+    notes: str | None = None
+
+
+class QuorumVoteRequest(BaseModel):
+    vote: str = Field(pattern="^(confirm|dispute)$")
+    latitude: float = Field(ge=-90, le=90)
+    longitude: float = Field(ge=-180, le=180)
+    reason: str | None = None
+
+
+class UpvoteRequest(BaseModel):
+    latitude: float = Field(ge=-90, le=90)
+    longitude: float = Field(ge=-180, le=180)
+
+
+TOXIC_KEYWORDS = {
+    "toxicprofanity",
+    "abusive",
+    "scam",
+    "spam",
+    "hate",
+    "kill",
+    "threat",
+    "violence",
+    "slur",
+}
+
+
+class CommentCreate(BaseModel):
+    content: str = Field(min_length=1, max_length=500)
+    parent_id: str | None = None
+
+    @field_validator("content")
+    @classmethod
+    def validate_content(cls, v: str) -> str:
+        stripped = v.strip()
+        if not stripped:
+            raise ValueError("Comment content cannot be empty or whitespace only")
+        if len(stripped) > 500:
+            raise ValueError("Comment content exceeds 500 characters")
+
+        lower = stripped.lower()
+        if any(tk in lower for tk in TOXIC_KEYWORDS):
+            raise ValueError("Comment contains toxic or inappropriate language")
+        return stripped
+
+
+class CommentResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    issue_id: int
+    parent_id: str | None = None
+    anon_id: str
+    content: str
+    created_at: datetime
+    is_author: bool = False
+    replies: list["CommentResponse"] = Field(default_factory=list)
+
+
+CommentResponse.model_rebuild()
+
+
+class WinOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    issue_id: int
+    title: str
+    description: str
+    category: str
+    ward: str
+    latitude: float
+    longitude: float
+    geohash: str | None = None
+    before_image_url: str | None = None
+    after_image_url: str | None = None
+    contributor_credits: list[str] = Field(default_factory=list)
+    created_at: datetime

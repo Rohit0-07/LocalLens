@@ -6,20 +6,20 @@
   "harness": null,
   "phases": {
     "0_repo_index": {
-      "status": "pending",
-      "updated_at": null,
+      "status": "done",
+      "updated_at": "2026-08-10T09:15:31+00:00",
       "depends_on": []
     },
     "1_spec": {
-      "status": "pending",
-      "updated_at": null,
+      "status": "done",
+      "updated_at": "2026-08-10T14:55:01+00:00",
       "depends_on": [
         "0_repo_index"
       ]
     },
     "2_tech_spec": {
-      "status": "pending",
-      "updated_at": null,
+      "status": "done",
+      "updated_at": "2026-08-10T18:42:47+00:00",
       "depends_on": [
         "1_spec",
         "0_repo_index"
@@ -33,8 +33,8 @@
       ]
     },
     "4_interfaces": {
-      "status": "pending",
-      "updated_at": null,
+      "status": "done",
+      "updated_at": "2026-08-10T19:45:05+00:00",
       "depends_on": [
         "2_tech_spec",
         "0_repo_index"
@@ -64,7 +64,19 @@
       ]
     }
   },
-  "invalidations": [],
+  "invalidations": [
+    {
+      "target": "2_tech_spec",
+      "reason": "P6 tests (written verbatim from the binding P1 contract) expose exact-name drift in the locked docs/2_tech_spec.md. The architect worked only from spec+index and diverged from the P1 contract on: (backend) place must equal ward.name not 'Ward {code}, {name}'; validation-error envelope must use code/error_code keys (app_error_handler shape) not 'error'; (frontend) ReverseGeocode must be exposed from data/geo_api.dart as a FLAT model (latitude/longitude/place/wardSlug/wardName/wardCode/distanceKm/found) not a nested ward object; DeviceLocationService must live in domain/device_location_service.dart with Future<({double lat,double lng})> getCurrentCoordinates() that THROWS on error (not null); WardLocationSuccess uses named fields place/wardSlug/code; WardLocationChip is a PRESENTATIONAL widget taking state via constructor WardLocationChip({required WardLocationState state}) not a ConsumerWidget watching the provider; currentCoordinatesProvider is Provider<({double lat,double lng})> default (19.1136,72.8697); controller named WardLocationController.",
+      "at": "2026-08-10T18:37:33+00:00",
+      "invalidated": [
+        "7_run",
+        "6_tests",
+        "5_code",
+        "4_interfaces"
+      ]
+    }
+  ],
   "escalations": [],
   "runs": {}
 }

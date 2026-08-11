@@ -1,0 +1,154 @@
+[
+  {
+    "id": "c0000000-0000-4000-8000-000000000001",
+    "issue_id": 1,
+    "parent_id": null,
+    "author_id": 4,
+    "content": "This pothole has been there for weeks and it keeps getting deeper. A scooter skid here yesterday.",
+    "created_at": "2026-08-10T09:00:00"
+  },
+  {
+    "id": "c0000000-0000-4000-8000-000000000002",
+    "issue_id": 1,
+    "parent_id": "c0000000-0000-4000-8000-000000000001",
+    "author_id": 3,
+    "content": "Yes, and it is worst in the evening when cars cannot see it. Hoping the ward councilor sees this soon.",
+    "created_at": "2026-08-10T09:20:00"
+  },
+  {
+    "id": "c0000000-0000-4000-8000-000000000003",
+    "issue_id": 1,
+    "parent_id": "c0000000-0000-4000-8000-000000000002",
+    "author_id": 5,
+    "content": "I called the helpline too. Let us keep this report visible until it is fixed.",
+    "created_at": "2026-08-10T09:35:00"
+  },
+  {
+    "id": "c0000000-0000-4000-8000-000000000004",
+    "issue_id": 1,
+    "parent_id": null,
+    "author_id": 6,
+    "content": "Adding my upvote. This stretch really needs resurfacing.",
+    "created_at": "2026-08-10T10:00:00"
+  },
+  {
+    "id": "c0000000-0000-4000-8000-000000000005",
+    "issue_id": 2,
+    "parent_id": null,
+    "author_id": 3,
+    "content": "The drain on the temple side is completely choked with plastic bottles.",
+    "created_at": "2026-08-09T07:00:00"
+  },
+  {
+    "id": "c0000000-0000-4000-8000-000000000006",
+    "issue_id": 2,
+    "parent_id": "c0000000-0000-4000-8000-000000000005",
+    "author_id": 4,
+    "content": "Exactly. Cleaning just this one drain would clear the whole stretch.",
+    "created_at": "2026-08-09T07:30:00"
+  },
+  {
+    "id": "c0000000-0000-4000-8000-000000000007",
+    "issue_id": 3,
+    "parent_id": null,
+    "author_id": 6,
+    "content": "Please be careful near the market entrance, the wire sags right over the paan shop.",
+    "created_at": "2026-08-08T10:00:00"
+  },
+  {
+    "id": "c0000000-0000-4000-8000-000000000008",
+    "issue_id": 3,
+    "parent_id": null,
+    "author_id": 9,
+    "content": "I reported the same last month. Glad it is finally under review.",
+    "created_at": "2026-08-09T11:00:00"
+  },
+  {
+    "id": "c0000000-0000-4000-8000-000000000009",
+    "issue_id": 6,
+    "parent_id": null,
+    "author_id": 10,
+    "content": "The crew did come and jet the drain, water is going down now.",
+    "created_at": "2026-08-08T09:00:00"
+  },
+  {
+    "id": "c0000000-0000-4000-8000-000000000010",
+    "issue_id": 6,
+    "parent_id": "c0000000-0000-4000-8000-000000000009",
+    "author_id": 4,
+    "content": "Thanks for confirming. If a couple more neighbours confirm, this can be marked resolved.",
+    "created_at": "2026-08-08T09:30:00"
+  },
+  {
+    "id": "c0000000-0000-4000-8000-000000000011",
+    "issue_id": 7,
+    "parent_id": null,
+    "author_id": 6,
+    "content": "The leak has stopped and the road is patched up. Looks good now.",
+    "created_at": "2026-07-19T08:00:00"
+  },
+  {
+    "id": "c0000000-0000-4000-8000-000000000012",
+    "issue_id": 7,
+    "parent_id": "c0000000-0000-4000-8000-000000000011",
+    "author_id": 9,
+    "content": "Confirmed from my side as well. No more water on the crossing.",
+    "created_at": "2026-07-19T09:00:00"
+  },
+  {
+    "id": "c0000000-0000-4000-8000-000000000013",
+    "issue_id": 7,
+    "parent_id": null,
+    "author_id": 10,
+    "content": "Fixed, water wastage has stopped. Thanks everyone for the quick action.",
+    "created_at": "2026-07-20T08:30:00"
+  },
+  {
+    "id": "c0000000-0000-4000-8000-000000000014",
+    "issue_id": 8,
+    "parent_id": null,
+    "author_id": 5,
+    "content": "School bus drivers are avoiding this stretch because of the rubble.",
+    "created_at": "2026-08-09T09:00:00"
+  },
+  {
+    "id": "c0000000-0000-4000-8000-000000000015",
+    "issue_id": 10,
+    "parent_id": null,
+    "author_id": 3,
+    "content": "I walked by the bus stop today, the wires are now secured higher up.",
+    "created_at": "2026-08-08T08:00:00"
+  },
+  {
+    "id": "c0000000-0000-4000-8000-000000000016",
+    "issue_id": 10,
+    "parent_id": "c0000000-0000-4000-8000-000000000015",
+    "author_id": 4,
+    "content": "They were re-tied yesterday, that part is done, but the cable at the corner still dips low.",
+    "created_at": "2026-08-08T08:30:00"
+  },
+  {
+    "id": "c0000000-0000-4000-8000-000000000017",
+    "issue_id": 16,
+    "parent_id": null,
+    "author_id": 6,
+    "content": "Barricades are up near the culvert, looks safer now.",
+    "created_at": "2026-08-07T10:00:00"
+  },
+  {
+    "id": "c0000000-0000-4000-8000-000000000018",
+    "issue_id": 17,
+    "parent_id": null,
+    "author_id": 10,
+    "content": "Same on our street, the pickup van skipped Monday as well.",
+    "created_at": "2026-08-08T12:00:00"
+  },
+  {
+    "id": "c0000000-0000-4000-8000-000000000019",
+    "issue_id": 17,
+    "parent_id": "c0000000-0000-4000-8000-000000000018",
+    "author_id": 9,
+    "content": "The Ward office has now acknowledged it. Let us hope the schedule is fixed.",
+    "created_at": "2026-08-08T17:00:00"
+  }
+]

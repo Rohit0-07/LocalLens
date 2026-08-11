@@ -60,7 +60,10 @@ def _module_rel(root: Path, path: Path) -> str:
 
 def _summary_for(module: ModuleInfo, text: str, code: str) -> str:
     """Short NL summary from module docstring + top-level names."""
-    doc = ast.get_docstring(code) if code and module.language == "python" else ""
+    try:
+        doc = ast.get_docstring(ast.parse(code)) if code and module.language == "python" else ""
+    except Exception:
+        doc = ""
     bits = []
     if doc:
         bits.append(doc.strip().split("\n")[0][:120])
@@ -161,7 +164,7 @@ def index_repo(root: Path) -> dict:
 
     adj: dict[str, list[str]] = {}
     for m in modules:
-        adj.setdefault(m["path" if False else "path"], [])
+        adj.setdefault(m.path, [])
     for m in modules:
         deps = [d for d in m.imports if not d.startswith(".") and not d.startswith("__future__")]
         adj[m.path] = deps

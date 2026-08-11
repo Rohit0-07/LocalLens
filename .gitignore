@@ -1,25 +1,65 @@
-# Python
+# Python & Caches
 __pycache__/
 *.py[cod]
+*$py.class
 *.egg-info/
 .venv/
 venv/
+ENV/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
 
-# SDD bookkeeping (regenerable / runtime state)
+# Flutter & Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+build/
+*.iml
+
+# Local runtime data & Media uploads
+*.db
+*.sqlite
+*.sqlite3
+*.db-shm
+*.db-wal
+uploads/*
+!uploads/.gitkeep
+
+# Environment variables & secrets
+.env
+.env.*
+!.env.example
+backend/.env*
+
+# SDD & Agent Harness runtime state & logs
 .sdd/runs/
 .sdd/state.json
-logs/*.json
+logs/*
+!logs/.gitkeep
 docs/0_repo_index.json
 docs/4_interfaces.json
+.agents/*
+!.agents/hooks.json
+BRIEFING.md
+handoff.md
+ORIGINAL_REQUEST.md
 
-# Node / OpenCode plugin
+# Node & OpenCode plugin
 .opencode/node_modules/
 .opencode/package-lock.json
 .opencode/package.json
 node_modules/
 
-# OS / editor
+# OS / Editor / IDE
 .DS_Store
+._*
 *.swp
+*.swo
 .idea/
 .vscode/
+Thumbs.db
