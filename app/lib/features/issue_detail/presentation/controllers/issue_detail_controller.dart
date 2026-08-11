@@ -14,13 +14,14 @@ class CommentsController extends FamilyAsyncNotifier<List<Comment>, int> {
     return api.getComments(arg);
   }
 
-  Future<void> postComment(String content, {dynamic parentId}) async {
+  /// Posts a comment and returns the created comment so the UI can
+  /// optimistically append the authoritative record (no `anon_current`
+  /// placeholder) instead of guessing an id/anonId.
+  Future<Comment> postComment(String content, {dynamic parentId}) async {
     final api = ref.read(issueDetailApiProvider);
-    state = const AsyncValue.loading();
-    state = await AsyncValue.guard(() async {
-      await api.postComment(arg, content, parentId: parentId);
-      return api.getComments(arg);
-    });
+    final created = await api.postComment(arg, content, parentId: parentId);
+    state = await AsyncValue.guard(() => api.getComments(arg));
+    return created;
   }
 
   Future<void> deleteComment(dynamic commentId) async {

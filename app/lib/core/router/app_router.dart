@@ -131,7 +131,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RoutePaths.otp,
         parentNavigatorKey: rootNavigatorKey,
-        builder: (context, state) => const OtpScreen(),
+        builder: (context, state) => OtpScreen(
+          args: state.extra is OtpRouteArgs ? state.extra as OtpRouteArgs : null,
+        ),
       ),
       GoRoute(
         path: RoutePaths.notifications,

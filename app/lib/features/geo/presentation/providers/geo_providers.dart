@@ -51,6 +51,18 @@ final currentCoordinatesProvider = Provider<({double lat, double lng})>(
   (ref) => (lat: 19.1136, lng: 72.8697),
 );
 
+/// Device coordinates for feed queries. Falls back to the deterministic
+/// reference point when the platform location source is unavailable or
+/// errors. Re-resolves whenever [deviceLocationProvider] emits.
+final feedCoordinatesProvider =
+    FutureProvider<({double lat, double lng})>((ref) async {
+  try {
+    return await ref.watch(deviceLocationProvider).getCurrentCoordinates();
+  } catch (_) {
+    return ref.read(currentCoordinatesProvider);
+  }
+});
+
 /// Resolves the ward location once per provider lifetime. Both surfaces
 /// (compose + feed) watch this same provider, so a single resolution serves
 /// both.

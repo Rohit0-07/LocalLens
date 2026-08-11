@@ -132,7 +132,9 @@ class IssueDetailScreen extends ConsumerWidget {
                   OutlinedButton.icon(
                     key: Key('upvote_button_${issue.id}'),
                     onPressed: () async {
-                      await ref.read(feedProvider.notifier).toggleUpvote(
+                      await ref
+                          .read(multiTypeFeedProvider.notifier)
+                          .toggleUpvote(
                             issue.id,
                             defaultLatitude,
                             defaultLongitude,

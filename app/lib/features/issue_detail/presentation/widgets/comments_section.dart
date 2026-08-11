@@ -74,35 +74,53 @@ class _CommentsSectionState extends ConsumerState<CommentsSection> {
       final text = _controller.text.trim();
       if (text.isEmpty) return;
 
+      final parent = _replyingTo;
+
       if (widget.onPostComment != null) {
-        widget.onPostComment!(text, _replyingTo?.id);
+        widget.onPostComment!(text, parent?.id);
+        _appendOptimistic(
+          Comment(
+            id: DateTime.now().microsecondsSinceEpoch,
+            issueId: widget.issueId,
+            parentId: parent?.id,
+            anonId: 'you',
+            content: text,
+            createdAt: DateTime.now(),
+            isAuthor: true,
+          ),
+          parent: parent,
+        );
       } else {
         ref
             .read(commentsProvider(widget.issueId).notifier)
-            .postComment(text, parentId: _replyingTo?.id);
+            .postComment(text, parentId: parent?.id)
+            .then((created) {
+              if (!mounted) return;
+              _appendOptimistic(created, parent: parent);
+            })
+            .catchError((_) {
+              if (mounted) {
+                ref.read(commentsProvider(widget.issueId).notifier).refresh();
+              }
+            });
       }
 
-      final newComment = Comment(
-        id: DateTime.now().microsecondsSinceEpoch,
-        issueId: widget.issueId,
-        parentId: _replyingTo?.id,
-        anonId: 'anon_current',
-        content: text,
-        createdAt: DateTime.now(),
-        isAuthor: true,
-      );
+      _controller.clear();
+      _replyingTo = null;
+      _composerFocus.unfocus();
+    });
+  }
 
-      setState(() {
-        final target = _replyingTo;
-        if (target != null) {
-          _appendReply(target, newComment);
-        } else {
-          _comments.add(newComment);
-        }
-        _controller.clear();
-        _replyingTo = null;
-        _composerFocus.unfocus();
-      });
+  /// Appends a comment (either authoritative from the server or an
+  /// optimistic local copy) to the local list, threading replies under their
+  /// parent. The provider reload acts as the reconciliation source of truth.
+  void _appendOptimistic(Comment comment, {Comment? parent}) {
+    setState(() {
+      if (parent != null) {
+        _appendReply(parent, comment);
+      } else {
+        _comments.add(comment);
+      }
     });
   }
 

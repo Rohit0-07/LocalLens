@@ -27,7 +27,7 @@ class _OutboxScreenState extends ConsumerState<OutboxScreen> {
       final synced = await outbox.flush();
       if (!mounted) return;
       setState(() => _syncedAnything = synced > 0);
-      if (synced > 0) ref.invalidate(feedProvider);
+      if (synced > 0) ref.invalidate(multiTypeFeedProvider);
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

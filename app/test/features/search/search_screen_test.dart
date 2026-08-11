@@ -86,7 +86,7 @@ Future<
     FakeRecentSearchStore store,
   })
 >
-buildHarness({bool seedRecents = false}) async {
+buildHarness({bool seedRecents = false, List<Issue> feedIssues = const []}) async {
   final repo = FakeSearchRepository();
   final store = FakeRecentSearchStore();
   if (seedRecents) {
@@ -97,6 +97,7 @@ buildHarness({bool seedRecents = false}) async {
     overrides: [
       searchRepositoryProvider.overrideWithValue(repo),
       recentSearchStoreProvider.overrideWithValue(store),
+      feedRepositoryProvider.overrideWithValue(FakeFeedRepository(issues: feedIssues)),
     ],
   );
   addTearDown(container.dispose);
@@ -194,14 +195,17 @@ void main() {
     expect(harness.repo.searchCount, greaterThanOrEqualTo(1));
   });
 
-  testWidgets('Clear empties recents and shows initial state', (tester) async {
-    final harness = await buildHarness(seedRecents: true);
+  testWidgets('Clear empties recents and shows preloaded feed', (tester) async {
+    final harness = await buildHarness(
+      seedRecents: true,
+      feedIssues: <Issue>[buildIssue(id: 7, title: 'Preloaded pothole')],
+    );
     await tester.pumpWidget(wrap(harness.container));
     await tester.tap(find.byKey(const Key('clearRecentSearches')));
     await pumpSearch(tester);
     expect(harness.store.load(), isEmpty);
     expect(find.text('Recent searches'), findsNothing);
-    expect(find.text('Discover issues near you'), findsOneWidget);
+    expect(find.text('Preloaded pothole'), findsOneWidget);
   });
 
   testWidgets('error shows Search unavailable and Retry re-runs', (
@@ -224,13 +228,23 @@ void main() {
     expect(harness.repo.searchCount, 2);
   });
 
-  testWidgets('initial empty state shows Discover issues near you', (
+  testWidgets('initial state shows preloaded feed', (tester) async {
+    final harness = await buildHarness(
+      feedIssues: <Issue>[buildIssue(id: 1, title: 'Nearby pothole')],
+    );
+    await tester.pumpWidget(wrap(harness.container));
+    await pumpSearch(tester);
+    expect(find.text('Nearby pothole'), findsOneWidget);
+    expect(find.text('No issues yet'), findsNothing);
+  });
+
+  testWidgets('initial state shows feed empty message when no issues', (
     tester,
   ) async {
     final harness = await buildHarness();
     await tester.pumpWidget(wrap(harness.container));
-    await tester.pump();
-    expect(find.text('Discover issues near you'), findsOneWidget);
+    await pumpSearch(tester);
+    expect(find.text('No issues yet'), findsOneWidget);
   });
 
   testWidgets('rapid keystrokes within window fire exactly one search', (

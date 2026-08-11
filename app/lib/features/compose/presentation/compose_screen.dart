@@ -433,7 +433,7 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
                           ),
                         );
                         context.go(RoutePaths.feed);
-                        ref.invalidate(feedProvider);
+                        ref.invalidate(multiTypeFeedProvider);
                       },
                 child: Text(context.tr('compose_publish')),
               ),

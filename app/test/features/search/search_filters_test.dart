@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:local_lens/features/feed/domain/issue.dart';
+import 'package:local_lens/features/feed/presentation/feed_providers.dart';
 import 'package:local_lens/features/search/data/recent_search_store.dart';
 import 'package:local_lens/features/search/domain/search_filters.dart';
 import 'package:local_lens/features/search/domain/search_repository.dart';
@@ -134,6 +135,7 @@ buildHarness() async {
     overrides: [
       searchRepositoryProvider.overrideWithValue(repo),
       recentSearchStoreProvider.overrideWithValue(store),
+      feedRepositoryProvider.overrideWithValue(FakeFeedRepository()),
     ],
   );
   addTearDown(container.dispose);

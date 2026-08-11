@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:local_lens/features/auth/domain/auth_repository.dart';
 import 'package:local_lens/features/auth/domain/session.dart';
 import 'package:local_lens/features/auth/presentation/auth_providers.dart';
+import 'package:local_lens/features/auth/presentation/screens/otp_screen.dart';
 import 'package:local_lens/features/auth/presentation/screens/sign_in_screen.dart';
 import 'package:local_lens/features/auth/presentation/widgets/guest_guard.dart';
 
@@ -174,25 +175,27 @@ void main() {
       );
     });
 
-    testWidgets('60-second countdown timer runs when OTP is requested and disables resend until 0s', (WidgetTester tester) async {
-      await tester.pumpWidget(buildTestApp());
-      await tester.pumpAndSettle();
-
-      // Switch to Email mode and request OTP
-      await tester.tap(find.text('Email'));
-      await tester.pumpAndSettle();
-
-      await tester.enterText(find.byType(TextField).first, 'user@example.com');
-      await tester.pump();
-
-      final submitButton = find.byWidgetPredicate(
-        (widget) =>
-            (widget is ElevatedButton || widget is FilledButton) &&
-            ((widget as dynamic).child is Text &&
-                (((widget as dynamic).child as Text).data?.toLowerCase().contains('otp') == true ||
-                    ((widget as dynamic).child as Text).data?.toLowerCase().contains('continue') == true)),
+    testWidgets('60-second countdown timer runs on OTP screen and enables resend until 0s', (WidgetTester tester) async {
+      final container = ProviderContainer(
+        overrides: [
+          authRepositoryProvider.overrideWithValue(mockAuthRepository),
+        ],
       );
-      await tester.tap(submitButton);
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            home: OtpScreen(
+              args: OtpRouteArgs(
+                identifier: 'user@example.com',
+                mode: OtpMode.email,
+              ),
+            ),
+          ),
+        ),
+      );
       await tester.pumpAndSettle();
 
       // Verify 60-second countdown timer text appears

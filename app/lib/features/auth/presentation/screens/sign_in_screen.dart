@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/router/route_paths.dart';
 import '../auth_providers.dart';
+import 'otp_screen.dart';
 
 final _emailPattern = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
 
@@ -24,45 +24,24 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   String? _error;
   bool _isSubmitting = false;
 
-  bool _otpSent = false;
-  int _secondsRemaining = 60;
-  Timer? _timer;
-
   @override
   void dispose() {
-    _timer?.cancel();
     _inputController.dispose();
     super.dispose();
   }
 
-  void _startTimer() {
-    _timer?.cancel();
-    setState(() {
-      _secondsRemaining = 60;
-    });
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (!mounted) {
-        timer.cancel();
-        return;
-      }
-      if (_secondsRemaining > 0) {
-        setState(() => _secondsRemaining--);
-      } else {
-        timer.cancel();
-      }
-    });
-  }
-
   /// Normalizes the raw input into an E.164 number.
   ///
-  /// If the user types the digits of the country code themselves (e.g.
-  /// `919876543210`) they are kept; otherwise the local market code `+91` is
-  /// assumed.
+  /// A `+` prefix means the user typed their own country code and it is kept
+  /// as-is. A 12-digit number starting with `91` is treated as an Indian
+  /// number with country code. Everything else is assumed to be a local Indian
+  /// number and gets the `+91` prefix.
   String _normalizePhone(String input) {
-    final digits = input.replaceAll(RegExp(r'\D'), '');
-    if (digits.length == 12 && digits.startsWith('91')) {
-      return '+$digits';
-    }
+    final trimmed = input.trim();
+    final digits = trimmed.replaceAll(RegExp(r'\D'), '');
+    if (digits.isEmpty) return '';
+    if (trimmed.startsWith('+')) return '+$digits';
+    if (digits.length == 12 && digits.startsWith('91')) return '+$digits';
     return '+91$digits';
   }
 
@@ -91,28 +70,23 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
 
     try {
       final repo = ref.read(authRepositoryProvider);
+      final identifier = _mode == AuthMode.phone
+          ? _normalizePhone(_inputController.text)
+          : _inputController.text.trim();
       if (_mode == AuthMode.phone) {
-        await repo.requestOtp(_normalizePhone(_inputController.text));
+        await repo.requestOtp(identifier);
       } else {
-        try {
-          await repo.requestEmailOtp(_inputController.text.trim());
-        } catch (_) {
-          await (repo as dynamic).requestEmailOtp(_inputController.text.trim());
-        }
+        await repo.requestEmailOtp(identifier);
       }
 
       if (!mounted) return;
-      _startTimer();
-      setState(() => _otpSent = true);
-
-      try {
-        context.push(
-          RoutePaths.otp,
-          extra: _mode == AuthMode.phone
-              ? _normalizePhone(_inputController.text)
-              : _inputController.text.trim(),
-        );
-      } catch (_) {}
+      context.push(
+        RoutePaths.otp,
+        extra: OtpRouteArgs(
+          identifier: identifier,
+          mode: _mode == AuthMode.phone ? OtpMode.phone : OtpMode.email,
+        ),
+      );
     } catch (_) {
       if (!mounted) return;
       setState(
@@ -131,16 +105,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     });
     try {
       final repo = ref.read(authRepositoryProvider);
-      dynamic session;
-      try {
-        session = await repo.loginAsGuest();
-      } catch (_) {
-        try {
-          session = await (repo as dynamic).guestLogin();
-        } catch (_) {
-          session = await (repo as dynamic).createGuestSession();
-        }
-      }
+      final session = await repo.loginAsGuest();
       await ref.read(sessionProvider.notifier).signIn(session);
       if (!mounted) return;
       context.go(RoutePaths.feed);
@@ -205,7 +170,6 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                     _mode = selection.first;
                     _inputController.clear();
                     _error = null;
-                    _otpSent = false;
                   });
                 },
               ),
@@ -247,20 +211,6 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                       : const Text('Send OTP'),
                 ),
               ),
-              if (_otpSent) ...[
-                const SizedBox(height: 16),
-                if (_secondsRemaining > 0)
-                  Text(
-                    'Resend OTP in ${_secondsRemaining}s',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  )
-                else
-                  TextButton(
-                    onPressed: _isSubmitting ? null : _sendOtp,
-                    child: const Text('Resend OTP'),
-                  ),
-              ],
               const SizedBox(height: 12),
               Text(
                 'No account needed — an OTP signs you in.',
