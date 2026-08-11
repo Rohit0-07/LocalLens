@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/l10n/app_strings.dart';
 import '../../../../core/router/route_paths.dart';
 import '../../../../core/utils/relative_time.dart';
 import '../../../../shared/widgets/status_badge.dart';
@@ -135,7 +136,7 @@ class IssueCard extends ConsumerWidget {
                             );
                           }
                         },
-                        child: const Text('Flag Issue'),
+                        child: Text(context.tr('flag_issue')),
                       ),
                     ],
                   ),
@@ -214,7 +215,7 @@ class IssueCard extends ConsumerWidget {
                   if (activeIssue.isFuzzed)
                     Chip(
                       avatar: const Icon(Icons.blur_on, size: 14),
-                      label: const Text('Fuzzed'),
+                      label: Text(context.tr('fuzzed')),
                       visualDensity: VisualDensity.compact,
                       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
@@ -222,7 +223,7 @@ class IssueCard extends ConsumerWidget {
                     Chip(
                       avatar: const Icon(Icons.shield_outlined,
                           size: 14, color: Colors.purple),
-                      label: const Text('Shielded'),
+                      label: Text(context.tr('shielded')),
                       visualDensity: VisualDensity.compact,
                       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),

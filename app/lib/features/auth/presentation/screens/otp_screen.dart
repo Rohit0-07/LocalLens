@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/router/route_paths.dart';
 import '../auth_providers.dart';
 import '../widgets/otp_field.dart';
 
@@ -29,6 +30,8 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
         code: code,
       );
       await ref.read(sessionProvider.notifier).signIn(session);
+      if (!mounted) return;
+      context.go(RoutePaths.feed);
     } catch (_) {
       if (!mounted) return;
       setState(() {

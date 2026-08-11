@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../../core/l10n/app_strings.dart';
 import '../../../core/router/route_paths.dart';
 import '../../feed/presentation/feed_providers.dart';
 import '../../geo/presentation/providers/geo_providers.dart';
@@ -110,9 +111,11 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
 
     final availableSlots = 4 - _attachedMediaList.length;
     if (availableSlots <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Maximum 4 images allowed.')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Maximum 4 images allowed.')),
+        );
+      }
       return;
     }
 
@@ -142,7 +145,7 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
     final draft = ref.watch(composeControllerProvider);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Report an issue'),
+        title: Text(context.tr('compose_title')),
         actions: [
           Padding(
             key: const Key('composeLocationChip'),
@@ -153,7 +156,7 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
           ),
           if (draft.hasContent)
             IconButton(
-              tooltip: 'Discard draft',
+              tooltip: context.tr('compose_discard'),
               icon: const Icon(Icons.delete_outline),
               onPressed: () async {
                 await ref.read(composeControllerProvider.notifier).submit();
@@ -169,8 +172,8 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
             TextField(
               key: const Key('compose_title'),
               maxLength: 100,
-              decoration: const InputDecoration(
-                labelText: 'What is wrong?',
+              decoration: InputDecoration(
+                labelText: context.tr('compose_whats_wrong'),
                 hintText: 'Deep pothole near the bus stop',
               ),
               onChanged: (value) => ref
@@ -181,8 +184,8 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
               key: const Key('compose_description'),
               maxLines: 4,
               maxLength: 1000,
-              decoration: const InputDecoration(
-                labelText: 'Details',
+              decoration: InputDecoration(
+                labelText: context.tr('compose_details'),
                 hintText: 'How big, how long, what happens...',
               ),
               onChanged: (value) => ref
@@ -212,7 +215,7 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Media Attachments',
+                      context.tr('compose_media'),
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
@@ -225,13 +228,13 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
                         OutlinedButton.icon(
                           key: const Key('openCameraButton'),
                           icon: const Icon(Icons.camera_alt_outlined),
-                          label: const Text('Take Photo'),
+                          label: Text(context.tr('compose_take_photo')),
                           onPressed: _openCameraModal,
                         ),
                         OutlinedButton.icon(
                           key: const Key('openGalleryButton'),
                           icon: const Icon(Icons.photo_library_outlined),
-                          label: const Text('Add Photos from Gallery'),
+                          label: Text(context.tr('compose_add_gallery')),
                           onPressed: () => _addGalleryImages(),
                         ),
                       ],
@@ -316,10 +319,8 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
             SwitchListTile(
               key: const Key('compose_fuzz_mode'),
               contentPadding: EdgeInsets.zero,
-              title: const Text('Fuzz location'),
-              subtitle: const Text(
-                'Block-level grid precision (~1km) for home privacy',
-              ),
+              title: Text(context.tr('compose_fuzz')),
+              subtitle: Text(context.tr('compose_fuzz_sub')),
               value: draft.isFuzzed,
               onChanged: (value) => ref
                   .read(composeControllerProvider.notifier)
@@ -328,10 +329,8 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
             SwitchListTile(
               key: const Key('compose_shield_mode'),
               contentPadding: EdgeInsets.zero,
-              title: const Text('Shield Mode (Whistleblower)'),
-              subtitle: const Text(
-                'Hide location & restrict to authority until resolved',
-              ),
+              title: Text(context.tr('compose_shield')),
+              subtitle: Text(context.tr('compose_shield_sub')),
               value: draft.isShielded,
               onChanged: (value) => ref
                   .read(composeControllerProvider.notifier)
@@ -340,7 +339,7 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
             SwitchListTile(
               key: const Key('compose_anonymous'),
               contentPadding: EdgeInsets.zero,
-              title: const Text('Post anonymously'),
+              title: Text(context.tr('compose_anonymous')),
               subtitle: const Text('Zero-retention identity derivation'),
               value: draft.isAnonymous,
               onChanged: (value) => ref
@@ -413,28 +412,31 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
               },
             ),
             const SizedBox(height: 24),
-            FilledButton(
-              key: const Key('compose_submit'),
-              onPressed: draft.title.length < 5
-                  ? null
-                  : () async {
-                      final success = await ref
-                          .read(composeControllerProvider.notifier)
-                          .submit();
-                      if (!context.mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            success
-                                ? 'Issue published successfully'
-                                : 'Saved to offline outbox. Will sync when online.',
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                key: const Key('compose_submit'),
+                onPressed: draft.title.length < 5
+                    ? null
+                    : () async {
+                        final success = await ref
+                            .read(composeControllerProvider.notifier)
+                            .submit();
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              success
+                                  ? context.tr('compose_published')
+                                  : context.tr('compose_outbox_msg'),
+                            ),
                           ),
-                        ),
-                      );
-                      context.go(RoutePaths.feed);
-                      ref.invalidate(feedProvider);
-                    },
-              child: const Text('Publish'),
+                        );
+                        context.go(RoutePaths.feed);
+                        ref.invalidate(feedProvider);
+                      },
+                child: Text(context.tr('compose_publish')),
+              ),
             ),
           ],
         ),

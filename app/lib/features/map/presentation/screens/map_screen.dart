@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/l10n/app_strings.dart';
+
 import '../controllers/map_controller.dart';
 import '../widgets/map_pin_preview_sheet.dart';
 
@@ -16,12 +18,12 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       TransformationController();
 
   static const List<Map<String, String>> _categories = [
-    {'id': 'all', 'label': 'All', 'key': 'mapFilterChip_all'},
-    {'id': 'road', 'label': 'Road', 'key': 'mapFilterChip_road'},
-    {'id': 'sanitation', 'label': 'Sanitation', 'key': 'mapFilterChip_sanitation'},
-    {'id': 'water', 'label': 'Water', 'key': 'mapFilterChip_water'},
-    {'id': 'lighting', 'label': 'Lighting', 'key': 'mapFilterChip_lighting'},
-    {'id': 'other', 'label': 'Other', 'key': 'mapFilterChip_other'},
+    {'id': 'all', 'labelKey': 'feed_filter_all', 'key': 'mapFilterChip_all'},
+    {'id': 'road', 'labelKey': 'cat_road', 'key': 'mapFilterChip_road'},
+    {'id': 'sanitation', 'labelKey': 'cat_sanitation', 'key': 'mapFilterChip_sanitation'},
+    {'id': 'water', 'labelKey': 'cat_water', 'key': 'mapFilterChip_water'},
+    {'id': 'lighting', 'labelKey': 'cat_lighting', 'key': 'mapFilterChip_lighting'},
+    {'id': 'other', 'labelKey': 'cat_other', 'key': 'mapFilterChip_other'},
   ];
 
   @override
@@ -52,7 +54,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Interactive Map'),
+        title: Text(context.tr('map_title')),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -100,7 +102,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                     padding: const EdgeInsets.only(right: 8.0),
                     child: FilterChip(
                       key: Key(cat['key']!),
-                      label: Text(cat['label']!),
+                      label: Text(context.tr(cat['labelKey']!)),
                       selected: isSelected,
                       onSelected: (_) {
                         mapNotifier.selectCategory(cat['id']!);
@@ -125,7 +127,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                     mapNotifier.searchThisArea();
                   },
                   icon: const Icon(Icons.search),
-                  label: const Text('Search this area'),
+                  label: Text(context.tr('map_search_area')),
                 ),
               ),
             ),
@@ -153,7 +155,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                       TextButton(
                         key: const Key('mapErrorRetryButton'),
                         onPressed: () => mapNotifier.fetchPins(),
-                        child: const Text('Retry'),
+                        child: Text(context.tr('action_retry')),
                       ),
                     ],
                   ),
@@ -170,15 +172,15 @@ class _MapScreenState extends ConsumerState<MapScreen> {
               child: Card(
                 key: const Key('mapEmptyState'),
                 color: Colors.white.withValues(alpha: 0.9),
-                child: const Padding(
+                child: Padding(
                   padding: EdgeInsets.symmetric(
                       vertical: 12.0, horizontal: 16.0),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.info_outline, color: Colors.grey),
-                      SizedBox(width: 8),
-                      Text('No issues found in this area'),
+                      const Icon(Icons.info_outline, color: Colors.grey),
+                      const SizedBox(width: 8),
+                      Text(context.tr('map_empty')),
                     ],
                   ),
                 ),

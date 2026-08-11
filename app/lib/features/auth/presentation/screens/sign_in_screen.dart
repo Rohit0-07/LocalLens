@@ -7,7 +7,6 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/router/route_paths.dart';
 import '../auth_providers.dart';
 
-final _phonePattern = RegExp(r'^\+[1-9][0-9]{6,14}$');
 final _emailPattern = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
 
 enum AuthMode { phone, email }
@@ -54,18 +53,30 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     });
   }
 
+  /// Normalizes the raw input into an E.164 number.
+  ///
+  /// If the user types the digits of the country code themselves (e.g.
+  /// `919876543210`) they are kept; otherwise the local market code `+91` is
+  /// assumed.
+  String _normalizePhone(String input) {
+    final digits = input.replaceAll(RegExp(r'\D'), '');
+    if (digits.length == 12 && digits.startsWith('91')) {
+      return '+$digits';
+    }
+    return '+91$digits';
+  }
+
   Future<void> _sendOtp() async {
-    final input = _inputController.text.trim();
     if (_mode == AuthMode.phone) {
-      if (!_phonePattern.hasMatch(input)) {
+      final digits = _inputController.text.replaceAll(RegExp(r'\D'), '');
+      if (digits.length < 6) {
         setState(
-          () => _error =
-              'Enter a valid phone number with country code, e.g. +91 98765 43210',
+          () => _error = 'Enter a valid phone number, e.g. 98765 43210',
         );
         return;
       }
     } else {
-      if (!_emailPattern.hasMatch(input)) {
+      if (!_emailPattern.hasMatch(_inputController.text.trim())) {
         setState(
           () => _error = 'Enter a valid email address',
         );
@@ -81,12 +92,12 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     try {
       final repo = ref.read(authRepositoryProvider);
       if (_mode == AuthMode.phone) {
-        await repo.requestOtp(input);
+        await repo.requestOtp(_normalizePhone(_inputController.text));
       } else {
         try {
-          await repo.requestEmailOtp(input);
+          await repo.requestEmailOtp(_inputController.text.trim());
         } catch (_) {
-          await (repo as dynamic).requestEmailOtp(input);
+          await (repo as dynamic).requestEmailOtp(_inputController.text.trim());
         }
       }
 
@@ -95,7 +106,12 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       setState(() => _otpSent = true);
 
       try {
-        context.push(RoutePaths.otp, extra: input);
+        context.push(
+          RoutePaths.otp,
+          extra: _mode == AuthMode.phone
+              ? _normalizePhone(_inputController.text)
+              : _inputController.text.trim(),
+        );
       } catch (_) {}
     } catch (_) {
       if (!mounted) return;
@@ -126,6 +142,8 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
         }
       }
       await ref.read(sessionProvider.notifier).signIn(session);
+      if (!mounted) return;
+      context.go(RoutePaths.feed);
     } catch (_) {
       if (!mounted) return;
       setState(
@@ -201,7 +219,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                     : null,
                 decoration: InputDecoration(
                   labelText: isPhone ? 'Phone number' : 'Email',
-                  hintText: isPhone ? '+91 98765 43210' : 'citizen@example.com',
+                  hintText: isPhone ? '98765 43210' : 'citizen@example.com',
                   prefixIcon: Icon(
                     isPhone ? Icons.phone_outlined : Icons.email_outlined,
                   ),
@@ -216,15 +234,18 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                 ),
               ],
               const SizedBox(height: 16),
-              FilledButton(
-                onPressed: _isSubmitting ? null : _sendOtp,
-                child: _isSubmitting
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('Send OTP'),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: _isSubmitting ? null : _sendOtp,
+                  child: _isSubmitting
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Send OTP'),
+                ),
               ),
               if (_otpSent) ...[
                 const SizedBox(height: 16),
