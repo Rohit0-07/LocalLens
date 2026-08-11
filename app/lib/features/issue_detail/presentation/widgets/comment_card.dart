@@ -1,135 +1,291 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/theme/app_colors.dart';
 import '../../data/issue_detail_api.dart';
 
-class CommentCard extends StatelessWidget {
+/// Displays a comment and its nested replies with a clean threaded layout.
+/// Replies deeper than [maxVisibleDepth] are collapsed behind a toggle so the
+/// list never breaks apart on long threads.
+class CommentCard extends StatefulWidget {
   const CommentCard({
     super.key,
     required this.comment,
     required this.onReply,
     required this.onDelete,
-    this.isReply = false,
+    this.depth = 0,
+    this.composer,
   });
 
   final Comment comment;
   final ValueChanged<Comment> onReply;
   final ValueChanged<dynamic> onDelete;
-  final bool isReply;
+  final int depth;
+  final Widget? composer;
+
+  static const int maxVisibleDepth = 1;
+
+  @override
+  State<CommentCard> createState() => _CommentCardState();
+}
+
+class _CommentCardState extends State<CommentCard> {
+  bool _expandedReplies = false;
+
+  bool get _canNestMore => widget.depth < CommentCard.maxVisibleDepth;
+
+  int get _visibleReplyCount {
+    final replies = widget.comment.replies;
+    if (_canNestMore) return replies.length;
+    return _expandedReplies ? replies.length : 0;
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final comment = widget.comment;
+    final replies = comment.replies;
+    final isNested = widget.depth > 0;
+    final visibleCount = _visibleReplyCount;
 
     return Padding(
       key: Key('comment_item_${comment.id}'),
       padding: EdgeInsets.only(
-        left: isReply ? 8.0 : 0.0,
-        top: 6.0,
-        bottom: 6.0,
+        left: isNested ? 0.0 : 0.0,
+        top: 8.0,
+        bottom: isNested ? 2.0 : 8.0,
       ),
-      child: IntrinsicHeight(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (isReply)
-              Container(
-                width: 2,
-                margin: const EdgeInsets.only(top: 4, bottom: 4, right: 8),
-                color: theme.colorScheme.primaryContainer,
-              ),
-            Expanded(
-              child: Card(
-                margin: EdgeInsets.zero,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  side: BorderSide(color: colorScheme.outlineVariant),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (isNested) ...[
+            Container(
+              width: 2.5,
+              margin: const EdgeInsets.only(top: 22, right: 10),
+              height: 1000,
+              color: colorScheme.primaryContainer.withValues(alpha: 0.7),
+            ),
+          ],
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _CommentBubble(
+                  comment: comment,
+                  onReply: () => widget.onReply(comment),
+                  onDelete: () => widget.onDelete(comment.id),
                 ),
-                color: isReply ? colorScheme.surfaceContainerLow : colorScheme.surface,
-                child: Padding(
-                  padding: const EdgeInsets.all(12.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.account_circle,
-                            size: 24.0,
-                            key: const Key('avatar_icon'),
-                            color: AppColors.anonMask,
-                          ),
-                          const SizedBox(width: 8.0),
-                          Expanded(
-                            child: Text(
-                              comment.anonId,
-                              overflow: TextOverflow.ellipsis,
-                              style: theme.textTheme.titleSmall?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8.0),
-                          Text(
-                            formatRelativeTimestamp(comment.createdAt),
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                          if (comment.isAuthor)
-                            IconButton(
-                              key: Key('delete_button_${comment.id}'),
-                              icon: Icon(
-                                Icons.delete_outline,
-                                size: 18.0,
-                                color: colorScheme.error,
-                              ),
-                              onPressed: () => onDelete(comment.id),
-                            ),
-                        ],
-                      ),
-                      const SizedBox(height: 6.0),
-                      Text(
-                        comment.content,
-                        style: theme.textTheme.bodyMedium,
-                      ),
-                      if (!isReply) ...[
-                        const SizedBox(height: 4.0),
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: TextButton.icon(
-                            key: Key('reply_button_${comment.id}'),
-                            icon: const Icon(Icons.reply, size: 16.0),
-                            label: const Text('Reply'),
-                            onPressed: () => onReply(comment),
-                          ),
-                        ),
-                      ],
-                      if (comment.replies.isNotEmpty) ...[
-                        const Divider(),
-                        for (final reply in comment.replies)
-                          CommentCard(
-                            comment: reply,
-                            onReply: onReply,
-                            onDelete: onDelete,
-                            isReply: true,
-                          ),
-                      ],
-                    ],
+                if (widget.composer != null) ...[
+                  const SizedBox(height: 6),
+                  widget.composer!,
+                ],
+                if (replies.isNotEmpty &&
+                    (visibleCount > 0 ||
+                        !_canNestMore &&
+                            replies.isNotEmpty)) ...[
+                  const SizedBox(height: 4),
+                  if (_canNestMore)
+                    for (final reply in replies.take(visibleCount))
+                      CommentCard(
+                        comment: reply,
+                        onReply: widget.onReply,
+                        onDelete: widget.onDelete,
+                        depth: widget.depth + 1,
+                        composer:
+                            _isTarget(widget.composer, reply) ? widget.composer : null,
+                      )
+                  else
+                    _buildCollapsedReplies(context, replies, colorScheme),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  bool _isTarget(Widget? composer, Comment reply) {
+    // The composer is only hoisted under the exact reply that is its target.
+    // We cannot introspect arbitrary widgets, so we pass identity via the
+    // composer's key when provided.
+    final key = composer?.key;
+    return key != null && key is ValueKey<String> && key.value == reply.id;
+  }
+
+  Widget _buildCollapsedReplies(
+    BuildContext context,
+    List<Comment> replies,
+    ColorScheme colorScheme,
+  ) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (!_expandedReplies)
+          Padding(
+            padding: const EdgeInsets.only(left: 8),
+            child: InkWell(
+              key: const Key('viewMoreRepliesButton'),
+              onTap: () => setState(() => _expandedReplies = true),
+              borderRadius: BorderRadius.circular(8),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+                child: Text(
+                  'View all ${replies.length} replies',
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: colorScheme.primary,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
             ),
-          ],
-        ),
-      ),
+          )
+        else
+          for (final reply in replies)
+            CommentCard(
+              comment: reply,
+              onReply: widget.onReply,
+              onDelete: widget.onDelete,
+              depth: widget.depth + 1,
+            ),
+      ],
     );
   }
 }
 
-String formatRelativeTimestamp(DateTime dateTime) {
+class _CommentBubble extends StatelessWidget {
+  const _CommentBubble({
+    required this.comment,
+    required this.onReply,
+    required this.onDelete,
+  });
+
+  final Comment comment;
+  final VoidCallback onReply;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final initial = comment.anonId.isEmpty
+        ? '?'
+        : comment.anonId.toString().characters.first.toUpperCase();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            CircleAvatar(
+              radius: 15,
+              backgroundColor: colorScheme.primaryContainer,
+              child: Text(
+                initial,
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: colorScheme.onPrimaryContainer,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          comment.anonId,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.labelLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      if (comment.isAuthor) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: colorScheme.primaryContainer,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            'You',
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: colorScheme.onPrimaryContainer,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  Text(
+                    formatCommentTime(comment.createdAt),
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (comment.isAuthor)
+              IconButton(
+                key: Key('delete_button_${comment.id}'),
+                visualDensity: VisualDensity.compact,
+                iconSize: 18,
+                icon: Icon(Icons.delete_outline,
+                    size: 18, color: colorScheme.error),
+                onPressed: onDelete,
+              ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        Padding(
+          padding: const EdgeInsets.only(left: 38),
+          child: Text(
+            comment.content,
+            style: theme.textTheme.bodyMedium,
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.only(left: 34, top: 4),
+          child: InkWell(
+            key: Key('reply_button_${comment.id}'),
+            onTap: onReply,
+            borderRadius: BorderRadius.circular(8),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.reply_outlined,
+                      size: 15, color: colorScheme.primary),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Reply',
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      color: colorScheme.primary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+String formatCommentTime(DateTime dateTime) {
   final diff = DateTime.now().difference(dateTime);
   if (diff.inSeconds < 60) return 'Just now';
   if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
