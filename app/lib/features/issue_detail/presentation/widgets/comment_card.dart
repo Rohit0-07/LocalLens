@@ -12,14 +12,12 @@ class CommentCard extends StatefulWidget {
     required this.onReply,
     required this.onDelete,
     this.depth = 0,
-    this.composer,
   });
 
   final Comment comment;
   final ValueChanged<Comment> onReply;
   final ValueChanged<dynamic> onDelete;
   final int depth;
-  final Widget? composer;
 
   static const int maxVisibleDepth = 1;
 
@@ -50,21 +48,19 @@ class _CommentCardState extends State<CommentCard> {
     return Padding(
       key: Key('comment_item_${comment.id}'),
       padding: EdgeInsets.only(
-        left: isNested ? 0.0 : 0.0,
         top: 8.0,
         bottom: isNested ? 2.0 : 8.0,
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (isNested) ...[
+          if (isNested)
             Container(
               width: 2.5,
               margin: const EdgeInsets.only(top: 22, right: 10),
               height: 1000,
               color: colorScheme.primaryContainer.withValues(alpha: 0.7),
             ),
-          ],
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -74,14 +70,9 @@ class _CommentCardState extends State<CommentCard> {
                   onReply: () => widget.onReply(comment),
                   onDelete: () => widget.onDelete(comment.id),
                 ),
-                if (widget.composer != null) ...[
-                  const SizedBox(height: 6),
-                  widget.composer!,
-                ],
                 if (replies.isNotEmpty &&
                     (visibleCount > 0 ||
-                        !_canNestMore &&
-                            replies.isNotEmpty)) ...[
+                        !_canNestMore && replies.isNotEmpty)) ...[
                   const SizedBox(height: 4),
                   if (_canNestMore)
                     for (final reply in replies.take(visibleCount))
@@ -90,8 +81,6 @@ class _CommentCardState extends State<CommentCard> {
                         onReply: widget.onReply,
                         onDelete: widget.onDelete,
                         depth: widget.depth + 1,
-                        composer:
-                            _isTarget(widget.composer, reply) ? widget.composer : null,
                       )
                   else
                     _buildCollapsedReplies(context, replies, colorScheme),
@@ -102,14 +91,6 @@ class _CommentCardState extends State<CommentCard> {
         ],
       ),
     );
-  }
-
-  bool _isTarget(Widget? composer, Comment reply) {
-    // The composer is only hoisted under the exact reply that is its target.
-    // We cannot introspect arbitrary widgets, so we pass identity via the
-    // composer's key when provided.
-    final key = composer?.key;
-    return key != null && key is ValueKey<String> && key.value == reply.id;
   }
 
   Widget _buildCollapsedReplies(

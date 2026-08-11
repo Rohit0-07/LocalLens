@@ -8,7 +8,6 @@ import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/skeleton_list.dart';
 import '../../geo/presentation/providers/geo_providers.dart';
 import '../../geo/presentation/widgets/ward_location_chip.dart';
-import '../../outbox/presentation/outbox_screen.dart';
 import '../../compose/presentation/compose_providers.dart';
 import '../domain/feed_item.dart';
 import 'feed_providers.dart';

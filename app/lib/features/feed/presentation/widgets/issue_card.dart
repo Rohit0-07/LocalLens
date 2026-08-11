@@ -242,7 +242,7 @@ class IssueCard extends ConsumerWidget {
                     color: activeIssue.hasUpvoted
                         ? colorScheme.primary
                         : colorScheme.onSurfaceVariant,
-                    label: '${activeIssue.upvotesCount}',
+                    label: Text('${activeIssue.upvotesCount}'),
                     onTap: () async {
                       try {
                         await ref
@@ -271,7 +271,7 @@ class IssueCard extends ConsumerWidget {
                     key: Key('share_button_${activeIssue.id}'),
                     icon: Icons.share_outlined,
                     color: colorScheme.onSurfaceVariant,
-                    label: '',
+                    label: const SizedBox.shrink(),
                     onTap: () => context
                         .push(RoutePaths.issueDetailFor(activeIssue.id)),
                   ),

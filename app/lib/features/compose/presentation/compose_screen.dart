@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../../core/router/route_paths.dart';
 import '../../feed/presentation/feed_providers.dart';
@@ -93,7 +94,20 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
     );
   }
 
-  void _addGalleryImages([List<Uint8List>? images]) {
+  Future<void> _addGalleryImages([List<Uint8List>? images]) async {
+    List<Uint8List> actualImages = images ?? [];
+
+    if (actualImages.isEmpty) {
+      try {
+        final picker = ImagePicker();
+        final picked = await picker.pickMultiImage(
+            limit: 4 - _attachedMediaList.length);
+        for (final file in picked) {
+          actualImages.add(await file.readAsBytes());
+        }
+      } catch (_) {}
+    }
+
     final availableSlots = 4 - _attachedMediaList.length;
     if (availableSlots <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -102,12 +116,10 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
       return;
     }
 
-    final selectedImages = images ?? [
-      Uint8List.fromList(List.generate(100, (index) => (index * 13) % 256)),
-    ];
+    if (actualImages.isEmpty) return;
 
     setState(() {
-      for (final bytes in selectedImages.take(availableSlots)) {
+      for (final bytes in actualImages.take(availableSlots)) {
         _attachedMediaList.add(
           _AttachedMedia(
             id: 'gallery_${DateTime.now().microsecondsSinceEpoch}_${_attachedMediaList.length}',

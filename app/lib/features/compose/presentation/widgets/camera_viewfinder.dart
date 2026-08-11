@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 enum FlashMode { off, on, auto }
 
@@ -76,13 +77,20 @@ class _CameraViewfinderState extends State<CameraViewfinder> {
     }
   }
 
-  void _triggerGalleryPicker() {
-    final dummyBytes = Uint8List.fromList(
-      List.generate(100, (index) => (index * 13) % 256),
-    );
-    if (widget.onGalleryPickSelected != null) {
-      widget.onGalleryPickSelected!([dummyBytes]);
-    }
+  Future<void> _triggerGalleryPicker() async {
+    try {
+      final picker = ImagePicker();
+      final pickedFiles = await picker.pickMultiImage(limit: 4);
+      if (pickedFiles.isEmpty) return;
+      if (widget.onGalleryPickSelected == null) return;
+
+      final images = <Uint8List>[];
+      for (final file in pickedFiles) {
+        final bytes = await file.readAsBytes();
+        images.add(bytes);
+      }
+      if (images.isNotEmpty) widget.onGalleryPickSelected!(images);
+    } catch (_) {}
   }
 
   @override

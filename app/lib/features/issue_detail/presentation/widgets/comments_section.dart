@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../auth/presentation/auth_providers.dart';
 import '../../../auth/presentation/widgets/guest_guard.dart';
-import '../../../core/l10n/app_strings.dart';
+import '../../../../core/l10n/app_strings.dart';
 import '../../data/issue_detail_api.dart';
 import '../controllers/issue_detail_controller.dart';
 import 'comment_card.dart';
@@ -276,95 +276,6 @@ class _CommentsSectionState extends ConsumerState<CommentsSection> {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _ReplyComposer extends StatelessWidget {
-  const _ReplyComposer({
-    required this.controller,
-    required this.focusNode,
-    required this.onCancel,
-    required this.onSubmit,
-    required this.targetLabel,
-  });
-
-  final TextEditingController controller;
-  final FocusNode focusNode;
-  final VoidCallback onCancel;
-  final VoidCallback onSubmit;
-  final String targetLabel;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    return Container(
-      key: const Key('inlineReplyComposer'),
-      padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
-      decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: colorScheme.outlineVariant),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.reply, size: 15, color: colorScheme.primary),
-              const SizedBox(width: 4),
-              Expanded(
-                child: Text(
-                  '${context.tr('comments_replying_to')} $targetLabel',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                    fontStyle: FontStyle.italic,
-                  ),
-                ),
-              ),
-              IconButton(
-                visualDensity: VisualDensity.compact,
-                iconSize: 16,
-                icon: const Icon(Icons.close),
-                onPressed: onCancel,
-              ),
-            ],
-          ),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: controller,
-                  focusNode: focusNode,
-                  minLines: 1,
-                  maxLines: 3,
-                  decoration: InputDecoration(
-                    hintText: context.tr('comments_hint'),
-                    isDense: true,
-                    filled: true,
-                    fillColor: colorScheme.surfaceContainerHighest,
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 8),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      borderSide: BorderSide.none,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 6),
-              IconButton.filled(
-                visualDensity: VisualDensity.compact,
-                icon: const Icon(Icons.send_rounded, size: 18),
-                onPressed: onSubmit,
-              ),
-            ],
-          ),
-        ],
-      ),
     );
   }
 }
