@@ -6,6 +6,7 @@ import jwt
 from fastapi import APIRouter, Query, Response, status
 
 from app.api.deps import CurrentUser, SessionDep, SettingsDep
+from app.core.exceptions import AppError
 from app.core.security import create_access_token, derive_anonymous_identity
 from app.features.auth import service
 from app.features.auth.schemas import (
@@ -13,6 +14,7 @@ from app.features.auth.schemas import (
     EmailOtpVerify,
     OtpRequest,
     OtpVerify,
+    ProfileUpdate,
     PublicUserProfileOut,
     TokenResponse,
     UserOut,
@@ -108,6 +110,50 @@ async def get_current_user_profile(
         id=user.id,
         phone=user.phone,
         email=user.email,
+        display_name=user.display_name,
+        username=user.username,
+        date_of_birth=user.date_of_birth,
+        photo_url=user.photo_url,
+        anonymous_identity=anon,
+        anon_id=anon,
+        role=user.role,
+        is_verified=user.is_verified,
+        ward=user.ward,
+        created_at=user.created_at,
+        is_guest=False,
+        issues_count=stats["issues_count"],
+        upvotes_count=stats["upvotes_count"],
+        quorum_votes_count=stats["quorum_votes_count"],
+    )
+
+
+@router.patch("/me", response_model=UserOut)
+async def update_current_user_profile(
+    payload: ProfileUpdate,
+    user: CurrentUser,
+    session: SessionDep,
+    settings: SettingsDep,
+) -> UserOut:
+    if getattr(user, "is_guest", False):
+        raise AppError("Guests cannot update a profile", status_code=400, code="guest_restricted")
+    user = await service.update_profile(
+        session,
+        user,
+        display_name=payload.display_name,
+        username=payload.username,
+        date_of_birth=payload.date_of_birth,
+        photo_url=payload.photo_url,
+    )
+    stats = await service.get_user_stats(session, user.id)
+    anon = derive_anonymous_identity(user.id, settings.jwt_secret)
+    return UserOut(
+        id=user.id,
+        phone=user.phone,
+        email=user.email,
+        display_name=user.display_name,
+        username=user.username,
+        date_of_birth=user.date_of_birth,
+        photo_url=user.photo_url,
         anonymous_identity=anon,
         anon_id=anon,
         role=user.role,

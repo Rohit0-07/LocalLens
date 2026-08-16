@@ -6,6 +6,8 @@ import 'package:share_plus/share_plus.dart';
 import '../../../../core/l10n/app_strings.dart';
 import '../../../../core/router/route_paths.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/utils/media_url.dart';
+import '../../../../core/utils/profile_navigation.dart';
 import '../../../../core/utils/relative_time.dart';
 import '../../../../shared/widgets/media_preview_widget.dart';
 import '../../../../shared/widgets/status_badge.dart';
@@ -196,11 +198,8 @@ class IssueCard extends ConsumerWidget {
                     child: InkWell(
                       key: Key('issueCardReporter_${activeIssue.id}'),
                       onTap: activeIssue.reporterId != null
-                          ? () => context.push(
-                                RoutePaths.publicProfileFor(
-                                  activeIssue.reporterId!,
-                                ),
-                              )
+                          ? () =>
+                                openReporterProfile(context, ref, activeIssue.reporterId)
                           : null,
                       borderRadius: BorderRadius.circular(8),
                       child: Row(
@@ -208,6 +207,7 @@ class IssueCard extends ConsumerWidget {
                           _CleanAvatar(
                             isAnonymous: isAnonymous,
                             reporterName: activeIssue.reporterLabel,
+                            photoUrl: activeIssue.reporterPhotoUrl,
                           ),
                           const SizedBox(width: 10),
                           Expanded(
@@ -508,10 +508,12 @@ class _CleanAvatar extends StatelessWidget {
   const _CleanAvatar({
     required this.isAnonymous,
     required this.reporterName,
+    this.photoUrl,
   });
 
   final bool isAnonymous;
   final String reporterName;
+  final String? photoUrl;
 
   @override
   Widget build(BuildContext context) {
@@ -538,6 +540,33 @@ class _CleanAvatar extends StatelessWidget {
       );
     }
 
+    final resolvedPhoto = photoUrl != null && photoUrl!.isNotEmpty
+        ? resolveMediaUrl(photoUrl!)
+        : null;
+    if (resolvedPhoto != null) {
+      return ClipOval(
+        child: SizedBox(
+          width: 36,
+          height: 36,
+          child: Image.network(
+            resolvedPhoto,
+            fit: BoxFit.cover,
+            errorBuilder: (_, _, _) => _initialAvatar(
+              colorScheme,
+              reporterName,
+            ),
+            loadingBuilder: (context, child, progress) => progress == null
+                ? child
+                : _initialAvatar(colorScheme, reporterName),
+          ),
+        ),
+      );
+    }
+
+    return _initialAvatar(colorScheme, reporterName);
+  }
+
+  Widget _initialAvatar(ColorScheme colorScheme, String reporterName) {
     final initial = reporterName.isNotEmpty
         ? reporterName.substring(0, 1).toUpperCase()
         : 'U';

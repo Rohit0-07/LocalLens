@@ -110,6 +110,8 @@ class IssueOut(BaseModel):
     is_shielded: bool = False
     reporter_id: int | None = None
     reporter_label: str
+    reporter_name: str | None = None
+    reporter_photo_url: str | None = None
     anonymous_identity: str | None = None
     media_url: str | None = None
     video_url: str | None = None

@@ -20,6 +20,7 @@ import '../../features/onboarding/presentation/screens/onboarding_screen.dart';
 import '../../features/outbox/presentation/outbox_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
 import '../../features/profile/presentation/screens/anonymity_guide_screen.dart';
+import '../../features/profile/presentation/screens/edit_profile_screen.dart';
 import '../../features/profile/presentation/screens/public_profile_screen.dart';
 import '../../features/profile/presentation/screens/settings_screen.dart';
 import '../../features/reels/presentation/reels_screen.dart';
@@ -226,6 +227,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const SettingsScreen(),
       ),
       GoRoute(
+        path: RoutePaths.editProfile,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const EditProfileScreen(),
+      ),
+      GoRoute(
         path: RoutePaths.publicProfile,
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) {
@@ -241,12 +247,19 @@ final routerProvider = Provider<GoRouter>((ref) {
   return router;
 });
 
-class _AppShell extends ConsumerWidget {
+class _AppShell extends ConsumerStatefulWidget {
   const _AppShell({required this.navigationShell});
 
   final StatefulNavigationShell navigationShell;
 
-  Future<void> _openCreateSheet(BuildContext context, WidgetRef ref) async {
+  @override
+  ConsumerState<_AppShell> createState() => _AppShellState();
+}
+
+class _AppShellState extends ConsumerState<_AppShell> {
+  bool _guestBannerDismissed = false;
+
+  Future<void> _openCreateSheet(BuildContext context) async {
     final session = ref.read(sessionProvider);
     final isGuest = session == null || session.isGuest;
     final theme = Theme.of(context);
@@ -313,7 +326,7 @@ class _AppShell extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final unreadCount = ref.watch(unreadNotificationCountProvider);
     final session = ref.watch(sessionProvider);
     final isGuest = session == null || session.isGuest;
@@ -321,26 +334,26 @@ class _AppShell extends ConsumerWidget {
     return Scaffold(
       body: Stack(
         children: [
-          navigationShell,
-          if (isGuest)
+          widget.navigationShell,
+          if (isGuest && !_guestBannerDismissed)
             Positioned(
               left: 0,
               right: 0,
               bottom: 0,
               child: GuestSessionBar(
-                onDismiss: () => ref.read(sessionProvider.notifier).signOut(),
+                onDismiss: () => setState(() => _guestBannerDismissed = true),
               ),
             ),
         ],
       ),
       bottomNavigationBar: _SocialDock(
-        currentIndex: navigationShell.currentIndex,
+        currentIndex: widget.navigationShell.currentIndex,
         unreadCount: unreadCount,
-        onSelect: (index) => navigationShell.goBranch(
+        onSelect: (index) => widget.navigationShell.goBranch(
           index,
-          initialLocation: index == navigationShell.currentIndex,
+          initialLocation: index == widget.navigationShell.currentIndex,
         ),
-        onCreate: () => _openCreateSheet(context, ref),
+        onCreate: () => _openCreateSheet(context),
       ),
     );
   }

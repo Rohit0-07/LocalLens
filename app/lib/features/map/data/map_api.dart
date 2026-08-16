@@ -90,7 +90,7 @@ class MapApi {
       query['status'] = status;
     }
 
-    final data = await _apiClient.getJson('/api/v1/geo/map-pins', query: query);
+    final data = await _apiClient.getJson('/geo/map-pins', query: query);
     if (data is List) {
       return data
           .map((item) => MapPin.fromJson(item as Map<String, dynamic>))

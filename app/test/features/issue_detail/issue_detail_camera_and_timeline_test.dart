@@ -248,6 +248,68 @@ void main() {
       expect(find.text('Resolved & Published as Win'), findsOneWidget);
       expect(find.textContaining('Civic win verified'), findsOneWidget);
     });
+
+    testWidgets(
+        'renders proof preview as an image when resolution proof is a relative API path',
+        (tester) async {
+      final resolvedIssue = Issue(
+        id: 102,
+        title: 'Sewage cleared in lane',
+        description: 'Channel unblocked by field team.',
+        category: 'sewage',
+        status: 'resolved',
+        latitude: 12.9716,
+        longitude: 77.5946,
+        reporterLabel: 'Citizen #Beta',
+        ward: 'Ward 12, Indiranagar',
+        isAnonymous: false,
+        createdAt: DateTime.now().subtract(const Duration(days: 4)),
+        acknowledgedAt: DateTime.now().subtract(const Duration(days: 3)),
+        resolvedAt: DateTime.now().subtract(const Duration(hours: 2)),
+        resolutionProof: '/api/v1/media/files/proof_sewage_cleared.jpg',
+        resolutionNotes: 'Channel cleared and flushed',
+        confirmationsCount: 3,
+        disputesCount: 0,
+        mediaUrls: const [],
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: AuditTimelineCard(issue: resolvedIssue),
+            ),
+          ),
+        ),
+      );
+
+      await tester.pump();
+
+      // The proof should render as an image attempt (Image.network), never
+      // as the raw path text.
+      expect(find.byKey(const Key('timeline_resolution_proof_preview')),
+          findsOneWidget);
+      expect(
+        find.text('/api/v1/media/files/proof_sewage_cleared.jpg'),
+        findsNothing,
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('timeline_resolution_proof_preview')),
+          matching: find.byType(Image),
+        ),
+        findsOneWidget,
+      );
+
+      // Proof labels still resolve as network URLs.
+      final image = tester.widget<Image>(
+        find.descendant(
+          of: find.byKey(const Key('timeline_resolution_proof_preview')),
+          matching: find.byType(Image),
+        ),
+      );
+      expect(image.image, isA<NetworkImage>());
+    });
   });
 
   group('Issue Detail - Community Verification Clarification & Voting', () {

@@ -292,7 +292,8 @@ class AuditTimelineCard extends StatelessWidget {
 
   Widget _buildResolutionProofPreview(BuildContext context) {
     final proof = issue.resolutionProof!;
-    final isNetwork = proof.startsWith('http');
+    final resolved = resolveMediaUrl(proof);
+    final isEmptyUrl = resolved.isEmpty;
     return Padding(
       padding: const EdgeInsets.only(top: 8),
       child: GestureDetector(
@@ -308,9 +309,9 @@ class AuditTimelineCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(8),
             child: Stack(
               children: [
-                if (isNetwork)
+                if (!isEmptyUrl)
                   Image.network(
-                    resolveMediaUrl(proof),
+                    resolved,
                     height: 100,
                     width: double.infinity,
                     fit: BoxFit.cover,
@@ -324,6 +325,23 @@ class AuditTimelineCard extends StatelessWidget {
                             color: AppColors.resolved, size: 32),
                       ),
                     ),
+                    loadingBuilder: (context, child, progress) =>
+                        progress == null
+                            ? child
+                            : Container(
+                                height: 80,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .surfaceContainerHighest,
+                                child: const Center(
+                                  child: SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2),
+                                  ),
+                                ),
+                              ),
                   )
                 else
                   Container(
@@ -383,18 +401,19 @@ class AuditTimelineCard extends StatelessWidget {
   }
 
   void _showMediaDialog(BuildContext context, String url) {
+    final resolved = resolveMediaUrl(url);
     showDialog<void>(
       context: context,
       builder: (ctx) => Dialog(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (url.startsWith('http'))
+            if (resolved.isNotEmpty)
               Image.network(
-                resolveMediaUrl(url),
+                resolved,
                 fit: BoxFit.contain,
-                errorBuilder: (context, error, stackTrace) => const Padding(
-                  padding: EdgeInsets.all(32),
+                errorBuilder: (context, error, stackTrace) => Padding(
+                  padding: const EdgeInsets.all(32),
                   child: Icon(Icons.broken_image, size: 48),
                 ),
               )

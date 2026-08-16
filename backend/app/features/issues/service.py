@@ -3,6 +3,7 @@ from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.core.exceptions import AppError
 from app.core.ratelimit import SlidingWindowRateLimiter
@@ -44,8 +45,60 @@ def _utc_now() -> datetime:
     return datetime.now(UTC).replace(tzinfo=None)
 
 
+def _loaded_reporter(issue: Issue) -> User | None:
+    """Return the eager-loaded reporter if present, without triggering a lazy load.
+
+    The `reporter` relationship must be eagerly loaded (selectinload) at the
+    query site; in async contexts, touching an unloaded lazy relationship
+    would raise MissingGreenlet.
+    """
+    if "reporter" in issue.__dict__ and issue.__dict__.get("reporter") is not None:
+        return issue.__dict__["reporter"]
+    return None
+
+
+def _masked_identity(issue: Issue) -> str | None:
+    """Return a masked fallback label for a real reporter with no profile name."""
+    reporter = _loaded_reporter(issue)
+    if reporter is None:
+        return None
+    phone = getattr(reporter, "phone", None)
+    if phone:
+        digits = "".join(ch for ch in phone if ch.isdigit())
+        if len(digits) >= 4:
+            return f"Citizen ••••{digits[-4:]}"
+    email = getattr(reporter, "email", None)
+    if email:
+        local = email.split("@")[0]
+        if len(local) >= 2:
+            return f"{local[0]}•••"
+    return None
+
+
 def reporter_label_for(issue: Issue) -> str:
-    return "Anonymous" if issue.is_anonymous else "Verified citizen"
+    if issue.is_anonymous:
+        return "Anonymous"
+    reporter = _loaded_reporter(issue)
+    if reporter is not None:
+        display = getattr(reporter, "display_name", None) or getattr(reporter, "username", None)
+        if display:
+            return display
+        masked = _masked_identity(issue)
+        if masked:
+            return masked
+    return "Verified citizen"
+
+
+def reporter_identity_for(issue: Issue) -> tuple[str | None, str | None]:
+    """Return (reporter_name, reporter_photo_url) for non-anonymous issues."""
+    if issue.is_anonymous:
+        return None, None
+    reporter = _loaded_reporter(issue)
+    if reporter is None:
+        return None, None
+    name = getattr(reporter, "display_name", None) or getattr(reporter, "username", None) or _masked_identity(issue)
+    photo = getattr(reporter, "photo_url", None)
+    return (name or None, photo or None)
 
 
 def to_issue_out(
@@ -56,6 +109,7 @@ def to_issue_out(
     official_responded_issue_ids: set[int] | None = None,
 ) -> IssueOut:
     label = reporter_label_for(issue)
+    reporter_name, reporter_photo_url = reporter_identity_for(issue)
     anon_id = (
         derive_anonymous_identity(issue.reporter_id, secret)
         if (secret and issue.is_anonymous and issue.reporter_id is not None)
@@ -117,6 +171,8 @@ def to_issue_out(
         is_shielded=issue.is_shielded,
         reporter_id=reporter_id_val,
         reporter_label=label,
+        reporter_name=reporter_name,
+        reporter_photo_url=reporter_photo_url,
         anonymous_identity=anon_id,
         media_url=media_url,
         video_url=video_url,
@@ -177,8 +233,10 @@ async def create_issue(
     )
     session.add(issue)
     await session.commit()
-    await session.refresh(issue)
-    return issue
+    issue = await session.scalar(
+        select(Issue).options(selectinload(Issue.reporter)).where(Issue.id == issue.id)
+    )
+    return issue  # type: ignore[return-value]
 
 
 async def list_issues_near(
@@ -219,7 +277,10 @@ async def list_issues_near(
 
 
 async def get_issue(session: AsyncSession, issue_id: int) -> Issue | None:
-    issue = await session.get(Issue, issue_id)
+    result = await session.execute(
+        select(Issue).options(selectinload(Issue.reporter)).where(Issue.id == issue_id)
+    )
+    issue = result.scalar_one_or_none()
     if issue is not None:
         if evaluate_escalation(issue, _utc_now()):
             await session.commit()

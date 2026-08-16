@@ -165,20 +165,37 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
   }
 
   Future<void> _useMyLocation() async {
-    final locationService = ref.read(locationServiceProvider);
-    final position = await locationService.getCurrentPosition();
+    // Resolve through the same coordinate source the home feed queries so a
+    // locked location always lands inside the feed's radius (see
+    // `geo_providers.feedCoordinatesProvider`). Falls back to the reference
+    // point so a GPS failure still yields a visible issue.
+    double? lockedLat;
+    double? lockedLng;
+    try {
+      final coords = await ref.read(feedCoordinatesProvider.future);
+      lockedLat = coords.lat;
+      lockedLng = coords.lng;
+    } catch (_) {
+      try {
+        final locationService = ref.read(locationServiceProvider);
+        final position = await locationService.getCurrentPosition();
+        lockedLat = position?.latitude;
+        lockedLng = position?.longitude;
+      } catch (_) {}
+    }
+
     final draft = ref.read(composeControllerProvider);
     await ref.read(composeControllerProvider.notifier).update(
           draft.copyWith(
-            latitude: position?.latitude,
-            longitude: position?.longitude,
+            latitude: lockedLat,
+            longitude: lockedLng,
           ),
         );
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          position != null
+          lockedLat != null && lockedLng != null
               ? context.tr('compose_location_locked')
               : context.tr('compose_location_unavailable'),
         ),
@@ -337,7 +354,9 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
               tooltip: context.tr('compose_discard'),
               icon: const Icon(Icons.delete_outline),
               onPressed: () async {
-                await ref.read(composeControllerProvider.notifier).submit();
+                await ref
+                    .read(composeControllerProvider.notifier)
+                    .discard();
                 if (context.mounted) context.pop();
               },
             ),

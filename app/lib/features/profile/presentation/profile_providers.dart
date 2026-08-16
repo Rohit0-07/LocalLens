@@ -34,6 +34,8 @@ final userProfileProvider = FutureProvider<UserProfile>((ref) async {
       id: session.userId,
       phone: session.isGuest ? null : '+919876543210',
       email: null,
+      displayName: session.isGuest ? null : 'Demo Resident',
+      username: session.isGuest ? null : 'demo_resident',
       anonymousIdentity: session.anonId ?? 'anon_mock_123',
       anonId: session.anonId ?? 'anon_mock_123',
       isGuest: session.isGuest,

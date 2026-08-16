@@ -242,16 +242,14 @@ void main() {
       expect(find.byKey(const Key('myIssuesFilter_active')), findsOneWidget);
       expect(find.byKey(const Key('myIssuesFilter_resolved')), findsOneWidget);
 
-      // Check issues are displayed
-      expect(find.text('Broken water pipeline on 14th Cross'), findsOneWidget);
-      expect(find.text('Street lights malfunctioning on Main Boulevard'),
-          findsOneWidget);
-      expect(find.text('Pothole repaired near market circle'), findsOneWidget);
+      // Check issues are displayed as grid tiles
+      expect(find.byKey(const Key('userIssueItem_101')), findsOneWidget);
+      expect(find.byKey(const Key('userIssueItem_102')), findsOneWidget);
+      expect(find.byKey(const Key('userIssueItem_103')), findsOneWidget);
 
-      // Check upvote counts and category
-      expect(find.text('8 upvotes'), findsOneWidget);
-      expect(find.text('24 upvotes'), findsOneWidget);
-      expect(find.text('56 upvotes'), findsOneWidget);
+      // Check status overlay badges
+      expect(find.text('ACTIVE'), findsNWidgets(2));
+      expect(find.text('RESOLVED'), findsOneWidget);
     });
 
     testWidgets('Status filter toggles Active and Resolved issues in ProfileScreen',
@@ -268,25 +266,24 @@ void main() {
       await tester.pumpAndSettle();
 
       // Active issues should be visible, resolved should be filtered out
-      expect(find.text('Broken water pipeline on 14th Cross'), findsOneWidget);
-      expect(find.text('Street lights malfunctioning on Main Boulevard'),
-          findsOneWidget);
-      expect(find.text('Pothole repaired near market circle'), findsNothing);
+      expect(find.byKey(const Key('userIssueItem_101')), findsOneWidget);
+      expect(find.byKey(const Key('userIssueItem_102')), findsOneWidget);
+      expect(find.byKey(const Key('userIssueItem_103')), findsNothing);
 
       // Tap Resolved filter
       await tester.tap(find.byKey(const Key('myIssuesFilter_resolved')));
       await tester.pumpAndSettle();
 
       // Resolved issue should be visible, active issues should be filtered out
-      expect(find.text('Pothole repaired near market circle'), findsOneWidget);
-      expect(find.text('Broken water pipeline on 14th Cross'), findsNothing);
+      expect(find.byKey(const Key('userIssueItem_103')), findsOneWidget);
+      expect(find.byKey(const Key('userIssueItem_101')), findsNothing);
 
       // Tap All filter
       await tester.tap(find.byKey(const Key('myIssuesFilter_all')));
       await tester.pumpAndSettle();
 
-      expect(find.text('Broken water pipeline on 14th Cross'), findsOneWidget);
-      expect(find.text('Pothole repaired near market circle'), findsOneWidget);
+      expect(find.byKey(const Key('userIssueItem_101')), findsOneWidget);
+      expect(find.byKey(const Key('userIssueItem_103')), findsOneWidget);
     });
 
     testWidgets('Tapping user issue in ProfileScreen navigates to IssueDetailScreen',
@@ -380,6 +377,7 @@ void main() {
 
       await tester.pumpWidget(
         createTestApp(
+          session: const Session(accessToken: 'token', userId: 999, isGuest: false),
           child: Scaffold(
             body: IssueCard(issue: issueWithReporter),
           ),
@@ -404,6 +402,7 @@ void main() {
 
       await tester.pumpWidget(
         createTestApp(
+          session: const Session(accessToken: 'token', userId: 999, isGuest: false),
           child: const IssueDetailScreen(issueId: 101),
         ),
       );

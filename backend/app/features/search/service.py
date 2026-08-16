@@ -2,6 +2,7 @@ from datetime import UTC, datetime
 
 from sqlalchemy import Select, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.core.exceptions import AppError
 from app.features.issues.geo import bbox_statement, haversine_km
@@ -61,7 +62,7 @@ async def search_issues(
         Issue.ward.ilike(pattern, escape="\\"),
     )
 
-    statement: Select[tuple[Issue]] = select(Issue).where(text_match)
+    statement: Select[tuple[Issue]] = select(Issue).options(selectinload(Issue.reporter)).where(text_match)
     if latitude is not None and longitude is not None:
         statement = await bbox_statement(latitude, longitude, radius_km)
         statement = statement.where(text_match)

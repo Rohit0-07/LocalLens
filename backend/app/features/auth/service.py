@@ -1,7 +1,8 @@
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.core.config import Settings
 from app.core.exceptions import AppError
@@ -58,6 +59,45 @@ async def request_otp(session: AsyncSession, settings: Settings, phone: str) -> 
         logger.info("otp for %s is %s", phone, code)
 
 
+async def _default_username(
+    session: AsyncSession, phone: str | None, email: str | None
+) -> str:
+    """Generate a unique default username for a newly created user.
+
+    Derives a base from the phone tail (or email local part) and appends a
+    numeric suffix until it is unique, so every real account is identifiable
+    in the feed (instead of falling back to a generic "Verified citizen").
+    """
+    if phone:
+        digits = "".join(ch for ch in phone if ch.isdigit())
+        base = f"citizen_{digits[-4:]}" if digits else "citizen"
+    elif email:
+        base = f"citizen_{email.split('@')[0][:8]}"
+    else:
+        base = "citizen"
+    username = base
+    counter = 1
+    while True:
+        exists = await session.scalar(
+            select(User.id).where(User.username == username)
+        )
+        if exists is None:
+            return username
+        counter += 1
+        username = f"{base}{counter}"
+
+
+async def _ensure_identity(
+    session: AsyncSession, user: User, phone: str | None = None, email: str | None = None
+) -> None:
+    """Backfill a default username for accounts lacking one."""
+    if getattr(user, "username", None):
+        return
+    user.username = await _default_username(session, phone, email)
+    await session.commit()
+    await session.refresh(user)
+
+
 async def verify_otp(session: AsyncSession, settings: Settings, phone: str, code: str) -> User:
     otp_result = await session.execute(
         select(OtpCode).where(OtpCode.phone == phone).order_by(OtpCode.created_at.desc()).limit(1)
@@ -76,6 +116,7 @@ async def verify_otp(session: AsyncSession, settings: Settings, phone: str, code
         session.add(user)
     await session.commit()
     await session.refresh(user)
+    await _ensure_identity(session, user, phone=phone)
     return user
 
 
@@ -114,6 +155,36 @@ async def verify_email_otp(
         session.add(user)
     await session.commit()
     await session.refresh(user)
+    await _ensure_identity(session, user, email=email)
+    return user
+
+
+async def update_profile(
+    session: AsyncSession,
+    user: User,
+    *,
+    display_name: str | None = None,
+    username: str | None = None,
+    date_of_birth: date | None = None,
+    photo_url: str | None = None,
+) -> User:
+    if display_name is not None:
+        user.display_name = display_name.strip() or None
+    if username is not None:
+        username = username.strip()
+        if username:
+            existing = await session.execute(
+                select(User.id).where(User.username == username, User.id != user.id)
+            )
+            if existing.scalar_one_or_none() is not None:
+                raise AppError("Username already taken", code="username_taken", status_code=409)
+        user.username = username or None
+    if date_of_birth is not None:
+        user.date_of_birth = date_of_birth
+    if photo_url is not None:
+        user.photo_url = photo_url.strip() or None
+    await session.commit()
+    await session.refresh(user)
     return user
 
 
@@ -124,7 +195,7 @@ async def get_user_issues(
     limit: int = 50,
     offset: int = 0,
 ) -> list[Issue]:
-    stmt = select(Issue).where(Issue.reporter_id == user_id)
+    stmt = select(Issue).options(selectinload(Issue.reporter)).where(Issue.reporter_id == user_id)
     if status_filter:
         stmt = stmt.where(Issue.status == status_filter)
     stmt = stmt.order_by(Issue.created_at.desc(), Issue.id.desc()).limit(limit).offset(offset)
@@ -179,6 +250,7 @@ async def get_public_user_profile(
 
     public_issues_stmt = (
         select(Issue)
+        .options(selectinload(Issue.reporter))
         .where(
             Issue.reporter_id == user_id,
             Issue.is_anonymous.is_(False),
@@ -200,6 +272,8 @@ async def get_public_user_profile(
     return PublicUserProfileOut(
         id=user.id,
         anon_id=anon_id,
+        display_name=user.display_name,
+        username=user.username,
         role=user.role,
         is_verified=is_verified,
         ward=ward,

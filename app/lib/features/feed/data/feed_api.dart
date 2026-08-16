@@ -190,12 +190,20 @@ class FeedApi implements FeedRepository {
 
   @override
   Future<List<Issue>> fetchUserIssues({int? userId, String? status}) async {
-    final query = <String, dynamic>{};
-    if (userId != null) query['user_id'] = userId;
-    if (status != null) query['status'] = status;
+    if (userId != null) {
+      final profile = await _client.getJson('/users/$userId');
+      final items =
+          (profile as Map<dynamic, dynamic>)['public_issues'] as List<dynamic>?;
+      if (items == null) return const [];
+      return items
+          .map((item) => Issue.fromJson(item as Map<String, Object?>))
+          .toList(growable: false);
+    }
 
-    final path = userId != null ? '/users/$userId/issues' : '/issues';
-    final data = await _client.getJson(path, query: query.isNotEmpty ? query : null);
+    final query = <String, dynamic>{};
+    if (status != null) query['status'] = status;
+    final data =
+        await _client.getJson('/auth/me/issues', query: query.isNotEmpty ? query : null);
     final items = data as List<dynamic>;
     return items
         .map((item) => Issue.fromJson(item as Map<String, Object?>))
@@ -204,7 +212,7 @@ class FeedApi implements FeedRepository {
 
   @override
   Future<Map<String, dynamic>> fetchPublicUserProfile(int userId) async {
-    final data = await _client.getJson('/users/$userId/public-profile');
+    final data = await _client.getJson('/users/$userId');
     return (data as Map<dynamic, dynamic>).cast<String, dynamic>();
   }
 }

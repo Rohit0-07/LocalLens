@@ -124,24 +124,80 @@ def _dedup(
         session.add(factory(row))
 
 
-def _sync_media_files() -> None:
-    """Sync sample media assets from seed/media to uploads/media and backend/uploads/media."""
+def _sync_media_files(data: dict[str, list[dict[str, Any]]] | None = None) -> None:
+    """Sync sample media assets (seed/media + seed/images) to the upload dirs."""
     seed_media = _REPO_ROOT / "seed" / "media"
     upload_dirs = [
         _REPO_ROOT / "uploads" / "media",
         _REPO_ROOT / "backend" / "uploads" / "media",
         Path("uploads/media"),
     ]
-    if not seed_media.exists():
-        return
 
-    for u_dir in upload_dirs:
-        u_dir.mkdir(parents=True, exist_ok=True)
+    def _copy_tracked(filename: str, src_paths: list[Path]) -> None:
+        for src in src_paths:
+            if not src.exists() or not src.is_file():
+                continue
+            for u_dir in upload_dirs:
+                u_dir.mkdir(parents=True, exist_ok=True)
+                dst_file = u_dir / filename
+                if not dst_file.exists() or dst_file.stat().st_size != src.stat().st_size:
+                    shutil.copy2(src, dst_file)
+            break
+
+    if seed_media.exists():
         for src_file in seed_media.glob("*"):
             if src_file.is_file():
-                dst_file = u_dir / src_file.name
-                if not dst_file.exists() or dst_file.stat().st_size != src_file.stat().st_size:
-                    shutil.copy2(src_file, dst_file)
+                _copy_tracked(src_file.name, [src_file])
+
+    if data is None:
+        data = _load_data()
+
+    _IMAGE_EXTS = (".jpg", ".jpeg", ".png", ".webp", ".gif")
+
+    # Map each seeded issue's media URLs to a sample image from
+    # seed/images/<category>/ so the home feed actually shows photos.
+    # Issues whose category has no sample folder fall back to any sample.
+    issues = data.get("issues", [])
+    images_root = _REPO_ROOT / "seed" / "images"
+    all_category_dirs = sorted(p for p in images_root.iterdir() if p.is_dir()) if images_root.exists() else []
+
+    def _sample_sources(category: str) -> list[Path]:
+        cat_dir = images_root / category
+        if cat_dir.is_dir():
+            found = sorted(p for p in cat_dir.iterdir() if p.is_file())
+            if found:
+                return found
+        # Fallback: any category with samples
+        for fallback_dir in all_category_dirs:
+            found = sorted(p for p in fallback_dir.iterdir() if p.is_file())
+            if found:
+                return found
+        return []
+
+    for issue_row in issues:
+        category = issue_row.get("category", "other")
+        refs = list(issue_row.get("media_urls") or [])
+        if issue_row.get("media_url"):
+            refs.insert(0, issue_row["media_url"])
+        if issue_row.get("video_url"):
+            refs.append(issue_row["video_url"])
+        if issue_row.get("resolution_proof"):
+            refs.append(issue_row["resolution_proof"])
+        for ref in refs:
+            if not ref or not ref.startswith("/"):
+                continue
+            filename = Path(ref).name
+            if not filename.lower().endswith(_IMAGE_EXTS):
+                continue
+            _copy_tracked(filename, _sample_sources(category))
+        # Ensure thumbnail URLs referenced by media rows exist (point at the sample image)
+        for media_row in data.get("media", []):
+            thumb = media_row.get("thumbnail_url", "")
+            if thumb and thumb.startswith("/"):
+                filename = Path(thumb).name
+                if not filename.lower().endswith(_IMAGE_EXTS):
+                    continue
+                _copy_tracked(filename, _sample_sources(category))
 
 
 async def _seed_users(
@@ -155,6 +211,10 @@ async def _seed_users(
             id=row["id"],
             phone=row.get("phone"),
             email=row.get("email"),
+            display_name=row.get("display_name"),
+            username=row.get("username"),
+            date_of_birth=_parse_date(row.get("date_of_birth")),
+            photo_url=row.get("photo_url"),
             is_admin=row.get("is_admin", False),
             role=row.get("role", "citizen"),
             is_verified=row.get("is_verified", True),
@@ -202,6 +262,7 @@ async def _seed_issues(
     def factory(row: dict[str, Any]) -> Issue:
         lat = float(row["latitude"])
         lng = float(row["longitude"])
+        raw_urls = row.get("media_urls") or []
         return Issue(
             id=row["id"],
             title=row["title"],
@@ -218,6 +279,9 @@ async def _seed_issues(
             is_shielded=row.get("is_shielded", False),
             is_hidden=row.get("is_hidden", False),
             reporter_id=row["reporter_id"],
+            media_url=row.get("media_url"),
+            video_url=row.get("video_url"),
+            media_urls=json.dumps(raw_urls) if raw_urls else None,
             created_at=_parse_dt(row.get("created_at")),
             acknowledged_at=_parse_dt(row.get("acknowledged_at")),
             resolved_at=_parse_dt(row.get("resolved_at")),
@@ -539,9 +603,9 @@ async def _main(args: argparse.Namespace) -> None:
                 }
 
             # Sync demo media and video files to upload directories
-            _sync_media_files()
-
             data = _load_data()
+            _sync_media_files(data)
+
             secret = settings.jwt_secret
 
             await _seed_users(session, data["users"], existing.get("users", set()))

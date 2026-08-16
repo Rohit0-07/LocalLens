@@ -20,6 +20,8 @@ _Issue _$IssueFromJson(Map<String, dynamic> json) => _Issue(
   isFuzzed: json['is_fuzzed'] as bool? ?? false,
   isShielded: json['is_shielded'] as bool? ?? false,
   reporterLabel: json['reporter_label'] as String,
+  reporterName: json['reporter_name'] as String?,
+  reporterPhotoUrl: json['reporter_photo_url'] as String?,
   createdAt: DateTime.parse(json['created_at'] as String),
   acknowledgedAt: json['acknowledged_at'] == null
       ? null
@@ -56,6 +58,8 @@ Map<String, dynamic> _$IssueToJson(_Issue instance) => <String, dynamic>{
   'is_fuzzed': instance.isFuzzed,
   'is_shielded': instance.isShielded,
   'reporter_label': instance.reporterLabel,
+  'reporter_name': instance.reporterName,
+  'reporter_photo_url': instance.reporterPhotoUrl,
   'created_at': instance.createdAt.toIso8601String(),
   'acknowledged_at': instance.acknowledgedAt?.toIso8601String(),
   'resolved_at': instance.resolvedAt?.toIso8601String(),

@@ -208,18 +208,22 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                             if (item.win != null) {
                               return WinCard(win: item.win!);
                             }
+                            break;
                           case FeedItemType.notice:
                             if (item.notice != null) {
                               return NoticeCard(notice: item.notice!);
                             }
+                            break;
                           case FeedItemType.localTalk:
                             if (item.localTalk != null) {
                               return LocalTalkCard(post: item.localTalk!);
                             }
+                            break;
                           case FeedItemType.issue:
                             if (item.issue != null) {
                               return IssueCard(issue: item.issue!);
                             }
+                            break;
                         }
                         return const SizedBox.shrink();
                       },

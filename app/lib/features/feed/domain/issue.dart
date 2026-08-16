@@ -19,6 +19,8 @@ abstract class Issue with _$Issue {
     @JsonKey(name: 'is_fuzzed') @Default(false) bool isFuzzed,
     @JsonKey(name: 'is_shielded') @Default(false) bool isShielded,
     @JsonKey(name: 'reporter_label') required String reporterLabel,
+    @JsonKey(name: 'reporter_name') String? reporterName,
+    @JsonKey(name: 'reporter_photo_url') String? reporterPhotoUrl,
     @JsonKey(name: 'created_at') required DateTime createdAt,
     @JsonKey(name: 'acknowledged_at') DateTime? acknowledgedAt,
     @JsonKey(name: 'resolved_at') DateTime? resolvedAt,

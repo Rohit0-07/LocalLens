@@ -1,4 +1,7 @@
+from fastapi import FastAPI
 from httpx import AsyncClient
+from sqlalchemy import update
+from app.features.auth.models import User
 
 _PAYLOAD: dict = {
     "title": "Deep pothole near the bus stop",
@@ -25,7 +28,7 @@ async def test_create_issue_requires_auth(client: AsyncClient) -> None:
 async def test_create_and_list_issue(client: AsyncClient, auth_headers: dict[str, str]) -> None:
     created = await _create(client, auth_headers)
     assert created["status"] == "unacknowledged"
-    assert created["reporter_label"] == "Verified citizen"
+    assert created["reporter_label"] == "citizen_3210"
 
     response = await client.get(
         "/api/v1/issues", params={"latitude": 19.1136, "longitude": 72.8697}
@@ -162,3 +165,20 @@ async def test_resolution_and_quorum_voting(
     )
     assert vote_resp.status_code == 200
     assert vote_resp.json()["confirmations_count"] == 1
+
+
+async def test_reporter_label_masks_phone_when_user_has_no_profile_name(
+    app: FastAPI, client: AsyncClient, auth_headers: dict[str, str]
+) -> None:
+    async with app.state.database.session_factory() as session:
+        await session.execute(
+            update(User)
+            .where(User.phone == "+919876543210")
+            .values(username=None, display_name=None)
+        )
+        await session.commit()
+
+    created = await _create(client, auth_headers)
+    masked = "Citizen \u2022\u2022\u2022\u20223210"
+    assert created["reporter_label"] == masked
+    assert created["reporter_name"] == masked

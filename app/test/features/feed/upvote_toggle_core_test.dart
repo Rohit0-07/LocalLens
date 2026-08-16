@@ -292,22 +292,24 @@ void main() {
       expect(issue.hasUpvoted, true);
     });
 
-    test('fetchUserIssues queries /users/:id/issues when userId is provided', () async {
-      client.cannedResponse = [
-        _sampleIssueJson(id: 101),
-        _sampleIssueJson(id: 102),
-      ];
+    test('fetchUserIssues reads public_issues from /users/:id when userId is provided', () async {
+      client.cannedResponse = {
+        'id': 42,
+        'public_issues': [
+          _sampleIssueJson(id: 101),
+          _sampleIssueJson(id: 102),
+        ],
+      };
 
       final issues = await api.fetchUserIssues(userId: 42, status: 'open');
 
       expect(client.lastMethod, 'GET');
-      expect(client.lastPath, '/users/42/issues');
-      expect(client.lastQuery, {'user_id': 42, 'status': 'open'});
+      expect(client.lastPath, '/users/42');
       expect(issues.length, 2);
       expect(issues.first.id, 101);
     });
 
-    test('fetchUserIssues queries /issues when userId is null', () async {
+    test('fetchUserIssues queries /auth/me/issues when userId is null', () async {
       client.cannedResponse = [
         _sampleIssueJson(id: 201),
       ];
@@ -315,14 +317,14 @@ void main() {
       final issues = await api.fetchUserIssues(status: 'resolved');
 
       expect(client.lastMethod, 'GET');
-      expect(client.lastPath, '/issues');
+      expect(client.lastPath, '/auth/me/issues');
       expect(client.lastQuery, {'status': 'resolved'});
       expect(issues.length, 1);
     });
 
-    test('fetchPublicUserProfile queries /users/:id/public-profile', () async {
+    test('fetchPublicUserProfile queries /users/:id', () async {
       client.cannedResponse = {
-        'user_id': 88,
+        'id': 88,
         'username': 'civic_hero',
         'points': 250,
       };
@@ -330,7 +332,7 @@ void main() {
       final profile = await api.fetchPublicUserProfile(88);
 
       expect(client.lastMethod, 'GET');
-      expect(client.lastPath, '/users/88/public-profile');
+      expect(client.lastPath, '/users/88');
       expect(profile['username'], 'civic_hero');
       expect(profile['points'], 250);
     });

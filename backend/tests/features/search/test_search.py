@@ -345,6 +345,8 @@ async def test_search_result_schema(client, create_user_headers):
         "is_fuzzed",
         "is_shielded",
         "reporter_label",
+        "reporter_name",
+        "reporter_photo_url",
         "anonymous_identity",
         "created_at",
         "acknowledged_at",

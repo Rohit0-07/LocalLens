@@ -1,6 +1,7 @@
 import math
 
 from sqlalchemy import Select, select
+from sqlalchemy.orm import selectinload
 
 from app.features.issues.models import Issue
 
@@ -21,7 +22,11 @@ async def bbox_statement(
 ) -> Select[tuple[Issue]]:
     delta_lat = radius_km / 111.0
     delta_lng = radius_km / (111.0 * math.cos(math.radians(latitude))) if latitude != 90 else 0.0
-    return select(Issue).where(
-        Issue.latitude.between(latitude - delta_lat, latitude + delta_lat),
-        Issue.longitude.between(longitude - delta_lng, longitude + delta_lng),
+    return (
+        select(Issue)
+        .options(selectinload(Issue.reporter))
+        .where(
+            Issue.latitude.between(latitude - delta_lat, latitude + delta_lat),
+            Issue.longitude.between(longitude - delta_lng, longitude + delta_lng),
+        )
     )

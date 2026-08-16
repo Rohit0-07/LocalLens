@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../../core/feedback/error_copy.dart';
 import '../../../../core/l10n/app_strings.dart';
-import '../../../../core/router/route_paths.dart';
 import '../../../../core/services/location_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/media_url.dart';
+import '../../../../core/utils/profile_navigation.dart';
 import '../../../../core/utils/relative_time.dart';
 import '../../../../shared/widgets/empty_state.dart';
 import '../../../../shared/widgets/media_preview_widget.dart';
@@ -125,11 +124,7 @@ class IssueDetailScreen extends ConsumerWidget {
                       child: InkWell(
                         key: Key('issueDetailReporter_${issue.id}'),
                         onTap: issue.reporterId != null
-                            ? () => context.push(
-                                  RoutePaths.publicProfileFor(
-                                    issue.reporterId!,
-                                  ),
-                                )
+                            ? () => openReporterProfile(context, ref, issue.reporterId)
                             : null,
                         borderRadius: BorderRadius.circular(8),
                         child: Row(

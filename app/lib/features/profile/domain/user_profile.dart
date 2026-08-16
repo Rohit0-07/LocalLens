@@ -2,6 +2,10 @@ class UserProfile {
   final Object id;
   final String? phone;
   final String? email;
+  final String? displayName;
+  final String? username;
+  final String? dateOfBirth;
+  final String? photoUrl;
   final String anonymousIdentity;
   final String anonId;
   final bool isGuest;
@@ -13,6 +17,10 @@ class UserProfile {
     required this.id,
     this.phone,
     this.email,
+    this.displayName,
+    this.username,
+    this.dateOfBirth,
+    this.photoUrl,
     required this.anonymousIdentity,
     required this.anonId,
     this.isGuest = false,
@@ -27,6 +35,10 @@ class UserProfile {
       id: json['id'] ?? '',
       phone: json['phone'] as String?,
       email: json['email'] as String?,
+      displayName: json['display_name'] as String?,
+      username: json['username'] as String?,
+      dateOfBirth: json['date_of_birth'] as String?,
+      photoUrl: json['photo_url'] as String?,
       anonymousIdentity: (json['anonymous_identity'] ?? anon) as String,
       anonId: anon,
       isGuest: json['is_guest'] as bool? ?? false,

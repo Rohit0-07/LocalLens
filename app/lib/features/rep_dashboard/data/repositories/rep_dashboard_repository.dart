@@ -14,7 +14,7 @@ class RepDashboardRepository {
 
   Future<RepresentativeProfile> fetchRepresentativeProfile() async {
     try {
-      final json = await _apiClient.getJson('/api/v1/representatives/me');
+      final json = await _apiClient.getJson('/representatives/me');
       final profile = RepresentativeProfile.fromJson(json as Map<String, dynamic>);
       await _localStore.setString('rep_profile', jsonEncode(profile.toJson()));
       return profile;
@@ -38,7 +38,7 @@ class RepDashboardRepository {
     int offset = 0,
   }) async {
     final json = await _apiClient.getJson(
-      '/api/v1/representatives/ward-issues',
+      '/representatives/ward-issues',
       query: {
         'filter': filter,
         'limit': limit,
@@ -60,14 +60,14 @@ class RepDashboardRepository {
       'status_update': ?statusUpdate,
     };
     final json = await _apiClient.postJson(
-      '/api/v1/issues/$issueId/official-response',
+      '/issues/$issueId/official-response',
       body: body,
     );
     return OfficialResponse.fromJson(json as Map<String, dynamic>);
   }
 
   Future<List<OfficialResponse>> fetchOfficialResponses(int issueId) async {
-    final json = await _apiClient.getJson('/api/v1/issues/$issueId/official-responses');
+    final json = await _apiClient.getJson('/issues/$issueId/official-responses');
     final list = json as List<dynamic>;
     return list.map((e) => OfficialResponse.fromJson(e as Map<String, dynamic>)).toList();
   }

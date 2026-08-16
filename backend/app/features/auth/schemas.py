@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -36,12 +36,23 @@ class TokenResponse(BaseModel):
     is_guest: bool = False
 
 
+class ProfileUpdate(BaseModel):
+    display_name: str | None = Field(default=None, max_length=120)
+    username: str | None = Field(default=None, min_length=3, max_length=40, pattern=r"^[a-zA-Z0-9_.]+$")
+    date_of_birth: date | None = None
+    photo_url: str | None = Field(default=None, max_length=500)
+
+
 class UserOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int | str
     phone: str | None = None
     email: str | None = None
+    display_name: str | None = None
+    username: str | None = None
+    date_of_birth: date | None = None
+    photo_url: str | None = None
     anonymous_identity: str
     anon_id: str | None = None
     role: str = "citizen"
@@ -59,6 +70,8 @@ class PublicUserProfileOut(BaseModel):
 
     id: int
     anon_id: str
+    display_name: str | None = None
+    username: str | None = None
     role: str = "citizen"
     is_verified: bool = True
     ward: str | None = "Ward 45, Urban Central"

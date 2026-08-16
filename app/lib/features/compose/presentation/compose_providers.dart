@@ -5,12 +5,26 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/storage/storage_providers.dart';
 import '../../feed/presentation/feed_providers.dart';
+import '../../geo/presentation/providers/geo_providers.dart';
 import '../data/hive_draft_store.dart';
 import '../data/media_service.dart';
 import '../data/offline_outbox_queue.dart';
 import '../domain/compose_draft.dart';
 import '../domain/draft_store.dart';
 import '../domain/near_duplicate_candidate.dart';
+
+/// Resolves the coordinates to create an issue at, using the exact same
+/// coordinate source as the home feed (`feedCoordinatesProvider`). This
+/// guarantees a newly created issue always falls inside the feed's query
+/// radius; using real device GPS here while the feed anchors to the fixed
+/// reference point could otherwise make new issues invisible.
+Future<({double lat, double lng})> _createCoords(Ref ref) async {
+  try {
+    return await ref.read(feedCoordinatesProvider.future);
+  } catch (_) {
+    return (lat: defaultLatitude, lng: defaultLongitude);
+  }
+}
 
 final draftStoreProvider = Provider<DraftStore>(
   (ref) => HiveDraftStore(ref.watch(localStoreProvider)),
@@ -51,6 +65,12 @@ class ComposeController extends Notifier<ComposeDraft> {
     await ref.read(draftStoreProvider).save(draft);
   }
 
+  /// Discards the current draft without publishing it.
+  Future<void> discard() async {
+    await ref.read(draftStoreProvider).clear();
+    state = const ComposeDraft();
+  }
+
   /// Uploads the attached media bytes (if any) and publishes the issue with
   /// the resulting media URLs. Falls back to the offline outbox on failure.
   Future<bool> submit({
@@ -60,6 +80,17 @@ class ComposeController extends Notifier<ComposeDraft> {
     final current = state;
     final repo = ref.read(feedRepositoryProvider);
     final outbox = ref.read(offlineOutboxProvider);
+
+    // Use the same coordinate resolution as the home feed so the created
+    // issue is guaranteed to be visible in the feed's query radius. Prefer
+    // the draft's explicit location (locked by the user) when present.
+    var lat = current.latitude;
+    var lng = current.longitude;
+    if (lat == null || lng == null) {
+      final coords = await _createCoords(ref);
+      lat = coords.lat;
+      lng = coords.lng;
+    }
 
     List<String> mediaUrls = const [];
     bool directSuccess = false;
@@ -81,8 +112,8 @@ class ComposeController extends Notifier<ComposeDraft> {
         title: current.title,
         description: current.description,
         category: current.category,
-        latitude: current.latitude ?? defaultLatitude,
-        longitude: current.longitude ?? defaultLongitude,
+        latitude: lat,
+        longitude: lng,
         isAnonymous: current.isAnonymous,
         isFuzzed: current.isFuzzed,
         isShielded: current.isShielded,

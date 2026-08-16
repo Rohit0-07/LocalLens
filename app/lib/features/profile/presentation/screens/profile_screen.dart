@@ -5,8 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/l10n/app_strings.dart';
 import '../../../../core/router/route_paths.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/utils/relative_time.dart';
-import '../../../../shared/widgets/status_badge.dart';
+import '../../../../core/utils/media_url.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
 import '../../../compose/presentation/compose_providers.dart';
 import '../../../feed/domain/issue.dart';
@@ -20,17 +19,6 @@ class ProfileScreen extends ConsumerStatefulWidget {
 }
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
-  static const _categoryIcons = <String, IconData>{
-    'road': Icons.alt_route_rounded,
-    'water': Icons.water_drop_outlined,
-    'power': Icons.bolt_rounded,
-    'lighting': Icons.lightbulb_outline_rounded,
-    'waste': Icons.delete_outline_rounded,
-    'sanitation': Icons.recycling_rounded,
-    'sewage': Icons.water_rounded,
-    'other': Icons.flag_outlined,
-  };
-
   @override
   Widget build(BuildContext context) {
     final profileAsync = ref.watch(userProfileProvider);
@@ -41,7 +29,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
       appBar: AppBar(
@@ -106,19 +93,34 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               width: 2,
                             ),
                           ),
-                          child: CircleAvatar(
-                            radius: 40,
-                            backgroundColor: AppColors.anonMask.withValues(
-                              alpha: 0.14,
-                            ),
-                            child: Icon(
-                              profile.isGuest
-                                  ? Icons.person_outline
-                                  : Icons.masks_outlined,
-                              size: 34,
-                              color: AppColors.anonMask,
-                            ),
-                          ),
+                          child: profile.photoUrl != null &&
+                                  profile.photoUrl!.isNotEmpty
+                              ? ClipOval(
+                                  child: Image.network(
+                                    resolveMediaUrl(profile.photoUrl),
+                                    width: 80,
+                                    height: 80,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, _, _) => const Icon(
+                                      Icons.masks_outlined,
+                                      size: 34,
+                                      color: AppColors.anonMask,
+                                    ),
+                                  ),
+                                )
+                              : CircleAvatar(
+                                  radius: 40,
+                                  backgroundColor: AppColors.anonMask.withValues(
+                                    alpha: 0.14,
+                                  ),
+                                  child: Icon(
+                                    profile.isGuest
+                                        ? Icons.person_outline
+                                        : Icons.masks_outlined,
+                                    size: 34,
+                                    color: AppColors.anonMask,
+                                  ),
+                                ),
                         ),
                         const SizedBox(height: 10),
                         Row(
@@ -126,13 +128,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           children: [
                             Flexible(
                               child: Text(
-                                profile.phone != null
-                                    ? profile.phone!
-                                    : profile.email != null
-                                        ? profile.email!
-                                        : profile.isGuest
-                                            ? 'Guest Session'
-                                            : 'Anonymous Citizen',
+                                profile.displayName != null &&
+                                        profile.displayName!.isNotEmpty
+                                    ? profile.displayName!
+                                    : profile.phone != null
+                                        ? profile.phone!
+                                        : profile.email != null
+                                            ? profile.email!
+                                            : profile.isGuest
+                                                ? 'Guest Session'
+                                                : 'Anonymous Citizen',
                                 style: theme.textTheme.titleLarge?.copyWith(
                                   fontWeight: FontWeight.w800,
                                 ),
@@ -166,6 +171,19 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     ),
                   ),
                   const SizedBox(height: 8),
+
+                  if (!profile.isGuest)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Center(
+                        child: FilledButton.tonalIcon(
+                          key: const Key('editProfileButton'),
+                          onPressed: () => context.push(RoutePaths.editProfile),
+                          icon: const Icon(Icons.edit_outlined, size: 16),
+                          label: const Text('Edit Profile'),
+                        ),
+                      ),
+                    ),
 
                   // ── Guest Banner ──────────────────────────────────────
                   if (profile.isGuest) ...[
@@ -326,7 +344,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         const SizedBox(width: 8),
                         _FilterChip(
                           key: const Key('myIssuesFilter_active'),
-                          label: 'Active',
+                          label: 'Unresolved',
                           selected: selectedFilter == 'active',
                           onSelected: () => ref
                               .read(myIssuesFilterProvider.notifier)
@@ -421,20 +439,20 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           );
                         }
 
-                        return ListView.separated(
+                        return GridView.builder(
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 3,
+                            crossAxisSpacing: 4,
+                            mainAxisSpacing: 4,
+                          ),
                           itemCount: issues.length,
-                          separatorBuilder: (context, index) =>
-                              const SizedBox(height: 8),
                           itemBuilder: (context, index) {
                             final issue = issues[index];
-                            return _UserIssueTile(
+                            return _UserIssueGridTile(
                               issue: issue,
-                              isDark: isDark,
-                              categoryIcon: _categoryIcons[
-                                      issue.category.toLowerCase()] ??
-                                  Icons.flag_outlined,
                               onTap: () => context.push(
                                 RoutePaths.issueDetailFor(issue.id),
                               ),
@@ -458,21 +476,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   Card(
                     child: Column(
                       children: [
-                        ListTile(
-                          key: const Key('openSettingsTile'),
-                          leading: const Icon(Icons.settings_outlined),
-                          title: Text(
-                            context.tr('profile_settings_header'),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          subtitle: const Text(
-                            'Theme, language, notifications, privacy & account',
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          trailing: const Icon(Icons.chevron_right),
-                          onTap: () => context.push(RoutePaths.settings),
-                        ),
-                        const Divider(height: 1),
                         ListTile(
                           key: const Key('viewGamificationButton'),
                           dense: true,
@@ -568,17 +571,13 @@ class _FilterChip extends StatelessWidget {
   }
 }
 
-class _UserIssueTile extends StatelessWidget {
-  const _UserIssueTile({
+class _UserIssueGridTile extends StatelessWidget {
+  const _UserIssueGridTile({
     required this.issue,
-    required this.isDark,
-    required this.categoryIcon,
     required this.onTap,
   });
 
   final Issue issue;
-  final bool isDark;
-  final IconData categoryIcon;
   final VoidCallback onTap;
 
   @override
@@ -586,100 +585,83 @@ class _UserIssueTile extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final categoryColor = AppColors.categoryColorFor(issue.category);
-    final categorySurface = AppColors.categorySurfaceFor(
-      issue.category,
-      isDark: isDark,
-    );
 
-    return Card(
+    return GestureDetector(
       key: Key('userIssueItem_${issue.id}'),
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
-        side: BorderSide(
-          color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
-        ),
-      ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: categorySurface,
-                      borderRadius: BorderRadius.circular(6),
+      onTap: onTap,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(10),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            if (issue.mediaUrls.isNotEmpty && issue.mediaUrls.first.isNotEmpty)
+              Image.network(
+                resolveMediaUrl(issue.mediaUrls.first),
+                fit: BoxFit.cover,
+                errorBuilder: (_, _, _) => _gridFallback(
+                  theme,
+                  colorScheme,
+                  categoryColor,
+                ),
+                loadingBuilder: (context, child, progress) => progress == null
+                    ? child
+                    : _gridFallback(theme, colorScheme, categoryColor),
+              )
+            else
+              _gridFallback(theme, colorScheme, categoryColor),
+            Positioned(
+              left: 4,
+              top: 4,
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.55),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      issue.isResolved
+                          ? Icons.check_circle
+                          : Icons.pending_outlined,
+                      size: 11,
+                      color: issue.isResolved
+                          ? const Color(0xFF4CAF50)
+                          : Colors.amberAccent,
                     ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(categoryIcon, size: 12, color: categoryColor),
-                        const SizedBox(width: 4),
-                        Text(
-                          issue.category.toUpperCase(),
-                          style: TextStyle(
-                            color: categoryColor,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ],
+                    const SizedBox(width: 3),
+                    Text(
+                      issue.isResolved ? 'RESOLVED' : 'ACTIVE',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 9,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  StatusBadge(status: issue.status),
-                  const Spacer(),
-                  Text(
-                    formatRelativeTime(issue.createdAt),
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                      fontSize: 11,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                issue.title,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
+                  ],
                 ),
               ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Icon(
-                    Icons.thumb_up_outlined,
-                    size: 14,
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    '${issue.upvotesCount} upvotes',
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  const Spacer(),
-                  Icon(
-                    Icons.chevron_right,
-                    size: 18,
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                ],
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
+      ),
+    );
+  }
+
+  Widget _gridFallback(
+    ThemeData theme,
+    ColorScheme colorScheme,
+    Color categoryColor,
+  ) {
+    return Container(
+      color: categoryColor.withValues(alpha: 0.18),
+      alignment: Alignment.center,
+      child: Icon(
+        Icons.flag_outlined,
+        size: 26,
+        color: categoryColor,
       ),
     );
   }

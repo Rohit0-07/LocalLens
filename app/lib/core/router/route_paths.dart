@@ -18,6 +18,7 @@ abstract final class RoutePaths {
   static const wardDetail = '/ward/:slug';
   static const outbox = '/outbox';
   static const settings = '/settings';
+  static const editProfile = '/edit-profile';
   static const publicProfile = '/users/:id';
 
   static const onboarding = '/onboarding';
