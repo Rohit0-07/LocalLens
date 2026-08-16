@@ -1,10 +1,12 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/storage/storage_providers.dart';
 import '../../feed/presentation/feed_providers.dart';
 import '../data/hive_draft_store.dart';
+import '../data/media_service.dart';
 import '../data/offline_outbox_queue.dart';
 import '../domain/compose_draft.dart';
 import '../domain/draft_store.dart';
@@ -49,13 +51,32 @@ class ComposeController extends Notifier<ComposeDraft> {
     await ref.read(draftStoreProvider).save(draft);
   }
 
-  Future<bool> submit() async {
+  /// Uploads the attached media bytes (if any) and publishes the issue with
+  /// the resulting media URLs. Falls back to the offline outbox on failure.
+  Future<bool> submit({
+    List<Uint8List> mediaBytes = const [],
+    bool isInAppCamera = false,
+  }) async {
     final current = state;
     final repo = ref.read(feedRepositoryProvider);
     final outbox = ref.read(offlineOutboxProvider);
 
+    List<String> mediaUrls = const [];
     bool directSuccess = false;
     try {
+      if (mediaBytes.isNotEmpty) {
+        final mediaService = ref.read(mediaServiceProvider);
+        final results = <String>[];
+        for (final bytes in mediaBytes) {
+          final result = await mediaService.uploadMedia(
+            bytes: bytes,
+            isInAppCamera: isInAppCamera,
+            isFuzzed: current.isFuzzed,
+          );
+          results.add(result.url);
+        }
+        mediaUrls = results;
+      }
       await repo.createIssue(
         title: current.title,
         description: current.description,
@@ -65,6 +86,7 @@ class ComposeController extends Notifier<ComposeDraft> {
         isAnonymous: current.isAnonymous,
         isFuzzed: current.isFuzzed,
         isShielded: current.isShielded,
+        mediaUrls: mediaUrls,
       );
       directSuccess = true;
     } catch (_) {

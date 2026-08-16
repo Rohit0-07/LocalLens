@@ -86,6 +86,10 @@ class IssueCreate(BaseModel):
     fuzz_location: bool = False
     is_fuzzed: bool = False
     is_shielded: bool = False
+    reporter_id: int | None = None
+    media_url: str | None = None
+    video_url: str | None = None
+    media_urls: list[str] = Field(default_factory=list)
 
 
 class IssueOut(BaseModel):
@@ -104,8 +108,12 @@ class IssueOut(BaseModel):
     fuzz_location: bool = False
     is_fuzzed: bool = False
     is_shielded: bool = False
+    reporter_id: int | None = None
     reporter_label: str
     anonymous_identity: str | None = None
+    media_url: str | None = None
+    video_url: str | None = None
+    media_urls: list[str] = Field(default_factory=list)
     created_at: datetime
     acknowledged_at: datetime | None = None
     resolved_at: datetime | None = None

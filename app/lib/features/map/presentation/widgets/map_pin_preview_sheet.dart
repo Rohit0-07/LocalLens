@@ -1,43 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/l10n/app_strings.dart';
 import '../../../../core/router/route_paths.dart';
+import '../../../../core/theme/app_colors.dart';
 import '../../data/map_api.dart';
 
 class MapPinPreviewSheet extends StatelessWidget {
   final MapPin pin;
   final VoidCallback? onClose;
 
-  const MapPinPreviewSheet({
-    super.key,
-    required this.pin,
-    this.onClose,
-  });
+  const MapPinPreviewSheet({super.key, required this.pin, this.onClose});
 
-  Color _categoryColor(String category) {
-    switch (category.toLowerCase()) {
-      case 'road':
-        return Colors.amber.shade700;
-      case 'sanitation':
-        return Colors.green.shade700;
-      case 'water':
-        return Colors.blue.shade700;
-      case 'lighting':
-        return Colors.orange.shade700;
-      default:
-        return Colors.purple.shade700;
-    }
-  }
+  Color _categoryColor(String category) => AppColors.pinColorFor(category);
 
-  Color _statusColor(String status) {
+  Color _statusColor(String status, ColorScheme colorScheme) {
     switch (status.toLowerCase()) {
       case 'resolved':
-        return Colors.green;
+        return AppColors.resolved;
       case 'in_progress':
-        return Colors.blue;
+        return AppColors.verified;
       case 'unacknowledged':
       default:
-        return Colors.grey.shade700;
+        return colorScheme.onSurfaceVariant;
     }
   }
 
@@ -57,18 +42,16 @@ class MapPinPreviewSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final statusColor = _statusColor(pin.status, colorScheme);
 
     return Container(
       padding: const EdgeInsets.all(20.0),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
+        color: colorScheme.surface,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         boxShadow: const [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 10,
-            spreadRadius: 2,
-          ),
+          BoxShadow(color: Colors.black26, blurRadius: 12, spreadRadius: 1),
         ],
       ),
       child: Column(
@@ -82,7 +65,7 @@ class MapPinPreviewSheet extends StatelessWidget {
                 width: 36,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
+                  color: colorScheme.outlineVariant,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -90,8 +73,11 @@ class MapPinPreviewSheet extends StatelessWidget {
                 IconButton(
                   icon: const Icon(Icons.close),
                   onPressed: onClose,
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
+                  tooltip: context.tr('action_close'),
+                  style: IconButton.styleFrom(
+                    minimumSize: const Size(44, 44),
+                    tapTargetSize: MaterialTapTargetSize.padded,
+                  ),
                 ),
             ],
           ),
@@ -99,8 +85,10 @@ class MapPinPreviewSheet extends StatelessWidget {
           Row(
             children: [
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: _categoryColor(pin.category).withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
@@ -115,16 +103,18 @@ class MapPinPreviewSheet extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
-                  color: _statusColor(pin.status).withValues(alpha: 0.15),
+                  color: statusColor.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
                   _formatStatus(pin.status),
                   style: theme.textTheme.labelSmall?.copyWith(
-                    color: _statusColor(pin.status),
+                    color: statusColor,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -132,11 +122,11 @@ class MapPinPreviewSheet extends StatelessWidget {
               if (pin.isShielded) ...[
                 const SizedBox(width: 8),
                 Tooltip(
-                  message: 'Location Shielded',
+                  message: context.tr('map_shielded_tooltip'),
                   child: Icon(
                     Icons.shield_outlined,
                     size: 18,
-                    color: Colors.indigo.shade600,
+                    color: AppColors.brand,
                   ),
                 ),
               ],
@@ -154,24 +144,32 @@ class MapPinPreviewSheet extends StatelessWidget {
           const SizedBox(height: 8),
           Row(
             children: [
-              Icon(Icons.location_on_outlined,
-                  size: 16, color: Colors.grey.shade600),
+              Icon(
+                Icons.location_on_outlined,
+                size: 16,
+                color: colorScheme.onSurfaceVariant,
+              ),
               const SizedBox(width: 4),
               Expanded(
                 child: Text(
-                  pin.wardName.isNotEmpty ? pin.wardName : 'Unknown Ward',
+                  pin.wardName.isNotEmpty
+                      ? pin.wardName
+                      : context.tr('map_unknown_ward'),
                   style: theme.textTheme.bodySmall?.copyWith(
-                    color: Colors.grey.shade700,
+                    color: colorScheme.onSurfaceVariant,
                   ),
                 ),
               ),
-              Icon(Icons.thumb_up_alt_outlined,
-                  size: 16, color: Colors.grey.shade600),
+              Icon(
+                Icons.thumb_up_alt_outlined,
+                size: 16,
+                color: colorScheme.onSurfaceVariant,
+              ),
               const SizedBox(width: 4),
               Text(
                 '${pin.upvotesCount}',
                 style: theme.textTheme.bodySmall?.copyWith(
-                  color: Colors.grey.shade700,
+                  color: colorScheme.onSurfaceVariant,
                 ),
               ),
             ],
@@ -189,7 +187,7 @@ class MapPinPreviewSheet extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              child: const Text('View Issue Details'),
+              child: Text(context.tr('map_view_issue_details')),
             ),
           ),
         ],

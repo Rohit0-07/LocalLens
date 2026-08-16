@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/theme/app_colors.dart';
 import 'shimmer_loading.dart';
 
 class SkeletonList extends StatelessWidget {
@@ -25,17 +26,18 @@ class _SkeletonCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _bar(width: 160, height: 12),
+            _bar(width: 160, height: 12, isDark: isDark),
             const SizedBox(height: 12),
-            _bar(width: double.infinity, height: 16),
+            _bar(width: double.infinity, height: 16, isDark: isDark),
             const SizedBox(height: 8),
-            _bar(width: double.infinity, height: 16),
+            _bar(width: double.infinity, height: 16, isDark: isDark),
             const SizedBox(height: 16),
             Container(
               height: 120,
@@ -51,12 +53,12 @@ class _SkeletonCard extends StatelessWidget {
     );
   }
 
-  Widget _bar({required double width, required double height}) {
+  Widget _bar({required double width, required double height, required bool isDark}) {
     return Container(
       width: width,
       height: height,
       decoration: BoxDecoration(
-        color: Colors.grey.shade300,
+        color: isDark ? AppColors.skeletonBaseDark : AppColors.skeletonBase,
         borderRadius: BorderRadius.circular(4),
       ),
     );

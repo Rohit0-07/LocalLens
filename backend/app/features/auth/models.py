@@ -18,6 +18,10 @@ class User(Base):
     email: Mapped[str | None] = mapped_column(String(255), unique=True, nullable=True, index=True)
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     role: Mapped[str] = mapped_column(String(32), default="citizen", nullable=False)
+    is_verified: Mapped[bool | None] = mapped_column(
+        Boolean, default=True, server_default="1", nullable=True
+    )
+    ward: Mapped[str | None] = mapped_column(String(64), default="Ward 45, Urban Central", nullable=True)
     is_banned: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), nullable=False

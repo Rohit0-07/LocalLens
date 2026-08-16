@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/l10n/app_strings.dart';
 import '../../../../shared/widgets/empty_state.dart';
 import '../../../../shared/widgets/skeleton_list.dart';
 import '../../../../shared/widgets/status_badge.dart';
@@ -21,7 +22,7 @@ class RepDashboardScreen extends ConsumerWidget {
     return Scaffold(
       key: const Key('repDashboardScreen'),
       appBar: AppBar(
-        title: const Text('Representative Dashboard'),
+        title: Text(context.tr('rep_dashboard_title')),
       ),
       body: asyncProfile.when(
         loading: () => const Padding(
@@ -146,21 +147,21 @@ class RepDashboardScreen extends ConsumerWidget {
                     children: [
                       FilterChip(
                         key: const Key('wardFilterChip_all'),
-                        label: const Text('All'),
+                        label: Text(context.tr('rep_filter_all')),
                         selected: activeFilter == 'all',
                         onSelected: (_) => ref.read(wardIssuesFilterProvider.notifier).state = 'all',
                       ),
                       const SizedBox(width: 8),
                       FilterChip(
                         key: const Key('wardFilterChip_escalated'),
-                        label: const Text('Escalated'),
+                        label: Text(context.tr('rep_filter_escalated')),
                         selected: activeFilter == 'escalated',
                         onSelected: (_) => ref.read(wardIssuesFilterProvider.notifier).state = 'escalated',
                       ),
                       const SizedBox(width: 8),
                       FilterChip(
                         key: const Key('wardFilterChip_needs_response'),
-                        label: const Text('Needs Response'),
+                        label: Text(context.tr('rep_filter_needs_response')),
                         selected: activeFilter == 'needs_response',
                         onSelected: (_) => ref.read(wardIssuesFilterProvider.notifier).state = 'needs_response',
                       ),
@@ -238,7 +239,7 @@ class RepDashboardScreen extends ConsumerWidget {
                                     FilledButton.icon(
                                       key: Key('respondToIssueButton_${issue.id}'),
                                       icon: const Icon(Icons.reply, size: 16),
-                                      label: const Text('Official Response'),
+                                      label: Text(context.tr('rep_official_response')),
                                       onPressed: () {
                                         showDialog<void>(
                                           context: context,

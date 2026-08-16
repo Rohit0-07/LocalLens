@@ -16,6 +16,7 @@ import 'package:local_lens/features/compose/data/offline_outbox_queue.dart';
 import 'package:local_lens/features/compose/domain/compose_draft.dart';
 import 'package:local_lens/features/compose/presentation/compose_providers.dart';
 import 'package:local_lens/features/feed/presentation/feed_providers.dart';
+import 'package:local_lens/features/feed/presentation/feed_screen.dart';
 import 'package:local_lens/features/issue_detail/presentation/screens/issue_detail_screen.dart';
 import 'package:local_lens/features/onboarding/presentation/screens/onboarding_screen.dart';
 import 'package:local_lens/features/ward/data/repositories/ward_repository.dart';
@@ -444,7 +445,7 @@ void main() {
 
       expect(router.state.matchedLocation, '/issue/123');
       expect(find.byType(IssueDetailScreen), findsOneWidget);
-      expect(find.text('Issue #123'), findsOneWidget);
+      expect(find.text('#123'), findsOneWidget);
     });
 
     testWidgets('locallens://ward/urban-central resolves to /ward/urban-central and renders WardDetailScreen', (tester) async {
@@ -463,7 +464,7 @@ void main() {
       expect(find.byType(WardDetailScreen), findsOneWidget);
     });
 
-    testWidgets('locallens://talk/45 resolves to /talk/45 and renders PlaceholderScreen', (tester) async {
+    testWidgets('locallens://talk/45 redirects to /feed (Talk detail not built yet)', (tester) async {
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
@@ -475,11 +476,11 @@ void main() {
       router.go('locallens://talk/45');
       await tester.pumpAndSettle();
 
-      expect(router.state.matchedLocation, '/talk/45');
-      expect(find.text('Talk #45'), findsOneWidget);
+      expect(router.state.matchedLocation, '/feed');
+      expect(find.byType(FeedScreen), findsOneWidget);
     });
 
-    testWidgets('locallens://rep/7 resolves to /rep/7 and renders PlaceholderScreen', (tester) async {
+    testWidgets('locallens://rep/7 redirects to /feed (Representative detail not built yet)', (tester) async {
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
@@ -491,11 +492,11 @@ void main() {
       router.go('locallens://rep/7');
       await tester.pumpAndSettle();
 
-      expect(router.state.matchedLocation, '/rep/7');
-      expect(find.text('Representative #7'), findsOneWidget);
+      expect(router.state.matchedLocation, '/feed');
+      expect(find.byType(FeedScreen), findsOneWidget);
     });
 
-    testWidgets('locallens://win/99 resolves to /win/99 and renders PlaceholderScreen', (tester) async {
+    testWidgets('locallens://win/99 redirects to /feed (Win detail not built yet)', (tester) async {
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
@@ -507,8 +508,8 @@ void main() {
       router.go('locallens://win/99');
       await tester.pumpAndSettle();
 
-      expect(router.state.matchedLocation, '/win/99');
-      expect(find.text('Civic Win #99'), findsOneWidget);
+      expect(router.state.matchedLocation, '/feed');
+      expect(find.byType(FeedScreen), findsOneWidget);
     });
   });
 

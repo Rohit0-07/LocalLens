@@ -24,6 +24,12 @@
 	<string>????</string>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Needed for camera</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Needed for location</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Needed for photos</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>UIApplicationSceneManifest</key>

@@ -357,6 +357,10 @@ async def test_search_result_schema(client, create_user_headers):
         "resolution_notes",
         "has_upvoted",
         "has_official_response",
+        "reporter_id",
+        "media_url",
+        "video_url",
+        "media_urls",
     }
     headers = await create_user_headers("+919000000021")
     await _create_issue(client, headers, title="Pothole on Main St")

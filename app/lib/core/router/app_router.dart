@@ -20,19 +20,22 @@ import '../../features/onboarding/presentation/screens/onboarding_screen.dart';
 import '../../features/outbox/presentation/outbox_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
 import '../../features/profile/presentation/screens/anonymity_guide_screen.dart';
+import '../../features/profile/presentation/screens/public_profile_screen.dart';
+import '../../features/profile/presentation/screens/settings_screen.dart';
+import '../../features/reels/presentation/reels_screen.dart';
 import '../../features/rep_dashboard/presentation/rep_dashboard_screen.dart';
 import '../../features/search/presentation/search_screen.dart';
 import '../../features/ward/presentation/ward_detail_screen.dart';
 import '../../features/ward/presentation/widgets/local_talk_compose_sheet.dart';
-import '../../shared/widgets/placeholder_screen.dart';
 import '../l10n/app_strings.dart';
 import '../storage/storage_providers.dart';
+import '../theme/app_colors.dart';
 import 'route_paths.dart';
-
 
 final rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
 final _feedNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'feed');
 final _mapNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'map');
+final _reelsNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'reels');
 final _inboxNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'inbox');
 final _profileNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'profile');
 
@@ -56,6 +59,15 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: RoutePaths.map,
             builder: (context, state) => const MapScreen(),
+          ),
+        ],
+      ),
+      StatefulShellBranch(
+        navigatorKey: _reelsNavigatorKey,
+        routes: [
+          GoRoute(
+            path: RoutePaths.reels,
+            builder: (context, state) => const ReelsScreen(),
           ),
         ],
       ),
@@ -86,8 +98,25 @@ final routerProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       final uri = state.uri;
       if (uri.scheme == 'locallens') {
+        // Legacy deep links to social destinations that are not yet built
+        // (Talk / Representative / Win / Notice details). Redirect straight
+        // to the feed instead of dead-ending on a placeholder.
+        final legacyHost =
+            uri.host == 'talk' || uri.host == 'rep' || uri.host == 'win' || uri.host == 'notice';
+        if (legacyHost) {
+          return RoutePaths.feed;
+        }
         final path = uri.host.isNotEmpty ? '/${uri.host}${uri.path}' : uri.path;
         return path;
+      }
+
+      // Path-form legacy deep links (e.g. /talk/45) to destinations that are
+      // not yet built redirect to the feed as well.
+      if (uri.path.startsWith('/talk/') ||
+          uri.path.startsWith('/rep/') ||
+          uri.path.startsWith('/win/') ||
+          uri.path.startsWith('/notice/')) {
+        return RoutePaths.feed;
       }
 
       final store = ref.read(localStoreProvider);
@@ -106,7 +135,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (session == null && !onAuthPage && !onOnboardingPage) {
         return RoutePaths.signIn;
       }
-      if (session != null && !session.isGuest && (onAuthPage || onOnboardingPage)) {
+      if (session != null &&
+          !session.isGuest &&
+          (onAuthPage || onOnboardingPage)) {
         return RoutePaths.feed;
       }
       return null;
@@ -132,7 +163,9 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: RoutePaths.otp,
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => OtpScreen(
-          args: state.extra is OtpRouteArgs ? state.extra as OtpRouteArgs : null,
+          args: state.extra is OtpRouteArgs
+              ? state.extra as OtpRouteArgs
+              : null,
         ),
       ),
       GoRoute(
@@ -188,40 +221,20 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const OutboxScreen(),
       ),
       GoRoute(
-        path: RoutePaths.talkDetail,
+        path: RoutePaths.settings,
         parentNavigatorKey: rootNavigatorKey,
-        builder: (context, state) {
-          final id = state.pathParameters['id'] ?? '';
-          return PlaceholderScreen(
-            title: 'Talk #$id',
-            icon: Icons.forum_outlined,
-          );
-        },
+        builder: (context, state) => const SettingsScreen(),
       ),
       GoRoute(
-        path: RoutePaths.repDetail,
+        path: RoutePaths.publicProfile,
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) {
-          final id = state.pathParameters['id'] ?? '';
-          return PlaceholderScreen(
-            title: 'Representative #$id',
-            icon: Icons.badge_outlined,
-          );
-        },
-      ),
-      GoRoute(
-        path: RoutePaths.winDetail,
-        parentNavigatorKey: rootNavigatorKey,
-        builder: (context, state) {
-          final id = state.pathParameters['id'] ?? '';
-          return PlaceholderScreen(
-            title: 'Civic Win #$id',
-            icon: Icons.emoji_events_outlined,
-          );
+          final idStr = state.pathParameters['id'];
+          final userId = int.tryParse(idStr ?? '') ?? 0;
+          return PublicProfileScreen(userId: userId);
         },
       ),
     ],
-
   );
 
   ref.listen(sessionProvider, (_, _) => router.refresh());
@@ -260,7 +273,7 @@ class _AppShell extends ConsumerWidget {
               _CreateActionTile(
                 key: const Key('createSheetReportIssue'),
                 icon: Icons.report_problem_outlined,
-                gradient: const [Color(0xFFE53935), Color(0xFF8E24AA)],
+                color: AppColors.urgent,
                 title: sheetContext.tr('action_create_issue'),
                 subtitle: 'Report a pothole, leak or outage to your ward.',
                 onTap: () {
@@ -272,7 +285,7 @@ class _AppShell extends ConsumerWidget {
               _CreateActionTile(
                 key: const Key('createSheetStartTalk'),
                 icon: Icons.forum_outlined,
-                gradient: const [Color(0xFF00897B), Color(0xFF3949AB)],
+                color: AppColors.brand,
                 title: sheetContext.tr('action_start_talk'),
                 subtitle: 'Begin a discussion with neighbours in your ward.',
                 onTap: () {
@@ -360,32 +373,54 @@ class _SocialDock extends StatelessWidget {
       int? badge,
     }) {
       final selected = currentIndex == index;
-      final color = selected ? colorScheme.primary : colorScheme.onSurfaceVariant;
+      final color = selected ? AppColors.brand : colorScheme.onSurfaceVariant;
       return Expanded(
-        child: InkWell(
-          onTap: () => onSelect(index),
-          borderRadius: BorderRadius.circular(12),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 6),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Badge(
-                  isLabelVisible: badge != null && badge > 0,
-                  label: badge != null && badge > 0 ? Text('$badge') : null,
-                  child: Icon(selected ? selectedIcon : icon, color: color),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: color,
-                    fontWeight: selected ? FontWeight.bold : FontWeight.w500,
+        child: Semantics(
+          button: true,
+          selected: selected,
+          label: label,
+          child: InkWell(
+            key: Key('dockTab$index'),
+            onTap: () => onSelect(index),
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: selected
+                          ? AppColors.brand.withValues(alpha: 0.12)
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    child: Badge(
+                      isLabelVisible: badge != null && badge > 0,
+                      label: badge != null && badge > 0 ? Text('$badge') : null,
+                      child: Icon(
+                        selected ? selectedIcon : icon,
+                        color: color,
+                        size: 24,
+                      ),
+                    ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 2),
+                  Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: color,
+                      fontWeight: selected ? FontWeight.bold : FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -415,42 +450,52 @@ class _SocialDock extends StatelessWidget {
                 icon: Icons.map_outlined,
                 selectedIcon: Icons.map,
               ),
+              tab(
+                index: 2,
+                label: 'Reels',
+                icon: Icons.movie_filter_outlined,
+                selectedIcon: Icons.movie_filter,
+              ),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: GestureDetector(
-                  key: const Key('createDockButton'),
-                  onTap: onCreate,
-                  child: Container(
-                    width: 54,
-                    height: 54,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [Color(0xFF00C853), Color(0xFF0091EA)],
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: Semantics(
+                  button: true,
+                  label: context.tr('nav_create'),
+                  child: GestureDetector(
+                    key: const Key('createDockButton'),
+                    onTap: onCreate,
+                    child: Container(
+                      width: 50,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        color: AppColors.brand,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.brand.withValues(alpha: 0.35),
+                            blurRadius: 10,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
                       ),
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.green.withValues(alpha: 0.35),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
+                      child: const Icon(
+                        Icons.add_rounded,
+                        color: Colors.white,
+                        size: 28,
+                      ),
                     ),
-                    child: const Icon(Icons.add_rounded, color: Colors.white, size: 30),
                   ),
                 ),
               ),
               tab(
-                index: 2,
+                index: 3,
                 label: context.tr('nav_inbox'),
                 icon: Icons.inbox_outlined,
                 selectedIcon: Icons.inbox,
                 badge: unreadCount,
               ),
               tab(
-                index: 3,
+                index: 4,
                 label: context.tr('nav_profile'),
                 icon: Icons.person_outline,
                 selectedIcon: Icons.person,
@@ -467,14 +512,14 @@ class _CreateActionTile extends StatelessWidget {
   const _CreateActionTile({
     super.key,
     required this.icon,
-    required this.gradient,
+    required this.color,
     required this.title,
     required this.subtitle,
     required this.onTap,
   });
 
   final IconData icon;
-  final List<Color> gradient;
+  final Color color;
   final String title;
   final String subtitle;
   final VoidCallback onTap;
@@ -496,7 +541,7 @@ class _CreateActionTile extends StatelessWidget {
                 width: 46,
                 height: 46,
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: gradient),
+                  color: color,
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Icon(icon, color: Colors.white, size: 24),

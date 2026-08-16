@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/l10n/app_strings.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/skeleton_list.dart';
 import '../../feed/domain/feed_item.dart';
@@ -105,7 +106,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         actions: [
           IconButton(
             key: const Key('filterButton'),
-            tooltip: 'Filters',
+            tooltip: context.tr('filter_title'),
             icon: filtersActive
                 ? Badge(smallSize: 8, child: const Icon(Icons.tune))
                 : const Icon(Icons.tune),
@@ -115,7 +116,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             TextButton(
               key: const Key('clearFiltersButton'),
               onPressed: _clearFilters,
-              child: const Text('Clear filters'),
+              child: Text(context.tr('search_clear_filters')),
             ),
           const SizedBox(width: 8),
         ],
@@ -151,7 +152,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                       key: const Key('clearRecentSearches'),
                       onPressed: () =>
                           ref.read(recentSearchesProvider.notifier).clear(),
-                      child: const Text('Clear'),
+                      child: Text(context.tr('search_clear')),
                     ),
                   ],
                 ),

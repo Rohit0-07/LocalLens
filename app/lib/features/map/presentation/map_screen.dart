@@ -1,6 +1,3 @@
-import 'package:flutter/material.dart';
-import '../../../shared/widgets/placeholder_screen.dart';
-
-class MapScreen extends PlaceholderScreen {
-  const MapScreen({super.key}) : super(title: 'Map', icon: Icons.map_outlined);
-}
+// Re-export the real MapScreen implementation so the router can import
+// from this barrel file without changing its import path.
+export 'screens/map_screen.dart';

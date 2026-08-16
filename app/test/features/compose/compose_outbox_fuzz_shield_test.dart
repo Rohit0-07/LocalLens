@@ -103,13 +103,33 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byKey(const Key('compose_title')), findsOneWidget);
+
+      await tester.scrollUntilVisible(
+        find.byKey(const Key('compose_fuzz_mode')),
+        200.0,
+        scrollable: find.byType(Scrollable).first,
+      );
       expect(find.byKey(const Key('compose_fuzz_mode')), findsOneWidget);
+
+      await tester.scrollUntilVisible(
+        find.byKey(const Key('compose_shield_mode')),
+        200.0,
+        scrollable: find.byType(Scrollable).first,
+      );
       expect(find.byKey(const Key('compose_shield_mode')), findsOneWidget);
+
+      await tester.scrollUntilVisible(
+        find.byKey(const Key('compose_anonymous')),
+        200.0,
+        scrollable: find.byType(Scrollable).first,
+      );
       expect(find.byKey(const Key('compose_anonymous')), findsOneWidget);
 
-      await tester.ensureVisible(find.byKey(const Key('check_near_duplicates_button')));
-      await tester.pumpAndSettle();
-
+      await tester.scrollUntilVisible(
+        find.byKey(const Key('check_near_duplicates_button')),
+        200.0,
+        scrollable: find.byType(Scrollable).first,
+      );
       expect(find.byKey(const Key('check_near_duplicates_button')), findsOneWidget);
     });
   });

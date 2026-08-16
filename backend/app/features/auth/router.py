@@ -1,8 +1,9 @@
 import uuid
 from datetime import UTC, datetime, timedelta
+from typing import Annotated
 
 import jwt
-from fastapi import APIRouter, Response, status
+from fastapi import APIRouter, Query, Response, status
 
 from app.api.deps import CurrentUser, SessionDep, SettingsDep
 from app.core.security import create_access_token, derive_anonymous_identity
@@ -12,9 +13,12 @@ from app.features.auth.schemas import (
     EmailOtpVerify,
     OtpRequest,
     OtpVerify,
+    PublicUserProfileOut,
     TokenResponse,
     UserOut,
 )
+from app.features.issues import service as issues_service
+from app.features.issues.schemas import IssueOut
 
 router = APIRouter()
 
@@ -90,6 +94,9 @@ async def get_current_user_profile(
             email=None,
             anonymous_identity="guest_anon",
             anon_id="guest_anon",
+            role="guest",
+            is_verified=False,
+            ward=None,
             is_guest=True,
             issues_count=0,
             upvotes_count=0,
@@ -103,9 +110,57 @@ async def get_current_user_profile(
         email=user.email,
         anonymous_identity=anon,
         anon_id=anon,
+        role=user.role,
+        is_verified=user.is_verified,
+        ward=user.ward,
         created_at=user.created_at,
         is_guest=False,
         issues_count=stats["issues_count"],
         upvotes_count=stats["upvotes_count"],
         quorum_votes_count=stats["quorum_votes_count"],
+    )
+
+
+@router.get("/me/issues", response_model=list[IssueOut])
+async def get_my_issues(
+    user: CurrentUser,
+    session: SessionDep,
+    settings: SettingsDep,
+    status_filter: Annotated[str | None, Query(alias="status")] = None,
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+    offset: Annotated[int, Query(ge=0)] = 0,
+) -> list[IssueOut]:
+    if getattr(user, "is_guest", False):
+        return []
+    issues = await service.get_user_issues(
+        session,
+        user_id=user.id,
+        status_filter=status_filter,
+        limit=limit,
+        offset=offset,
+    )
+    user_upvoted_ids = await issues_service.get_user_upvoted_issue_ids(
+        session, user.id, [i.id for i in issues]
+    )
+    return [
+        issues_service.to_issue_out(
+            issue,
+            settings.jwt_secret,
+            user_id=user.id,
+            user_upvoted_ids=user_upvoted_ids,
+        )
+        for issue in issues
+    ]
+
+
+@router.get("/users/{user_id}", response_model=PublicUserProfileOut)
+async def get_public_user_profile(
+    user_id: int,
+    session: SessionDep,
+    settings: SettingsDep,
+) -> PublicUserProfileOut:
+    return await service.get_public_user_profile(
+        session,
+        user_id=user_id,
+        secret=settings.jwt_secret,
     )

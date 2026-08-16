@@ -1,6 +1,27 @@
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:dio/dio.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../../core/config/app_config.dart';
+import '../../auth/presentation/auth_providers.dart';
+
+final mediaServiceProvider = Provider<MediaService>((ref) {
+  return MediaService(
+    dio: Dio(
+      BaseOptions(
+        baseUrl: AppConfig.dev.apiBaseUrl,
+        connectTimeout: const Duration(seconds: 15),
+        receiveTimeout: const Duration(seconds: 20),
+        headers: {'Accept': 'application/json'},
+      ),
+    ),
+    accessTokenProvider: () {
+      final session = ref.read(sessionProvider);
+      return session?.accessToken;
+    },
+  );
+});
 
 class MediaUploadResult {
   final String id;
@@ -60,8 +81,10 @@ class MediaUploadResult {
 
 class MediaService {
   final Dio _dio;
+  final String? Function()? accessTokenProvider;
 
-  MediaService({Dio? dio}) : _dio = dio ?? Dio();
+  MediaService({Dio? dio, this.accessTokenProvider})
+      : _dio = dio ?? Dio();
 
   /// Compresses raw image bytes to simulate quality reduction & optimization.
   Uint8List compressImage(Uint8List bytes, {double quality = 0.85}) {
@@ -105,12 +128,14 @@ class MediaService {
       'is_fuzzed': isFuzzed,
     };
 
+    final token = accessTokenProvider?.call();
     final response = await _dio.post(
-      '/api/v1/media/upload',
+      '/media/upload',
       data: payload,
       options: Options(
         headers: {
           'Content-Type': 'application/json',
+          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
         },
       ),
     );

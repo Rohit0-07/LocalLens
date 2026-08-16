@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/l10n/app_strings.dart';
 import '../../../../core/router/route_paths.dart';
 import '../../../../core/storage/storage_providers.dart';
+import '../../../../core/theme/app_colors.dart';
 import '../../../auth/presentation/auth_providers.dart';
 
 class OnboardingPageData {
@@ -29,7 +31,7 @@ const List<OnboardingPageData> _onboardingPages = [
     description:
         'Discover real-time civic issues in your neighborhood, from dangerous potholes to failing streetlights.',
     icon: Icons.location_on_rounded,
-    color: Colors.indigo,
+    color: AppColors.brand,
   ),
   OnboardingPageData(
     title: 'Your upvotes are civic signals',
@@ -37,7 +39,7 @@ const List<OnboardingPageData> _onboardingPages = [
     description:
         'Vote on local issues that matter most to your community. Upvoted issues demand faster municipal response.',
     icon: Icons.thumb_up_alt_rounded,
-    color: Colors.teal,
+    color: AppColors.verified,
   ),
   OnboardingPageData(
     title: "We can't reveal you, even if we tried",
@@ -45,7 +47,7 @@ const List<OnboardingPageData> _onboardingPages = [
     description:
         'Report concerns safely with zero-knowledge obfuscation, fuzzy location shielding, and complete privacy.',
     icon: Icons.shield_rounded,
-    color: Colors.deepPurple,
+    color: AppColors.anonMask,
   ),
   OnboardingPageData(
     title: 'Street Check',
@@ -53,7 +55,7 @@ const List<OnboardingPageData> _onboardingPages = [
     description:
         'Make civic awareness a habit. Check nearby updates on your daily commute and stay informed.',
     icon: Icons.today_rounded,
-    color: Colors.amber,
+    color: AppColors.review,
   ),
   OnboardingPageData(
     title: 'Every fix is celebrated',
@@ -61,7 +63,7 @@ const List<OnboardingPageData> _onboardingPages = [
     description:
         'Track issue resolution from dispatch to repair, earning badges as your neighborhood improves.',
     icon: Icons.emoji_events_rounded,
-    color: Colors.orange,
+    color: AppColors.win,
   ),
 ];
 
@@ -97,10 +99,14 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   void _onNextPressed() {
     if (_currentPage < _onboardingPages.length - 1) {
-      _pageController.nextPage(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
+      if (MediaQuery.disableAnimationsOf(context)) {
+        _pageController.jumpToPage(_currentPage + 1);
+      } else {
+        _pageController.nextPage(
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        );
+      }
     } else {
       _completeOnboarding();
     }
@@ -123,7 +129,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 child: TextButton(
                   key: const Key('skipOnboardingButton'),
                   onPressed: _completeOnboarding,
-                  child: const Text('Skip'),
+                  child: Text(context.tr('onboarding_skip')),
                 ),
               ),
             ),
@@ -229,7 +235,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(isLastPage ? 'Get Started' : 'Next'),
+                        Text(isLastPage ? context.tr('onboarding_get_started') : context.tr('onboarding_next')),
                         const SizedBox(width: 4),
                         Icon(
                           isLastPage

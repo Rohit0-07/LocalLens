@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:local_lens/core/router/app_router.dart';
 import 'package:local_lens/features/auth/domain/session.dart';
 import 'package:local_lens/features/auth/presentation/auth_providers.dart';
+import 'package:local_lens/features/feed/presentation/feed_screen.dart';
 
 class _TestSessionController extends SessionController {
   _TestSessionController(this.session);
@@ -73,7 +74,7 @@ void main() {
     expect(router.state.matchedLocation, '/ward/downtown');
   });
 
-  testWidgets('Deep link locallens://talk/100 parses and resolves route',
+  testWidgets('Deep link locallens://talk/100 redirects to the feed (not built yet)',
       (tester) async {
     final container = ProviderContainer(
       overrides: [
@@ -99,7 +100,7 @@ void main() {
     router.go('locallens://talk/100');
     await tester.pumpAndSettle();
 
-    expect(router.state.matchedLocation, '/talk/100');
-    expect(find.text('Talk #100'), findsOneWidget);
+    expect(router.state.matchedLocation, '/feed');
+    expect(find.byType(FeedScreen), findsOneWidget);
   });
 }

@@ -35,6 +35,9 @@ LocalLens/
 ```sh
 cd backend
 cp .env.example .env
+# For local dev, add one line to backend/.env:
+#   LOCALLENS_OTP_MASTER_CODE=000000
+# That lets you verify OTP with code 000000 for any phone number.
 uv sync
 uv run alembic upgrade head
 uv run python seed.py             # or `make seed`: load demo data + images
@@ -50,6 +53,24 @@ dart run build_runner build             # freezed / json_serializable codegen
 flutter run
 ```
 
+`AppConfig.dev` already points at the real local backend (`http://127.0.0.1:8000/api/v1`)
+with mock auth **disabled**, so the app boots straight into the live feed.
+
+- **iOS simulator / macOS / desktop**: use `127.0.0.1:8000` as above.
+- **Android emulator**: the host is `10.0.2.2`, not `127.0.0.1`. Edit
+  `app/lib/core/config/app_config.dart` (`apiBaseUrl`) accordingly.
+
+### Demo flow
+
+1. Open the app → feed loads seeded issues around Ward 45, Mumbai.
+2. Tap **Map** tab → pins for the seeded issues (default view spans all of India).
+3. Tap the green **+** dock button → “Report an issue” or “Start a ward discussion”.
+4. Compose is camera/gallery enabled; if the backend is unreachable the report is
+   queued to the **Offline Outbox** (visible via the tray icon on the feed, or from
+   Profile → Outbox).
+5. Sign in: enter any phone number, request OTP, and use code **`000000`**.
+6. Language/theme: Profile → Settings (English, हिन्दी, मराठी, தமிழ், తెలుగు).
+
 ## Checks
 
 ```sh
@@ -61,17 +82,14 @@ Design docs: `LocalLens_App_Info.md`, `LocalLens_Feature_Checklist.md`.
 
 ## Status
 
-- **Backend**: auth (OTP request/verify + JWT), issues (create / feed / radius search),
-  async SQLAlchemy + Alembic, full test suite green, ruff + mypy strict clean.
-- **App**: scaffolded with Riverpod 2.6, go_router 17 (4-tab shell + compose FAB),
-  dio client with auth interceptor, hive_ce local storage, freezed models,
-  auth + feed + compose flows with screens, 17 tests green, `flutter analyze` clean.
-- **Known ecosystem pins** (do not bump casually): riverpod `2.6.1`, freezed
-  `4.0.0-dev.3`, build_runner `2.15.1`, go_router `17.4.0`, dio `5.11.0` —
-  see `app/pubspec.yaml` for the conflict notes.
+- **Backend**: FastAPI (async SQLAlchemy 2 + Alembic), 262/262 pytest tests green, ruff + mypy strict clean. Features shipped: Auth (OTP + JWT + Guest + HMAC Anon-ID), Issues & Near-Duplicate Guard, Escalation Ladder & Dual-Verification Quorum Resolution with Auto-Win Post Generation, Camera & Media Upload Pipeline, Multi-Type Feed & Ward Talk Channels, Search & Advanced Filters, Map Pins Engine, Notifications, Representative Dashboard, Gamification Engine, and Admin Flagging/Moderation Queue.
+- **App**: Flutter client with Riverpod 2.6 & go_router 17. Features shipped: Onboarding Carousel, Live Auth & GuestGuard, Social Feed Cards (Issues, Wins, Notices, Local Talk), Interactive Map Canvas & Pins, Compose Wizard with Offline Outbox & Camera/Gallery Capture, Threaded Comments, Ward Place Pages, Notifications Center & Inbox Digest, Representative Dashboard, Gamification Screen (Impact Score & Badges), Profile & 5-Language i18n (`en`, `hi`, `mr`, `ta`, `te`), Admin Moderation Queue, Toast Overlay, Offline Banner, Error Boundary, and Deep Linking (`locallens://`). `flutter analyze` clean.
 
 ## Next steps
 
-- SMS provider for production OTP delivery; rep verification; anon-ID split.
-- Ward/geofence routing, duplicate guard, escalation ladder, notifications.
-- Compose-to-backend wiring, map tab, issue detail with photos.
+- Production SMS gateway & FCM/APNS external push notification service integration.
+- Refresh token rotation & secure OS keychain/keystore token persistence.
+- Auto-suggest merge-link flow for duplicate reports & mini-map pin selector in compose.
+- Live ticking countdown renderers on escalation timeline & dispute photo uploads.
+- Vector pin clustering SDK for high-density spatial map rendering.
+- Offline sync conflict resolution strategy & image vector similarity for duplicate detection.

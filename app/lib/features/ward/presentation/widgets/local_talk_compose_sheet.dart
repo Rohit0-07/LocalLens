@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/l10n/app_strings.dart';
 import '../providers/ward_providers.dart';
 
 class LocalTalkComposeSheet extends ConsumerStatefulWidget {
@@ -50,7 +51,7 @@ class _LocalTalkComposeSheetState extends ConsumerState<LocalTalkComposeSheet> {
 
     if (title.isEmpty || body.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill in title and content.')),
+        SnackBar(content: Text(context.tr('talk_required'))),
       );
       return;
     }
@@ -69,7 +70,7 @@ class _LocalTalkComposeSheetState extends ConsumerState<LocalTalkComposeSheet> {
       if (mounted) {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Discussion post published successfully!')),
+          SnackBar(content: Text(context.tr('talk_published'))),
         );
         widget.onPostSubmitted?.call();
       }
@@ -77,7 +78,7 @@ class _LocalTalkComposeSheetState extends ConsumerState<LocalTalkComposeSheet> {
       if (mounted) {
         setState(() => _isSubmitting = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to publish: ${e.toString()}')),
+          SnackBar(content: Text(context.tr('talk_failed'))),
         );
       }
     }
@@ -140,8 +141,8 @@ class _LocalTalkComposeSheetState extends ConsumerState<LocalTalkComposeSheet> {
               key: const Key('localTalkTitleInput'),
               controller: _titleController,
               decoration: const InputDecoration(
-                labelText: 'Title / Question',
-                hintText: 'e.g. When will the water pipeline repair complete?',
+                labelText: 'Discussion Title',
+                hintText: 'What would you like to discuss?',
                 border: OutlineInputBorder(),
               ),
               maxLength: 255,
@@ -151,8 +152,8 @@ class _LocalTalkComposeSheetState extends ConsumerState<LocalTalkComposeSheet> {
               key: const Key('localTalkBodyInput'),
               controller: _bodyController,
               decoration: const InputDecoration(
-                labelText: 'Details / Discussion Body',
-                hintText: 'Provide context for neighborhood discussion...',
+                labelText: 'Body',
+                hintText: 'Provide context or details for your neighborhood...',
                 border: OutlineInputBorder(),
               ),
               maxLines: 4,
@@ -177,7 +178,7 @@ class _LocalTalkComposeSheetState extends ConsumerState<LocalTalkComposeSheet> {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Text(
-                        'Publish Discussion',
+                        'Post Discussion',
                         style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                       ),
               ),

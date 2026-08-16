@@ -6,9 +6,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import Settings
 from app.core.exceptions import AppError
 from app.core.logging import get_logger
-from app.core.security import generate_otp, hash_secret, verify_secret
+from app.core.security import derive_anonymous_identity, generate_otp, hash_secret, verify_secret
 from app.features.auth.models import OtpCode, User
+from app.features.auth.schemas import PublicUserProfileOut
+from app.features.gamification.service import (
+    calculate_impact_score,
+    evaluate_and_unlock_badges,
+    fetch_activity_counts,
+    get_level_info,
+    get_or_create_user_gamification,
+)
 from app.features.issues.models import Issue, QuorumVote, Upvote
+from app.features.issues.service import evaluate_escalation, to_issue_out
 
 logger = get_logger("locallens.auth")
 
@@ -106,3 +115,101 @@ async def verify_email_otp(
     await session.commit()
     await session.refresh(user)
     return user
+
+
+async def get_user_issues(
+    session: AsyncSession,
+    user_id: int,
+    status_filter: str | None = None,
+    limit: int = 50,
+    offset: int = 0,
+) -> list[Issue]:
+    stmt = select(Issue).where(Issue.reporter_id == user_id)
+    if status_filter:
+        stmt = stmt.where(Issue.status == status_filter)
+    stmt = stmt.order_by(Issue.created_at.desc(), Issue.id.desc()).limit(limit).offset(offset)
+    result = await session.execute(stmt)
+    issues = list(result.scalars().all())
+
+    now = _utc_now()
+    modified = False
+    for issue in issues:
+        if evaluate_escalation(issue, now):
+            modified = True
+    if modified:
+        await session.commit()
+
+    return issues
+
+
+async def get_public_user_profile(
+    session: AsyncSession,
+    user_id: int,
+    secret: str | None = None,
+) -> PublicUserProfileOut:
+    user = await session.get(User, user_id)
+    if user is None or user.is_banned:
+        raise AppError("User not found", status_code=404, code="not_found")
+
+    issues_res = await session.execute(
+        select(func.count(Issue.id)).where(Issue.reporter_id == user_id, Issue.is_hidden.is_(False))
+    )
+    resolutions_res = await session.execute(
+        select(func.count(Issue.id)).where(
+            Issue.reporter_id == user_id, Issue.status == "resolved", Issue.is_hidden.is_(False)
+        )
+    )
+    upvotes_res = await session.execute(
+        select(func.count(Upvote.id)).where(Upvote.user_id == user_id)
+    )
+    quorum_res = await session.execute(
+        select(func.count(QuorumVote.id)).where(QuorumVote.user_id == user_id)
+    )
+    issues_count = issues_res.scalar() or 0
+    resolutions_count = resolutions_res.scalar() or 0
+    upvotes_count = upvotes_res.scalar() or 0
+    quorum_votes_count = quorum_res.scalar() or 0
+
+    counts = await fetch_activity_counts(session, user_id)
+    gamif = await get_or_create_user_gamification(session, user_id)
+    streak_days = gamif.streak_days if gamif else 0
+    impact_score = calculate_impact_score(counts, streak_days)
+    level, _level_name, _ = get_level_info(impact_score)
+    badges = await evaluate_and_unlock_badges(session, user_id, counts, streak_days)
+
+    public_issues_stmt = (
+        select(Issue)
+        .where(
+            Issue.reporter_id == user_id,
+            Issue.is_anonymous.is_(False),
+            Issue.is_hidden.is_(False),
+        )
+        .order_by(Issue.created_at.desc(), Issue.id.desc())
+    )
+    public_issues_res = await session.execute(public_issues_stmt)
+    public_issues = list(public_issues_res.scalars().all())
+
+    public_issues_out = [
+        to_issue_out(issue, secret=secret, user_id=None) for issue in public_issues
+    ]
+
+    anon_id = derive_anonymous_identity(user.id, secret) if secret else f"anon_{user.id}"
+    ward = getattr(user, "ward", None) or "Ward 45, Urban Central"
+    is_verified = getattr(user, "is_verified", True)
+
+    return PublicUserProfileOut(
+        id=user.id,
+        anon_id=anon_id,
+        role=user.role,
+        is_verified=is_verified,
+        ward=ward,
+        created_at=user.created_at,
+        issues_count=issues_count,
+        resolutions_count=resolutions_count,
+        upvotes_count=upvotes_count,
+        quorum_votes_count=quorum_votes_count,
+        level=level,
+        impact_score=impact_score,
+        badges=badges,
+        public_issues=public_issues_out,
+    )

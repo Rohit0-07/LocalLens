@@ -64,6 +64,21 @@ class ApiClient {
       throw mapDioException(error);
     }
   }
+
+  Future<dynamic> deleteJson(
+    String path, {
+    Object? body,
+  }) async {
+    try {
+      final response = await _dio.delete<dynamic>(
+        path,
+        data: body,
+      );
+      return response.data;
+    } on DioException catch (error) {
+      throw mapDioException(error);
+    }
+  }
 }
 
 class _AuthInterceptor extends Interceptor {

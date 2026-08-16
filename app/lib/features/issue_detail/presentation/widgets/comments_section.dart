@@ -254,43 +254,53 @@ class _CommentsSectionState extends ConsumerState<CommentsSection> {
               ],
             ),
           ),
-        Container(
-          padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-          decoration: BoxDecoration(
-            border: Border(
-              top: BorderSide(color: colorScheme.outlineVariant),
+        SafeArea(
+          top: false,
+          child: Container(
+            padding: EdgeInsets.fromLTRB(
+              12,
+              8,
+              12,
+              MediaQuery.viewInsetsOf(context).bottom > 0
+                  ? MediaQuery.viewInsetsOf(context).bottom + 8
+                  : 8,
             ),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  key: const Key('comment_input'),
-                  controller: _controller,
-                  focusNode: _composerFocus,
-                  minLines: 1,
-                  maxLines: 4,
-                  decoration: InputDecoration(
-                    hintText: context.tr('comments_hint'),
-                    isDense: true,
-                    filled: true,
-                    fillColor: colorScheme.surfaceContainerHighest,
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 10),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(22),
-                      borderSide: BorderSide.none,
+            decoration: BoxDecoration(
+              border: Border(
+                top: BorderSide(color: colorScheme.outlineVariant),
+              ),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    key: const Key('comment_input'),
+                    controller: _controller,
+                    focusNode: _composerFocus,
+                    minLines: 1,
+                    maxLines: 4,
+                    decoration: InputDecoration(
+                      hintText: context.tr('comments_hint'),
+                      isDense: true,
+                      filled: true,
+                      fillColor: colorScheme.surfaceContainerHighest,
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 10),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(22),
+                        borderSide: BorderSide.none,
+                      ),
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              IconButton.filled(
-                key: const Key('submit_comment_button'),
-                icon: const Icon(Icons.send_rounded, size: 20),
-                onPressed: _submitComment,
-              ),
-            ],
+                const SizedBox(width: 8),
+                IconButton.filled(
+                  key: const Key('submit_comment_button'),
+                  icon: const Icon(Icons.send_rounded, size: 20),
+                  onPressed: _submitComment,
+                ),
+              ],
+            ),
           ),
         ),
       ],

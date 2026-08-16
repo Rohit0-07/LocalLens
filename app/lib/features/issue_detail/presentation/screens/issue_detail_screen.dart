@@ -1,16 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../../core/feedback/error_copy.dart';
+import '../../../../core/l10n/app_strings.dart';
+import '../../../../core/router/route_paths.dart';
+import '../../../../core/services/location_service.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/utils/media_url.dart';
 import '../../../../core/utils/relative_time.dart';
 import '../../../../shared/widgets/empty_state.dart';
+import '../../../../shared/widgets/media_preview_widget.dart';
 import '../../../../shared/widgets/skeleton_list.dart';
 import '../../../../shared/widgets/status_badge.dart';
+import '../../../compose/data/media_service.dart';
 import '../../../feed/domain/issue.dart';
 import '../../../feed/presentation/feed_providers.dart';
 import '../../../rep_dashboard/presentation/rep_dashboard_providers.dart';
+import '../widgets/audit_timeline_card.dart';
 import '../widgets/comments_section.dart';
 import '../widgets/official_response_card.dart';
+import '../widgets/resolution_proof_modal.dart';
 
 final singleIssueProvider =
     FutureProvider.family<Issue, int>((ref, issueId) async {
@@ -19,9 +29,16 @@ final singleIssueProvider =
 });
 
 class IssueDetailScreen extends ConsumerWidget {
-  const IssueDetailScreen({super.key, required this.issueId});
+  const IssueDetailScreen({
+    super.key,
+    required this.issueId,
+    this.mediaService,
+    this.locationService,
+  });
 
   final int issueId;
+  final MediaService? mediaService;
+  final LocationService? locationService;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -29,10 +46,47 @@ class IssueDetailScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Issue #$issueId'),
+        title: asyncIssue.when(
+          data: (issue) => Row(
+            children: [
+              Expanded(
+                child: Text(
+                  issue.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color:
+                      Theme.of(context).colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  '#$issueId',
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color:
+                            Theme.of(context).colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w600,
+                      ),
+                ),
+              ),
+            ],
+          ),
+          loading: () => Text('Issue #$issueId'),
+          error: (err, stack) => Text('Issue #$issueId'),
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
+            tooltip: context.tr('action_refresh'),
             onPressed: () => ref.invalidate(singleIssueProvider(issueId)),
           ),
         ],
@@ -46,296 +100,247 @@ class IssueDetailScreen extends ConsumerWidget {
           padding: const EdgeInsets.all(16),
           child: EmptyState(
             icon: Icons.error_outline,
-            title: 'Could not load issue',
-            message: err.toString(),
-            actionLabel: 'Retry',
+            title: context.tr('issue_load_error_title'),
+            message: friendlyErrorMessage(
+              err,
+              fallback: context.tr('issue_load_error_msg'),
+            ),
+            actionLabel: context.tr('action_retry'),
             onAction: () => ref.invalidate(singleIssueProvider(issueId)),
           ),
         ),
-        data: (issue) => RefreshIndicator(
-          onRefresh: () async => ref.invalidate(singleIssueProvider(issueId)),
-          child: ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              // Header Row
-              Row(
-                children: [
-                  if (issue.isAnonymous) ...[
-                    Icon(Icons.face_retouching_natural,
-                        size: 18, color: AppColors.anonMask),
-                    const SizedBox(width: 6),
-                  ],
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          issue.reporterLabel,
-                          style: Theme.of(context).textTheme.titleSmall,
-                        ),
-                        Text(
-                          '${issue.ward} • ${formatRelativeTime(issue.createdAt)}',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurfaceVariant,
+        data: (issue) {
+          final officialResponses =
+              ref.watch(officialResponsesProvider(issueId)).asData?.value ?? [];
+
+          return RefreshIndicator(
+            onRefresh: () async => ref.invalidate(singleIssueProvider(issueId)),
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                // Header Row
+                Row(
+                  children: [
+                    Expanded(
+                      child: InkWell(
+                        key: Key('issueDetailReporter_${issue.id}'),
+                        onTap: issue.reporterId != null
+                            ? () => context.push(
+                                  RoutePaths.publicProfileFor(
+                                    issue.reporterId!,
+                                  ),
+                                )
+                            : null,
+                        borderRadius: BorderRadius.circular(8),
+                        child: Row(
+                          children: [
+                            if (issue.isAnonymous) ...[
+                              Icon(Icons.face_retouching_natural,
+                                  size: 18, color: AppColors.anonMask),
+                              const SizedBox(width: 6),
+                            ],
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    issue.reporterLabel,
+                                    style:
+                                        Theme.of(context).textTheme.titleSmall,
+                                  ),
+                                  Text(
+                                    '${issue.ward} • ${formatRelativeTime(issue.createdAt)}',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodySmall
+                                        ?.copyWith(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurfaceVariant,
+                                        ),
+                                  ),
+                                ],
                               ),
+                            ),
+                          ],
                         ),
-                      ],
+                      ),
                     ),
-                  ),
-                  StatusBadge(status: issue.status),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              // Title and Description
-              Text(
-                issue.title,
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-              ),
-              if (issue.description.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Text(
-                  issue.description,
-                  style: Theme.of(context).textTheme.bodyLarge,
+                    StatusBadge(status: issue.status),
+                  ],
                 ),
-              ],
-              const SizedBox(height: 16),
+                const SizedBox(height: 16),
 
-              // Tags & Upvote Row
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Expanded(
-                    child: Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        Chip(label: Text('#${issue.category}')),
-                        if (issue.isFuzzed)
-                          const Chip(
-                            avatar: Icon(Icons.blur_on, size: 16),
-                            label: Text('Location Fuzzed'),
-                          ),
-                        if (issue.isShielded)
-                          const Chip(
-                            avatar: Icon(Icons.shield_outlined,
-                                size: 16, color: Colors.purple),
-                            label: Text('Shielded Mode'),
-                          ),
-                      ],
-                    ),
+                // Title and Description
+                Text(
+                  issue.title,
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+                if (issue.description.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    issue.description,
+                    style: Theme.of(context).textTheme.bodyLarge,
                   ),
-                  OutlinedButton.icon(
-                    key: Key('upvote_button_${issue.id}'),
-                    onPressed: () async {
-                      await ref
-                          .read(multiTypeFeedProvider.notifier)
-                          .toggleUpvote(
-                            issue.id,
-                            defaultLatitude,
-                            defaultLongitude,
-                          );
-                      ref.invalidate(singleIssueProvider(issueId));
-                    },
-                    icon: Icon(
-                      issue.hasUpvoted ? Icons.thumb_up : Icons.thumb_up_outlined,
-                      size: 18,
-                      color: issue.hasUpvoted
-                          ? Theme.of(context).colorScheme.primary
-                          : Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-                    label: Text(
-                      '${issue.upvotesCount}',
-                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                            color: issue.hasUpvoted
-                                ? Theme.of(context).colorScheme.primary
-                                : Theme.of(context).colorScheme.onSurfaceVariant,
-                            fontWeight: issue.hasUpvoted
-                                ? FontWeight.bold
-                                : FontWeight.normal,
+                ],
+                if (issue.mediaUrls.isNotEmpty ||
+                    (issue.videoUrl != null && issue.videoUrl!.isNotEmpty) ||
+                    (issue.resolutionProof != null &&
+                        issue.resolutionProof!.isNotEmpty)) ...[
+                  const SizedBox(height: 16),
+                  MediaPreviewWidget(
+                    key: Key('issueDetailMedia_${issue.id}'),
+                    mediaUrls: issue.mediaUrls,
+                    videoUrl: issue.videoUrl,
+                    resolutionProof: issue.resolutionProof,
+                    maxHeight: 260,
+                    heroTagPrefix: 'detail_${issue.id}',
+                  ),
+                ],
+                const SizedBox(height: 16),
+
+                // Tags & Upvote Row
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          Chip(
+                            label: Text(
+                              issue.category.toUpperCase(),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
+                            ),
                           ),
+                          if (issue.isFuzzed)
+                            Chip(
+                              avatar: const Icon(Icons.blur_on, size: 16),
+                              label: Text(context.tr('issue_location_fuzzed')),
+                            ),
+                          if (issue.isShielded)
+                            Chip(
+                              avatar: Icon(Icons.shield_outlined,
+                                  size: 16, color: AppColors.anonMask),
+                              label: Text(context.tr('issue_shielded_mode')),
+                            ),
+                        ],
+                      ),
                     ),
-                    style: OutlinedButton.styleFrom(
-                      backgroundColor: issue.hasUpvoted
-                          ? Theme.of(context).colorScheme.primaryContainer
-                          : Colors.transparent,
-                      side: BorderSide(
+                    OutlinedButton.icon(
+                      key: Key('upvote_button_${issue.id}'),
+                      onPressed: () async {
+                        try {
+                          await ref
+                              .read(multiTypeFeedProvider.notifier)
+                              .toggleUpvote(
+                                issue.id,
+                                issue.latitude,
+                                issue.longitude,
+                                currentlyUpvoted: issue.hasUpvoted,
+                              );
+                          ref.invalidate(singleIssueProvider(issueId));
+                        } catch (err) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(upvoteErrorMessage(err)),
+                              ),
+                            );
+                          }
+                        }
+                      },
+                      icon: Icon(
+                        issue.hasUpvoted
+                            ? Icons.thumb_up
+                            : Icons.thumb_up_outlined,
+                        size: 18,
                         color: issue.hasUpvoted
                             ? Theme.of(context).colorScheme.primary
+                            : Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                      label: Text(
+                        '${issue.upvotesCount}',
+                        style:
+                            Theme.of(context).textTheme.labelMedium?.copyWith(
+                                  color: issue.hasUpvoted
+                                      ? Theme.of(context).colorScheme.primary
+                                      : Theme.of(context)
+                                          .colorScheme
+                                          .onSurfaceVariant,
+                                  fontWeight: issue.hasUpvoted
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
+                                ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        backgroundColor: issue.hasUpvoted
+                            ? Theme.of(context).colorScheme.primaryContainer
+                            : Colors.transparent,
+                        side: BorderSide(
+                          color: issue.hasUpvoted
+                            ? Theme.of(context).colorScheme.primary
                             : Theme.of(context).colorScheme.outlineVariant,
+                        ),
+                        visualDensity: VisualDensity.compact,
                       ),
-                      visualDensity: VisualDensity.compact,
                     ),
-                  ),
+                  ],
+                ),
+                const Divider(height: 32),
+
+                // Rich Detailed Audit Timeline
+                AuditTimelineCard(
+                  issue: issue,
+                  officialResponses: officialResponses,
+                ),
+                const Divider(height: 32),
+
+                // Official Representative Responses
+                if (officialResponses.isNotEmpty) ...[
+                  ...officialResponses
+                      .map((res) => OfficialResponseCard(response: res)),
+                  const Divider(height: 32),
                 ],
-              ),
-              const Divider(height: 32),
 
-              // Escalation Ladder Section
-              _EscalationLadderWidget(issue: issue),
-              const Divider(height: 32),
-
-              // Official Representative Responses
-              ref.watch(officialResponsesProvider(issueId)).when(
-                    data: (responses) {
-                      if (responses.isEmpty) return const SizedBox.shrink();
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          ...responses.map((res) => OfficialResponseCard(response: res)),
-                          const Divider(height: 32),
-                        ],
-                      );
-                    },
-                    loading: () => const SizedBox.shrink(),
-                    error: (err, stack) => const SizedBox.shrink(),
-                  ),
-
-              // Quorum Resolution Section
-              _QuorumResolutionWidget(issue: issue, issueId: issueId),
-              const Divider(height: 32),
-
-              // Community Discussion Section
-              CommentsSection(issueId: issueId),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _EscalationLadderWidget extends StatelessWidget {
-  const _EscalationLadderWidget({required this.issue});
-
-  final Issue issue;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final status = issue.status;
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.timeline_rounded, color: Colors.indigo),
-                const SizedBox(width: 8),
-                Text(
-                  'Escalation Ladder Audit',
-                  style: theme.textTheme.titleMedium
-                      ?.copyWith(fontWeight: FontWeight.bold),
+                // Community / Neighbor Verification Section
+                _CommunityVerificationWidget(
+                  issue: issue,
+                  issueId: issueId,
+                  mediaService: mediaService,
+                  locationService: locationService,
                 ),
+                const Divider(height: 32),
+
+                // Community Discussion Section
+                CommentsSection(issueId: issueId),
               ],
             ),
-            const SizedBox(height: 16),
-            _TimelineStep(
-              title: '1. Reported & Unacknowledged',
-              subtitle: '24h window for representative acknowledgment',
-              isDone: true,
-              isActive: status == 'unacknowledged' || status == 'open',
-            ),
-            _TimelineStep(
-              title: '2. 24h - 72h Escalating',
-              subtitle: 'Public escalation on ward feed & ignored list',
-              isDone: status == 'escalating' ||
-                  status == 'under_review' ||
-                  status == 'forwarded' ||
-                  status == 'pending_quorum' ||
-                  status == 'resolved',
-              isActive: status == 'escalating',
-            ),
-            _TimelineStep(
-              title: '3. >7d Forwarded to Council Tier',
-              subtitle: 'Auto-forwarded to higher authorities',
-              isDone: status == 'forwarded' ||
-                  status == 'pending_quorum' ||
-                  status == 'resolved',
-              isActive: status == 'forwarded',
-            ),
-            _TimelineStep(
-              title: '4. Dual Quorum Resolution',
-              subtitle: 'Proof uploaded + 3 neighbor confirmations',
-              isDone: status == 'resolved',
-              isActive: status == 'pending_quorum',
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
 }
 
-class _TimelineStep extends StatelessWidget {
-  const _TimelineStep({
-    required this.title,
-    required this.subtitle,
-    required this.isDone,
-    required this.isActive,
+class _CommunityVerificationWidget extends ConsumerWidget {
+  const _CommunityVerificationWidget({
+    required this.issue,
+    required this.issueId,
+    this.mediaService,
+    this.locationService,
   });
-
-  final String title;
-  final String subtitle;
-  final bool isDone;
-  final bool isActive;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = isActive
-        ? Colors.orange
-        : (isDone ? Colors.green : Colors.grey.shade400);
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(
-            isDone ? Icons.check_circle_rounded : Icons.radio_button_unchecked,
-            color: color,
-            size: 20,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight:
-                            isActive ? FontWeight.bold : FontWeight.normal,
-                        color: color,
-                      ),
-                ),
-                Text(
-                  subtitle,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _QuorumResolutionWidget extends ConsumerWidget {
-  const _QuorumResolutionWidget({required this.issue, required this.issueId});
 
   final Issue issue;
   final int issueId;
+  final MediaService? mediaService;
+  final LocationService? locationService;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -352,57 +357,107 @@ class _QuorumResolutionWidget extends ConsumerWidget {
           children: [
             Row(
               children: [
-                const Icon(Icons.people_alt_rounded, color: Colors.teal),
+                const Icon(Icons.people_alt_rounded, color: AppColors.verified),
                 const SizedBox(width: 8),
-                Text(
-                  'Quorum-Backed Resolution',
-                  style: theme.textTheme.titleMedium
-                      ?.copyWith(fontWeight: FontWeight.bold),
+                Expanded(
+                  child: Text(
+                    context.tr('issue_quorum_title'),
+                    style: theme.textTheme.titleMedium
+                        ?.copyWith(fontWeight: FontWeight.bold),
+                  ),
                 ),
               ],
             ),
+            const SizedBox(height: 4),
+            Text(
+              context.tr('issue_quorum_subtitle'),
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
             const SizedBox(height: 12),
+
+            // Resolution proof card if present
             if (issue.resolutionProof != null &&
-                issue.resolutionProof!.isNotEmpty) ...[
+                issue.resolutionProof!.trim().isNotEmpty) ...[
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: theme.colorScheme.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: AppColors.resolved.withValues(alpha: 0.3),
+                  ),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Authority Resolution Proof:',
-                      style: theme.textTheme.labelMedium
-                          ?.copyWith(fontWeight: FontWeight.bold),
+                    Row(
+                      children: [
+                        const Icon(Icons.verified_rounded,
+                            size: 18, color: AppColors.resolved),
+                        const SizedBox(width: 6),
+                        Text(
+                          context.tr('resolution_proof_label'),
+                          style: theme.textTheme.labelMedium
+                              ?.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 4),
-                    Text(issue.resolutionProof!),
+                    const SizedBox(height: 8),
+                    if (issue.resolutionProof!.startsWith('http'))
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.network(
+                          resolveMediaUrl(issue.resolutionProof!),
+                          height: 140,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) => Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            child: Text(issue.resolutionProof!),
+                          ),
+                        ),
+                      )
+                    else
+                      Text(
+                        issue.resolutionProof!,
+                        style: theme.textTheme.bodyMedium,
+                      ),
                     if (issue.resolutionNotes != null &&
                         issue.resolutionNotes!.isNotEmpty) ...[
-                      const SizedBox(height: 4),
-                      Text('Notes: ${issue.resolutionNotes}',
-                          style: theme.textTheme.bodySmall),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.surface,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          '${context.tr('resolution_notes_label')} ${issue.resolutionNotes}',
+                          style: theme.textTheme.bodySmall,
+                        ),
+                      ),
                     ],
                   ],
                 ),
               ),
               const SizedBox(height: 12),
             ],
+
             Text(
-              'Quorum Progress: ${issue.confirmationsCount} / 3 neighbor confirmations',
+              '${context.tr('quorum_progress')} ${issue.confirmationsCount} / 3',
               style: theme.textTheme.bodyMedium
                   ?.copyWith(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 6),
             LinearProgressIndicator(
               value: (issue.confirmationsCount / 3).clamp(0.0, 1.0),
-              backgroundColor: Colors.grey.shade300,
-              color: isResolved ? Colors.green : Colors.teal,
+              backgroundColor: theme.colorScheme.surfaceContainerHighest,
+              color: isResolved ? AppColors.resolved : AppColors.verified,
             ),
             const SizedBox(height: 16),
+
             if (isPending) ...[
               Row(
                 children: [
@@ -410,29 +465,38 @@ class _QuorumResolutionWidget extends ConsumerWidget {
                     child: OutlinedButton.icon(
                       key: const Key('quorum_vote_confirm'),
                       icon: const Icon(Icons.check_circle_outline,
-                          color: Colors.green),
-                      label: const Text('Confirm Fix'),
+                          color: AppColors.resolved),
+                      label: Text(context.tr('quorum_confirm')),
                       onPressed: () async {
                         final repo = ref.read(feedRepositoryProvider);
                         try {
                           await repo.voteQuorum(
                             issueId: issueId,
                             vote: 'confirm',
-                            latitude: defaultLatitude,
-                            longitude: defaultLongitude,
+                            latitude: issue.latitude,
+                            longitude: issue.longitude,
                           );
                           ref.invalidate(singleIssueProvider(issueId));
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Quorum confirm vote submitted'),
+                              SnackBar(
+                                content: Text(
+                                  context.tr('quorum_confirm_submitted'),
+                                ),
                               ),
                             );
                           }
                         } catch (err) {
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Error: $err')),
+                              SnackBar(
+                                content: Text(
+                                  friendlyErrorMessage(
+                                    err,
+                                    fallback: context.tr('quorum_vote_failed'),
+                                  ),
+                                ),
+                              ),
                             );
                           }
                         }
@@ -444,29 +508,38 @@ class _QuorumResolutionWidget extends ConsumerWidget {
                     child: OutlinedButton.icon(
                       key: const Key('quorum_vote_dispute'),
                       icon: const Icon(Icons.highlight_off_rounded,
-                          color: Colors.red),
-                      label: const Text('Dispute Fix'),
+                          color: AppColors.urgent),
+                      label: Text(context.tr('quorum_dispute')),
                       onPressed: () async {
                         final repo = ref.read(feedRepositoryProvider);
                         try {
                           await repo.voteQuorum(
                             issueId: issueId,
                             vote: 'dispute',
-                            latitude: defaultLatitude,
-                            longitude: defaultLongitude,
+                            latitude: issue.latitude,
+                            longitude: issue.longitude,
                           );
                           ref.invalidate(singleIssueProvider(issueId));
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Quorum dispute vote submitted'),
+                              SnackBar(
+                                content: Text(
+                                  context.tr('quorum_dispute_submitted'),
+                                ),
                               ),
                             );
                           }
                         } catch (err) {
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Error: $err')),
+                              SnackBar(
+                                content: Text(
+                                  friendlyErrorMessage(
+                                    err,
+                                    fallback: context.tr('quorum_vote_failed'),
+                                  ),
+                                ),
+                              ),
                             );
                           }
                         }
@@ -477,7 +550,7 @@ class _QuorumResolutionWidget extends ConsumerWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                'Note: Votes require device location within issue radius.',
+                context.tr('quorum_note'),
                 style: theme.textTheme.labelSmall
                     ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
               ),
@@ -486,81 +559,21 @@ class _QuorumResolutionWidget extends ConsumerWidget {
                 width: double.infinity,
                 child: FilledButton.icon(
                   key: const Key('submit_resolution_button'),
-                  icon: const Icon(Icons.task_alt_rounded),
-                  label: const Text('Authority: Submit Resolution Proof'),
-                  onPressed: () => _showSubmitResolutionDialog(context, ref),
+                  icon: const Icon(Icons.photo_camera_rounded),
+                  label: Text(context.tr('submit_resolution_proof')),
+                  onPressed: () => ResolutionProofModal.show(
+                    context,
+                    issueId: issueId,
+                    initialLat: issue.latitude,
+                    initialLng: issue.longitude,
+                    mediaService: mediaService,
+                    locationService: locationService,
+                  ),
                 ),
               ),
             ],
           ],
         ),
-      ),
-    );
-  }
-
-  void _showSubmitResolutionDialog(BuildContext context, WidgetRef ref) {
-    final proofController = TextEditingController();
-    final notesController = TextEditingController();
-
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Submit Resolution Proof'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: proofController,
-              decoration: const InputDecoration(
-                labelText: 'Proof Image URL',
-                hintText: 'https://storage.example.com/fix_photo.jpg',
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: notesController,
-              decoration: const InputDecoration(
-                labelText: 'Resolution Notes',
-                hintText: 'Re-paved 20m asphalt road section...',
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () async {
-              if (proofController.text.length < 5) return;
-              final repo = ref.read(feedRepositoryProvider);
-              try {
-                await repo.submitResolution(
-                  issueId: issueId,
-                  proofUrl: proofController.text,
-                  notes: notesController.text,
-                );
-                if (ctx.mounted) Navigator.pop(ctx);
-                ref.invalidate(singleIssueProvider(issueId));
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Resolution submitted for quorum verification'),
-                    ),
-                  );
-                }
-              } catch (err) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Error submitting resolution: $err')),
-                  );
-                }
-              }
-            },
-            child: const Text('Submit'),
-          ),
-        ],
       ),
     );
   }

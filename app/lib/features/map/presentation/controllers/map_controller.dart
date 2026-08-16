@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import '../../data/map_api.dart';
+import '../../../../core/services/location_service.dart';
 
 class MapBounds {
   final double minLat;
@@ -37,6 +37,8 @@ class MapState {
   final String selectedStatus;
   final MapBounds bounds;
   final bool isBoundsDirty;
+  final double? initialLat;
+  final double? initialLng;
 
   const MapState({
     this.pins = const AsyncValue.loading(),
@@ -44,12 +46,14 @@ class MapState {
     this.selectedCategory = 'all',
     this.selectedStatus = 'all',
     this.bounds = const MapBounds(
-      minLat: 8.0,
-      maxLat: 37.0,
-      minLng: 68.0,
-      maxLng: 97.0,
+      minLat: 19.0760 - 0.05,
+      maxLat: 19.0760 + 0.05,
+      minLng: 72.8777 - 0.05,
+      maxLng: 72.8777 + 0.05,
     ),
     this.isBoundsDirty = false,
+    this.initialLat,
+    this.initialLng,
   });
 
   MapState copyWith({
@@ -59,6 +63,8 @@ class MapState {
     String? selectedStatus,
     MapBounds? bounds,
     bool? isBoundsDirty,
+    double? initialLat,
+    double? initialLng,
   }) {
     return MapState(
       pins: pins ?? this.pins,
@@ -67,14 +73,40 @@ class MapState {
       selectedStatus: selectedStatus ?? this.selectedStatus,
       bounds: bounds ?? this.bounds,
       isBoundsDirty: isBoundsDirty ?? this.isBoundsDirty,
+      initialLat: initialLat ?? this.initialLat,
+      initialLng: initialLng ?? this.initialLng,
     );
   }
 }
 
 class MapPinsNotifier extends StateNotifier<MapState> {
   final MapApi _mapApi;
+  final LocationService _locationService;
 
-  MapPinsNotifier(this._mapApi) : super(const MapState()) {
+  MapPinsNotifier(this._mapApi, this._locationService) : super(const MapState()) {
+    _initLocationAndFetch();
+  }
+
+  Future<void> _initLocationAndFetch() async {
+    final pos = await _locationService.getCurrentPosition();
+    if (pos != null) {
+      final bounds = MapBounds(
+        minLat: pos.latitude - 0.05,
+        maxLat: pos.latitude + 0.05,
+        minLng: pos.longitude - 0.05,
+        maxLng: pos.longitude + 0.05,
+      );
+      state = state.copyWith(
+        bounds: bounds,
+        initialLat: pos.latitude,
+        initialLng: pos.longitude,
+      );
+    } else {
+      state = state.copyWith(
+        initialLat: 19.0760,
+        initialLng: 72.8777,
+      );
+    }
     fetchPins();
   }
 
@@ -132,9 +164,26 @@ class MapPinsNotifier extends StateNotifier<MapState> {
   void searchThisArea() {
     fetchPins();
   }
+
+  /// Called by the map screen once the user's GPS position is resolved.
+  /// Updates the bounds to a ~5 km radius centred on [lat],[lng] then fetches.
+  void fetchPinsForCenter(double lat, double lng) {
+    const delta = 0.05; // ~5.5 km at equator
+    final bounds = MapBounds(
+      minLat: lat - delta,
+      maxLat: lat + delta,
+      minLng: lng - delta,
+      maxLng: lng + delta,
+    );
+    state = state.copyWith(bounds: bounds, isBoundsDirty: false);
+    fetchPins();
+  }
 }
 
 final mapPinsNotifierProvider =
     StateNotifierProvider<MapPinsNotifier, MapState>((ref) {
-  return MapPinsNotifier(ref.watch(mapApiProvider));
+  return MapPinsNotifier(
+    ref.watch(mapApiProvider),
+    ref.watch(locationServiceProvider),
+  );
 });

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/l10n/app_strings.dart';
 import '../providers/flag_issue_provider.dart';
 
 class FlagIssueDialog extends StatefulWidget {
@@ -31,19 +32,34 @@ class _FlagIssueDialogState extends State<FlagIssueDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       key: const Key('flagIssueDialog'),
-      title: const Text('Flag Issue'),
+      title: Text(context.tr('flag_issue_title')),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           DropdownButton<String>(
             key: const Key('flagCategorySelect'),
             value: selectedCategory,
-            items: const [
-              DropdownMenuItem(value: 'spam', child: Text('Spam')),
-              DropdownMenuItem(value: 'abuse', child: Text('Abuse')),
-              DropdownMenuItem(value: 'pii', child: Text('PII')),
-              DropdownMenuItem(value: 'fake_report', child: Text('Fake Report')),
-              DropdownMenuItem(value: 'other', child: Text('Other')),
+            items: [
+              DropdownMenuItem(
+                value: 'spam',
+                child: Text(context.tr('flag_category_spam')),
+              ),
+              DropdownMenuItem(
+                value: 'abuse',
+                child: Text(context.tr('flag_category_abuse')),
+              ),
+              DropdownMenuItem(
+                value: 'pii',
+                child: Text(context.tr('flag_category_pii')),
+              ),
+              DropdownMenuItem(
+                value: 'fake_report',
+                child: Text(context.tr('flag_category_fake')),
+              ),
+              DropdownMenuItem(
+                value: 'other',
+                child: Text(context.tr('flag_category_other')),
+              ),
             ],
             onChanged: (val) {
               if (val != null) {
@@ -56,7 +72,9 @@ class _FlagIssueDialogState extends State<FlagIssueDialog> {
           TextField(
             key: const Key('flagDetailsInput'),
             controller: detailsController,
-            decoration: const InputDecoration(hintText: 'Details (optional)'),
+            decoration: InputDecoration(
+              hintText: context.tr('flag_details_hint'),
+            ),
           ),
         ],
       ),
@@ -76,7 +94,7 @@ class _FlagIssueDialogState extends State<FlagIssueDialog> {
                   Navigator.of(context).pop();
                 }
               },
-              child: const Text('Submit'),
+              child: Text(context.tr('action_submit')),
             );
           },
         ),

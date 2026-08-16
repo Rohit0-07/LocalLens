@@ -1,6 +1,9 @@
 from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
+
+from app.features.gamification.schemas import UserBadgeOut
+from app.features.issues.schemas import IssueOut
 
 _PHONE_PATTERN = r"^\+[1-9]\d{6,14}$"
 _EMAIL_PATTERN = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
@@ -34,13 +37,37 @@ class TokenResponse(BaseModel):
 
 
 class UserOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int | str
     phone: str | None = None
     email: str | None = None
     anonymous_identity: str
     anon_id: str | None = None
+    role: str = "citizen"
+    is_verified: bool = True
+    ward: str | None = "Ward 45, Urban Central"
     created_at: datetime | None = None
     is_guest: bool = False
     issues_count: int = 0
     upvotes_count: int = 0
     quorum_votes_count: int = 0
+
+
+class PublicUserProfileOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    anon_id: str
+    role: str = "citizen"
+    is_verified: bool = True
+    ward: str | None = "Ward 45, Urban Central"
+    created_at: datetime
+    issues_count: int = 0
+    resolutions_count: int = 0
+    upvotes_count: int = 0
+    quorum_votes_count: int = 0
+    level: int = 1
+    impact_score: int = 0
+    badges: list[UserBadgeOut] = Field(default_factory=list)
+    public_issues: list[IssueOut] = Field(default_factory=list)

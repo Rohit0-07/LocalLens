@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../core/theme/app_colors.dart';
+
 class ShimmerLoading extends StatefulWidget {
   const ShimmerLoading({
     super.key,
@@ -40,8 +42,9 @@ class _ShimmerLoadingState extends State<ShimmerLoading>
         WidgetsBinding.instance.runtimeType.toString().contains('Test');
     // ignore: deprecated_member_use
     final tickerEnabled = TickerMode.of(context);
+    final reduceMotion = MediaQuery.disableAnimationsOf(context);
 
-    if (widget.enabled && tickerEnabled && !isTest) {
+    if (widget.enabled && tickerEnabled && !isTest && !reduceMotion) {
       if (!_controller.isAnimating) {
         _controller.repeat();
       }
@@ -68,9 +71,9 @@ class _ShimmerLoadingState extends State<ShimmerLoading>
     final isDark = theme.brightness == Brightness.dark;
 
     final base = widget.baseColor ??
-        (isDark ? Colors.grey.shade800 : Colors.grey.shade300);
+        (isDark ? AppColors.skeletonBaseDark : AppColors.skeletonBase);
     final highlight = widget.highlightColor ??
-        (isDark ? Colors.grey.shade600 : Colors.grey.shade100);
+        (isDark ? AppColors.skeletonHighlightDark : AppColors.skeletonHighlight);
 
     return AnimatedBuilder(
       animation: _controller,
@@ -112,7 +115,9 @@ class ShimmerBox extends StatelessWidget {
       width: width,
       height: height,
       decoration: BoxDecoration(
-        color: Colors.grey.shade300,
+        color: Theme.of(context).brightness == Brightness.dark
+          ? AppColors.skeletonBaseDark
+          : AppColors.skeletonBase,
         borderRadius: BorderRadius.circular(borderRadius),
       ),
     );

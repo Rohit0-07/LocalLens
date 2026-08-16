@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/l10n/app_strings.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../auth/presentation/widgets/guest_guard.dart';
 import '../domain/gamification_models.dart';
@@ -17,7 +18,7 @@ class GamificationScreen extends ConsumerWidget {
     return Scaffold(
       key: const Key('gamificationScreen'),
       appBar: AppBar(
-        title: const Text('Civic Impact & Badges'),
+        title: Text(context.tr('gamification_title')),
       ),
       body: profileAsync.when(
         data: (profile) => _buildContent(context, ref, profile),
@@ -35,7 +36,7 @@ class GamificationScreen extends ConsumerWidget {
               const SizedBox(height: 12),
               FilledButton.tonal(
                 onPressed: () => ref.read(gamificationProfileProvider.notifier).refreshProfile(),
-                child: const Text('Retry'),
+                child: Text(context.tr('action_retry')),
               ),
             ],
           ),
@@ -203,7 +204,7 @@ class _StreakBanner extends ConsumerWidget {
                   );
                 }
               },
-              child: const Text('Claim Daily Streak'),
+              child: Text(context.tr('gamification_claim_streak')),
             ),
           ],
         ),
@@ -220,7 +221,7 @@ class _BadgesGrid extends StatelessWidget {
   static const List<Map<String, String>> staticBadges = [
     {'key': 'first_report', 'name': 'First Report'},
     {'key': 'civic_voter', 'name': 'Civic Voter'},
-    {'key': 'quorum_hero', 'name': 'Quorum Hero'},
+    {'key': 'quorum_hero', 'name': 'Verification Hero'},
     {'key': 'neighborhood_voice', 'name': 'Neighborhood Voice'},
     {'key': 'streak_master', 'name': 'Streak Master'},
   ];
@@ -295,7 +296,7 @@ class _BadgesGrid extends StatelessWidget {
                       Text(
                         unlockedAt.toIso8601String().substring(0, 10),
                         style: theme.textTheme.labelSmall?.copyWith(
-                          fontSize: 10,
+                          fontSize: 12,
                           color: colorScheme.onPrimaryContainer.withValues(alpha: 0.8),
                         ),
                       ),
@@ -350,7 +351,7 @@ class _ActivityBreakdownCard extends StatelessWidget {
             ),
             const Divider(height: 16.0),
             _ActivityMetricRow(
-              label: 'Quorum Votes: ${counts.quorumVotesCast}',
+              label: 'Verification Votes: ${counts.quorumVotesCast}',
               ptsLabel: '+${counts.quorumVotesCast * 20} pts',
               icon: Icons.how_to_vote_outlined,
               color: AppColors.seed,

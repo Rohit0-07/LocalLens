@@ -1,9 +1,9 @@
 """Seed the LocalLens database with realistic demo data.
 
 Data lives in the repository-level ``seed/data/*.json`` files (one file per
-record type) and ``seed/images/**`` (one SVG per issue). This script loads
+record type), ``seed/images/**``, and ``seed/media/**``. This script loads
 those files and inserts the rows in foreign-key order, deriving geohashes,
-anonymous identities and denormalised counters so the database stays
+anonymous identities, and denormalised counters so the database stays
 internally consistent with what the API would compute.
 
 Run from the ``backend`` directory:
@@ -18,6 +18,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import shutil
 from collections import Counter
 from datetime import date, datetime
 from pathlib import Path
@@ -37,7 +38,9 @@ from app.features.issues.models import (
     QuorumVote,
     Upvote,
     UpvoteRateLimit,
+    Win,
 )
+from app.features.media.models import Media
 from app.features.notifications.models import Notification
 from app.features.representatives.models import OfficialResponse, RepresentativeProfile
 from sqlalchemy import delete, select
@@ -45,6 +48,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 #: tables touched by the seeder (deleted first when --clear is used, children first)
 _TABLES: list[Any] = [
+    Win,
+    Media,
     Notification,
     OfficialResponse,
     QuorumVote,
@@ -64,6 +69,7 @@ _TABLES: list[Any] = [
 #: record types consumed by the seeder, in foreign-key-safe load order
 _DATA_FILES = [
     "users",
+    "media",
     "issues",
     "representatives",
     "comments",
@@ -118,6 +124,26 @@ def _dedup(
         session.add(factory(row))
 
 
+def _sync_media_files() -> None:
+    """Sync sample media assets from seed/media to uploads/media and backend/uploads/media."""
+    seed_media = _REPO_ROOT / "seed" / "media"
+    upload_dirs = [
+        _REPO_ROOT / "uploads" / "media",
+        _REPO_ROOT / "backend" / "uploads" / "media",
+        Path("uploads/media"),
+    ]
+    if not seed_media.exists():
+        return
+
+    for u_dir in upload_dirs:
+        u_dir.mkdir(parents=True, exist_ok=True)
+        for src_file in seed_media.glob("*"):
+            if src_file.is_file():
+                dst_file = u_dir / src_file.name
+                if not dst_file.exists() or dst_file.stat().st_size != src_file.stat().st_size:
+                    shutil.copy2(src_file, dst_file)
+
+
 async def _seed_users(
     session: AsyncSession, rows: list[dict[str, Any]], existing: set[Any]
 ) -> None:
@@ -131,7 +157,35 @@ async def _seed_users(
             email=row.get("email"),
             is_admin=row.get("is_admin", False),
             role=row.get("role", "citizen"),
+            is_verified=row.get("is_verified", True),
+            ward=row.get("ward", "Ward 45, Urban Central"),
             is_banned=row.get("is_banned", False),
+            created_at=_parse_dt(row.get("created_at")),
+        )
+
+    _dedup(session, rows, existing, key, factory)
+    await session.commit()
+
+
+async def _seed_media(
+    session: AsyncSession, rows: list[dict[str, Any]], existing: set[Any]
+) -> None:
+    def key(row: dict[str, Any]) -> Any:
+        return row["id"]
+
+    def factory(row: dict[str, Any]) -> Media:
+        return Media(
+            id=row["id"],
+            user_id=str(row["user_id"]) if row.get("user_id") is not None else None,
+            url=row["url"],
+            thumbnail_url=row.get("thumbnail_url", row["url"]),
+            is_verified=row.get("is_verified", False),
+            watermark_label=row.get("watermark_label", "LocalLens Verified"),
+            derived_hash=row.get("derived_hash", ""),
+            latitude=row.get("latitude"),
+            longitude=row.get("longitude"),
+            is_fuzzed=row.get("is_fuzzed", False),
+            is_in_app_camera=row.get("is_in_app_camera", False),
             created_at=_parse_dt(row.get("created_at")),
         )
 
@@ -377,6 +431,18 @@ async def _seed_quorum_votes(
     await session.commit()
 
 
+async def _seed_wins_for_resolved_issues(session: AsyncSession) -> None:
+    """Ensure resolved issues have corresponding Win records with before/after photos and credits."""
+    from app.features.issues.service import create_win_for_issue
+
+    stmt = select(Issue).where(Issue.status == "resolved")
+    res = await session.execute(stmt)
+    resolved_issues = res.scalars().all()
+    for issue in resolved_issues:
+        await create_win_for_issue(session, issue)
+    await session.commit()
+
+
 async def _reconcile_counters(session: AsyncSession) -> None:
     """Make issues.flag_count/upvotes_count/comments_count and quorum tallies
     match the actual child rows, so the database is consistent with the API."""
@@ -421,6 +487,7 @@ async def _report(session: AsyncSession) -> None:
 
     counts = {
         "users": await count(User, User.id),
+        "media": await count(Media, Media.id),
         "issues": await count(Issue, Issue.id),
         "representatives": await count(RepresentativeProfile, RepresentativeProfile.id),
         "comments": await count(Comment, Comment.id),
@@ -432,6 +499,7 @@ async def _report(session: AsyncSession) -> None:
         "user_badges": await count(UserBadge, UserBadge.id),
         "official_responses": await count(OfficialResponse, OfficialResponse.id),
         "quorum_votes": await count(QuorumVote, QuorumVote.id),
+        "wins": await count(Win, Win.id),
     }
     print("Seeded database summary:")
     for name, total in counts.items():
@@ -442,16 +510,16 @@ async def _main(args: argparse.Namespace) -> None:
     settings = Settings(database_url=args.db) if args.db else Settings()
     db = Database(settings.database_url)
     try:
+        if args.clear:
+            await db.drop_all()
         await db.create_all()
         async with db.session_factory() as session:
             if args.clear:
-                for table in _TABLES:
-                    await session.execute(delete(table))
-                await session.commit()
                 existing: dict[str, set[Any]] = {}
             else:
                 existing = {
                     "users": await _keys(session, User.id),
+                    "media": await _keys(session, Media.id),
                     "issues": await _keys(session, Issue.id),
                     "representatives": await _keys(session, RepresentativeProfile.id),
                     "comments": await _keys(session, Comment.id),
@@ -470,10 +538,14 @@ async def _main(args: argparse.Namespace) -> None:
                     "quorum_votes": await _keys(session, QuorumVote.issue_id, QuorumVote.user_id),
                 }
 
+            # Sync demo media and video files to upload directories
+            _sync_media_files()
+
             data = _load_data()
             secret = settings.jwt_secret
 
             await _seed_users(session, data["users"], existing.get("users", set()))
+            await _seed_media(session, data["media"], existing.get("media", set()))
             await _seed_issues(session, data["issues"], existing.get("issues", set()))
             await _seed_representatives(
                 session, data["representatives"], existing.get("representatives", set())
@@ -499,6 +571,7 @@ async def _main(args: argparse.Namespace) -> None:
             await _seed_quorum_votes(
                 session, data["quorum_votes"], existing.get("quorum_votes", set())
             )
+            await _seed_wins_for_resolved_issues(session)
 
             await _reconcile_counters(session)
             await _report(session)

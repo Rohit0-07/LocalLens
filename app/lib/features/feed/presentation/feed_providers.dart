@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/feedback/app_messenger.dart';
+import '../../../core/feedback/error_copy.dart';
+import '../../../core/network/api_exceptions.dart';
 import '../../../core/network/network_providers.dart';
 import '../../geo/presentation/providers/geo_providers.dart';
 import '../data/feed_api.dart';
@@ -11,6 +13,33 @@ import '../domain/feed_item.dart';
 
 const defaultLatitude = 19.1136;
 const defaultLongitude = 72.8697;
+
+/// Maps an upvote failure to a specific, actionable message so the user
+/// knows *why* the vote failed (proximity / rate limit / guest) instead of
+/// a generic error.
+String upvoteErrorMessage(Object err) {
+  final lower = err.toString().toLowerCase();
+  if (err is ApiServerException) {
+    final code = err.code.toLowerCase();
+    if (code.contains('proximity') ||
+        code.contains('too_far') ||
+        lower.contains('proximity') ||
+        lower.contains('too far')) {
+      return 'You must be near this issue to upvote it';
+    }
+    if (code.contains('rate') ||
+        lower.contains('rate') ||
+        lower.contains('too many')) {
+      return 'Too many upvotes. Please try again in a moment';
+    }
+    if (code.contains('guest') ||
+        lower.contains('guest') ||
+        lower.contains('sign in')) {
+      return 'Please sign in to upvote issues';
+    }
+  }
+  return friendlyErrorMessage(err, fallback: 'Failed to toggle upvote');
+}
 
 final feedRepositoryProvider = Provider<FeedRepository>(
   (ref) => FeedApi(ref.watch(apiClientProvider)),
@@ -31,10 +60,9 @@ Future<({double lat, double lng})> _feedCoords(Ref ref) async {
   }
 }
 
-/// Performs the upvote API call. The concrete repository may expose
-/// `upvoteIssue`/`removeUpvote` or a single `toggleUpvote`; dispatch to
-/// whichever exists. Prefer the matching call for [currentlyUpvoted] so the
-/// server is told to add or remove an upvote explicitly.
+/// Performs the upvote API call cleanly using [FeedRepository].
+/// Calls [FeedRepository.removeUpvote] when [currentlyUpvoted] is true,
+/// and [FeedRepository.upvoteIssue] when false.
 Future<Issue> _performUpvote(
   FeedRepository repository,
   int issueId,
@@ -42,18 +70,14 @@ Future<Issue> _performUpvote(
   double longitude,
   bool currentlyUpvoted,
 ) async {
-  final repoDynamic = repository as dynamic;
   if (currentlyUpvoted) {
-    try {
-      return await repoDynamic.removeUpvote(issueId);
-    } on NoSuchMethodError catch (_) {
-      return await repoDynamic.toggleUpvote(issueId);
-    }
-  }
-  try {
-    return await repoDynamic.upvoteIssue(issueId, latitude, longitude);
-  } on NoSuchMethodError catch (_) {
-    return await repoDynamic.toggleUpvote(issueId);
+    return repository.removeUpvote(issueId);
+  } else {
+    return repository.upvoteIssue(
+      issueId,
+      latitude: latitude,
+      longitude: longitude,
+    );
   }
 }
 
@@ -79,27 +103,39 @@ class MultiTypeFeedController extends AsyncNotifier<List<FeedItem>> {
     state = await AsyncValue.guard(build);
   }
 
-  Future<void> toggleUpvote(int issueId, double latitude, double longitude) async {
+  Future<void> toggleUpvote(
+    int issueId,
+    double latitude,
+    double longitude, {
+    bool? currentlyUpvoted,
+  }) async {
     final previousState = state;
     final currentItems = state.value;
-    if (currentItems == null) return;
 
-    final index = currentItems.indexWhere(
-        (item) => item.itemType == FeedItemType.issue && item.issue?.id == issueId);
-    if (index == -1) return;
+    final index = currentItems?.indexWhere(
+          (item) =>
+              item.itemType == FeedItemType.issue && item.issue?.id == issueId,
+        ) ??
+        -1;
 
-    final targetIssue = currentItems[index].issue!;
-    final currentlyUpvoted = targetIssue.hasUpvoted;
-    final updatedIssue = targetIssue.copyWith(
-      hasUpvoted: !currentlyUpvoted,
-      upvotesCount: currentlyUpvoted
-          ? (targetIssue.upvotesCount > 0 ? targetIssue.upvotesCount - 1 : 0)
-          : targetIssue.upvotesCount + 1,
-    );
+    final isUpvoted = (index != -1 && currentItems != null)
+        ? currentItems[index].issue!.hasUpvoted
+        : (currentlyUpvoted ?? false);
 
-    final updatedList = List<FeedItem>.from(currentItems);
-    updatedList[index] = FeedItem(itemType: FeedItemType.issue, issue: updatedIssue);
-    state = AsyncData(updatedList);
+    if (currentItems != null && index != -1) {
+      final targetIssue = currentItems[index].issue!;
+      final updatedIssue = targetIssue.copyWith(
+        hasUpvoted: !isUpvoted,
+        upvotesCount: isUpvoted
+            ? (targetIssue.upvotesCount > 0 ? targetIssue.upvotesCount - 1 : 0)
+            : targetIssue.upvotesCount + 1,
+      );
+
+      final updatedList = List<FeedItem>.from(currentItems);
+      updatedList[index] =
+          FeedItem(itemType: FeedItemType.issue, issue: updatedIssue);
+      state = AsyncData(updatedList);
+    }
 
     try {
       final repository = ref.read(feedRepositoryProvider);
@@ -108,13 +144,14 @@ class MultiTypeFeedController extends AsyncNotifier<List<FeedItem>> {
         issueId,
         latitude,
         longitude,
-        currentlyUpvoted,
+        isUpvoted,
       );
 
       final latestItems = state.value;
       if (latestItems != null) {
         final latestIndex = latestItems.indexWhere(
-            (i) => i.itemType == FeedItemType.issue && i.issue?.id == issueId);
+          (i) => i.itemType == FeedItemType.issue && i.issue?.id == issueId,
+        );
         if (latestIndex != -1) {
           final refreshedList = List<FeedItem>.from(latestItems);
           refreshedList[latestIndex] =
@@ -124,7 +161,7 @@ class MultiTypeFeedController extends AsyncNotifier<List<FeedItem>> {
       }
     } catch (err) {
       state = previousState;
-      ref.read(appMessengerProvider.notifier).show('Failed to toggle upvote');
+      ref.read(appMessengerProvider.notifier).show(upvoteErrorMessage(err));
       rethrow;
     }
   }

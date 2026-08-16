@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/l10n/app_strings.dart';
 import '../../../../core/router/route_paths.dart';
 
 class GuestGuard extends StatelessWidget {
@@ -9,14 +10,12 @@ class GuestGuard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Sign in required'),
-      content: const Text(
-        'Create an account or sign in to participate in civic reporting.',
-      ),
+      title: Text(context.tr('sign_in_required')),
+      content: Text(context.tr('guest_guard_body')),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+          child: Text(context.tr('action_cancel')),
         ),
         FilledButton(
           onPressed: () {
@@ -27,7 +26,7 @@ class GuestGuard extends StatelessWidget {
               }
             });
           },
-          child: const Text('Sign In'),
+          child: Text(context.tr('action_sign_in')),
         ),
       ],
     );

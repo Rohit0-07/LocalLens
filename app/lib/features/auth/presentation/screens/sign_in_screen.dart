@@ -3,11 +3,15 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/feedback/error_copy.dart';
+import '../../../../core/l10n/app_strings.dart';
 import '../../../../core/router/route_paths.dart';
 import '../auth_providers.dart';
 import 'otp_screen.dart';
 
 final _emailPattern = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
+
+const _countryCodes = ['+91', '+1', '+44', '+61', '+971'];
 
 enum AuthMode { phone, email }
 
@@ -21,6 +25,7 @@ class SignInScreen extends ConsumerStatefulWidget {
 class _SignInScreenState extends ConsumerState<SignInScreen> {
   AuthMode _mode = AuthMode.phone;
   final _inputController = TextEditingController();
+  String _countryCode = '+91';
   String? _error;
   bool _isSubmitting = false;
 
@@ -34,15 +39,15 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   ///
   /// A `+` prefix means the user typed their own country code and it is kept
   /// as-is. A 12-digit number starting with `91` is treated as an Indian
-  /// number with country code. Everything else is assumed to be a local Indian
-  /// number and gets the `+91` prefix.
+  /// number with country code. Everything else is prefixed with the selected
+  /// [country code][_countryCode].
   String _normalizePhone(String input) {
     final trimmed = input.trim();
     final digits = trimmed.replaceAll(RegExp(r'\D'), '');
     if (digits.isEmpty) return '';
     if (trimmed.startsWith('+')) return '+$digits';
     if (digits.length == 12 && digits.startsWith('91')) return '+$digits';
-    return '+91$digits';
+    return '$_countryCode$digits';
   }
 
   Future<void> _sendOtp() async {
@@ -50,14 +55,14 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       final digits = _inputController.text.replaceAll(RegExp(r'\D'), '');
       if (digits.length < 6) {
         setState(
-          () => _error = 'Enter a valid phone number, e.g. 98765 43210',
+          () => _error = context.tr('sign_in_phone_invalid'),
         );
         return;
       }
     } else {
       if (!_emailPattern.hasMatch(_inputController.text.trim())) {
         setState(
-          () => _error = 'Enter a valid email address',
+          () => _error = context.tr('sign_in_email_invalid'),
         );
         return;
       }
@@ -87,11 +92,13 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
           mode: _mode == AuthMode.phone ? OtpMode.phone : OtpMode.email,
         ),
       );
-    } catch (_) {
+    } catch (err) {
       if (!mounted) return;
       setState(
-        () => _error =
-            'Could not send the code. Check your connection and try again.',
+        () => _error = friendlyErrorMessage(
+          err,
+          fallback: context.tr('sign_in_otp_failed'),
+        ),
       );
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
@@ -109,10 +116,13 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       await ref.read(sessionProvider.notifier).signIn(session);
       if (!mounted) return;
       context.go(RoutePaths.feed);
-    } catch (_) {
+    } catch (err) {
       if (!mounted) return;
       setState(
-        () => _error = 'Could not start guest session. Try again.',
+        () => _error = friendlyErrorMessage(
+          err,
+          fallback: context.tr('sign_in_guest_failed'),
+        ),
       );
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
@@ -146,22 +156,22 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Your neighborhood, working together.',
+                context.tr('sign_in_tagline'),
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodyLarge,
               ),
               const SizedBox(height: 32),
               SegmentedButton<AuthMode>(
-                segments: const [
+                segments: [
                   ButtonSegment<AuthMode>(
                     value: AuthMode.phone,
-                    label: Text('Phone'),
-                    icon: Icon(Icons.phone_outlined),
+                    label: Text(context.tr('sign_in_phone_tab')),
+                    icon: const Icon(Icons.phone_outlined),
                   ),
                   ButtonSegment<AuthMode>(
                     value: AuthMode.email,
-                    label: Text('Email'),
-                    icon: Icon(Icons.email_outlined),
+                    label: Text(context.tr('sign_in_email_tab')),
+                    icon: const Icon(Icons.email_outlined),
                   ),
                 ],
                 selected: {_mode},
@@ -182,11 +192,34 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                     ? [FilteringTextInputFormatter.allow(RegExp(r'[0-9+]'))]
                     : null,
                 decoration: InputDecoration(
-                  labelText: isPhone ? 'Phone number' : 'Email',
-                  hintText: isPhone ? '98765 43210' : 'citizen@example.com',
-                  prefixIcon: Icon(
-                    isPhone ? Icons.phone_outlined : Icons.email_outlined,
-                  ),
+                  labelText: isPhone
+                      ? context.tr('sign_in_phone_label')
+                      : context.tr('sign_in_email_label'),
+                  hintText: isPhone
+                      ? context.tr('sign_in_phone_hint')
+                      : context.tr('sign_in_email_hint'),
+                  prefixIcon: isPhone
+                      ? Padding(
+                          padding: const EdgeInsets.only(left: 4),
+                          child: DropdownButton<String>(
+                            value: _countryCode,
+                            underline: const SizedBox.shrink(),
+                            borderRadius: BorderRadius.circular(12),
+                            items: _countryCodes
+                                .map(
+                                  (code) => DropdownMenuItem<String>(
+                                    value: code,
+                                    child: Text(code),
+                                  ),
+                                )
+                                .toList(),
+                            onChanged: (value) {
+                              if (value == null) return;
+                              setState(() => _countryCode = value);
+                            },
+                          ),
+                        )
+                      : const Icon(Icons.email_outlined),
                 ),
                 onSubmitted: (_) => _sendOtp(),
               ),
@@ -208,19 +241,19 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                           width: 20,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Text('Send OTP'),
+                      : Text(context.tr('sign_in_send_otp')),
                 ),
               ),
               const SizedBox(height: 12),
               Text(
-                'No account needed — an OTP signs you in.',
+                context.tr('sign_in_otp_note'),
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodySmall,
               ),
               const SizedBox(height: 24),
               OutlinedButton(
                 onPressed: _isSubmitting ? null : _continueAsGuest,
-                child: const Text('Continue as Guest'),
+                child: Text(context.tr('sign_in_guest')),
               ),
               const SizedBox(height: 16),
             ],

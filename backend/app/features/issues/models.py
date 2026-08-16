@@ -40,7 +40,10 @@ class Issue(Base):
     is_shielded: Mapped[bool] = mapped_column(default=False)
     is_hidden: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     flag_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    reporter_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    reporter_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), index=True, nullable=True)
+    media_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    video_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    media_urls: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), nullable=False, index=True
     )
@@ -56,7 +59,7 @@ class Issue(Base):
     disputes_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     quorum_expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
-    reporter: Mapped["User"] = relationship()
+    reporter: Mapped["User | None"] = relationship()
     official_responses: Mapped[list["OfficialResponse"]] = relationship(
         "OfficialResponse", back_populates="issue", cascade="all, delete-orphan"
     )

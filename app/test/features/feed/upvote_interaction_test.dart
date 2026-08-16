@@ -21,7 +21,31 @@ class UpvoteTestFeedRepository implements FeedRepository {
   String errorMessage;
   int toggleCallCount = 0;
 
-  Future<Issue> toggleUpvote(int issueId) async {
+  @override
+  Future<Issue> upvoteIssue(
+    int issueId, {
+    required double latitude,
+    required double longitude,
+  }) async {
+    return _applyToggle(issueId, true);
+  }
+
+  @override
+  Future<Issue> removeUpvote(int issueId) async {
+    return _applyToggle(issueId, false);
+  }
+
+  @override
+  Future<Issue> toggleUpvote(
+    int issueId, {
+    required double latitude,
+    required double longitude,
+    required bool currentlyUpvoted,
+  }) async {
+    return _applyToggle(issueId, !currentlyUpvoted);
+  }
+
+  Future<Issue> _applyToggle(int issueId, bool targetUpvoted) async {
     toggleCallCount++;
     if (shouldFail) {
       throw Exception(errorMessage);
@@ -29,20 +53,32 @@ class UpvoteTestFeedRepository implements FeedRepository {
     final index = issues.indexWhere((i) => i.id == issueId);
     if (index != -1) {
       final current = issues[index];
-      final currentHasUpvoted = ((current as dynamic).hasUpvoted as bool?) ?? false;
-      final currentCount = ((current as dynamic).upvotesCount as int?) ?? 0;
-      final newHasUpvoted = !currentHasUpvoted;
-      final newCount = newHasUpvoted ? currentCount + 1 : currentCount - 1;
+      final currentHasUpvoted = current.hasUpvoted;
+      final currentCount = current.upvotesCount;
+      final newHasUpvoted = targetUpvoted;
+      final newCount = newHasUpvoted
+          ? (currentHasUpvoted ? currentCount : currentCount + 1)
+          : (currentHasUpvoted ? (currentCount > 0 ? currentCount - 1 : 0) : currentCount);
 
-      final updatedJson = current.toJson();
-      updatedJson['has_upvoted'] = newHasUpvoted;
-      updatedJson['upvotes_count'] = newCount;
-      final updated = Issue.fromJson(updatedJson);
+      final updated = current.copyWith(
+        hasUpvoted: newHasUpvoted,
+        upvotesCount: newCount,
+      );
 
       issues[index] = updated;
       return updated;
     }
     throw Exception('Issue not found');
+  }
+
+  @override
+  Future<List<Issue>> fetchUserIssues({int? userId, String? status}) async {
+    return issues;
+  }
+
+  @override
+  Future<Map<String, dynamic>> fetchPublicUserProfile(int userId) async {
+    return {'id': userId};
   }
 
   @override
@@ -81,6 +117,7 @@ class UpvoteTestFeedRepository implements FeedRepository {
     required bool isAnonymous,
     bool isFuzzed = false,
     bool isShielded = false,
+    List<String> mediaUrls = const [],
   }) async {
     throw UnimplementedError();
   }

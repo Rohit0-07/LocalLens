@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "project": "LocalLens",
   "version": "2.0.0",
-  "generated_at": "2026-08-10",
+  "generated_at": "2026-08-15",
   "description": "Topologically ordered feature dependency matrix and component interaction map for AI agents.",
   "topological_build_order": [
     "F-01",
@@ -24,7 +24,7 @@
     "F-01": {
       "name": "Core App Shell, Storage & Infrastructure",
       "layer": 0,
-      "status": "PARTIAL",
+      "status": "COMPLETED",
       "prerequisites": [],
       "dependents": ["F-02", "F-03", "F-04", "F-05", "F-06", "F-07", "F-08", "F-09", "F-10", "F-11", "F-12", "F-13", "F-14"],
       "read_scope": [
@@ -69,10 +69,10 @@
     "F-03": {
       "name": "Spatial & Geofencing Engine",
       "layer": 2,
-      "status": "PARTIAL — reverse-geocode subset shipped",
+      "status": "PARTIAL — Reverse-Geocode + LocationService shipped",
       "prerequisites": ["F-01"],
       "dependents": ["F-04", "F-05", "F-06", "F-08", "F-09", "F-14"],
-      "subset": "reverse-geocode_2026-08-10: GET /api/v1/geo/reverse-geocode backend (ward lookup by lat/lng, radius_km, 422 invalid_coordinates envelope, read-only, no auth) + WardLocationChip/wardLocationProvider frontend surfaced on Compose (Key composeLocationChip) and Feed app bar (Key feedAreaLabel); maps/polygons/geofencing still NOT_STARTED",
+      "subset": "reverse-geocode_2026-08-10: GET /api/v1/geo/reverse-geocode backend (ward lookup by lat/lng, radius_km, 422 invalid_coordinates envelope, read-only, no auth) + WardLocationChip/wardLocationProvider frontend surfaced on Compose (Key composeLocationChip) and Feed app bar (Key feedAreaLabel); LocationService geolocator wrapper (2026-08-16); maps/polygons/geofencing still NOT_STARTED",
       "read_scope": [
         "backend/app/features/issues/geohash.py",
         "backend/app/features/issues/service.py",
@@ -86,7 +86,7 @@
         "backend/app/main.py",
         "backend/app/api/router.py",
         "backend/tests/features/geo/test_geo.py",
-        "app/lib/core/utils/location_service.dart",
+        "app/lib/core/services/location_service.dart",
         "app/lib/features/geo/data/geo_api.dart",
         "app/lib/features/geo/domain/device_location_service.dart",
         "app/lib/features/geo/presentation/providers/geo_providers.dart",
@@ -123,7 +123,7 @@
     "F-05": {
       "name": "Camera & Media Integrity Pipeline",
       "layer": 4,
-      "status": "NOT_STARTED",
+      "status": "COMPLETED - Hardware Integration Active",
       "prerequisites": ["F-01", "F-03", "F-04"],
       "dependents": ["F-04", "F-06", "F-07"],
       "read_scope": [
@@ -135,7 +135,7 @@
     "F-06": {
       "name": "Home Feed Engine & Post Discovery",
       "layer": 5,
-      "status": "PARTIAL",
+      "status": "COMPLETED",
       "prerequisites": ["F-01", "F-02", "F-03", "F-04", "F-05"],
       "dependents": ["F-07", "F-08", "F-09", "F-10", "F-11", "F-12"],
       "read_scope": [
@@ -151,7 +151,7 @@
     "F-07": {
       "name": "Escalation Ladder & Quorum Resolution Engine",
       "layer": 6,
-      "status": "PARTIAL",
+      "status": "COMPLETED",
       "prerequisites": ["F-01", "F-02", "F-03", "F-04", "F-05", "F-06"],
       "dependents": ["F-08", "F-09", "F-10", "F-11", "F-12", "F-14"],
       "read_scope": [
@@ -166,12 +166,13 @@
     "F-08": {
       "name": "Interactive Map & Search Engine",
       "layer": 7,
-      "status": "PARTIAL — search + filters shipped",
+      "status": "COMPLETED - Real Map SDK Active",
       "prerequisites": ["F-01", "F-03", "F-04", "F-06"],
       "dependents": ["F-09", "F-11"],
-      "subset": "search_2026-08-10: GET /api/v1/search backend + SearchScreen frontend; filters_2026-08-10: advanced search filters (categories/created_after/created_before backend + SearchFilters/AdvancedFilterSheet frontend); map/clustering still NOT_STARTED",
+      "subset": "search_2026-08-10: GET /api/v1/search backend + SearchScreen frontend; filters_2026-08-10: advanced search filters; map_2026-08-11: GET /api/v1/geo/map-pins backend + MapScreen frontend interactive map canvas and pins; real map SDK (flutter_map + OSM) 2026-08-16",
       "read_scope": [
         "app/lib/features/map/presentation/screens/map_screen.dart",
+        "app/lib/features/map/presentation/controllers/map_controller.dart",
         "app/lib/features/map/data/map_api.dart",
         "app/lib/features/search/domain/search_repository.dart",
         "app/lib/features/search/data/search_api.dart",

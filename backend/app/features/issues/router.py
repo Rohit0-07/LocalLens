@@ -88,6 +88,40 @@ async def trigger_escalation_evaluation(session: SessionDep) -> dict[str, int]:
     return {"updated": updated_count}
 
 
+@router.get("/my", response_model=list[IssueOut])
+async def get_my_issues_endpoint(
+    user: CurrentUser,
+    session: SessionDep,
+    settings: SettingsDep,
+    status_filter: Annotated[str | None, Query(alias="status")] = None,
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+    offset: Annotated[int, Query(ge=0)] = 0,
+) -> list[IssueOut]:
+    if getattr(user, "is_guest", False):
+        return []
+    from app.features.auth import service as auth_service
+
+    issues = await auth_service.get_user_issues(
+        session,
+        user_id=user.id,
+        status_filter=status_filter,
+        limit=limit,
+        offset=offset,
+    )
+    user_upvoted_ids = await service.get_user_upvoted_issue_ids(
+        session, user.id, [i.id for i in issues]
+    )
+    return [
+        service.to_issue_out(
+            issue,
+            settings.jwt_secret,
+            user_id=user.id,
+            user_upvoted_ids=user_upvoted_ids,
+        )
+        for issue in issues
+    ]
+
+
 @router.post("", response_model=IssueOut, status_code=status.HTTP_201_CREATED)
 async def create_issue(
     payload: IssueCreate, session: SessionDep, user: CurrentUser, settings: SettingsDep
@@ -97,7 +131,7 @@ async def create_issue(
             "Sign in required to create issues", status_code=403, code="guest_restricted"
         )
     issue = await service.create_issue(session, payload, reporter_id=user.id)
-    return service.to_issue_out(issue, settings.jwt_secret)
+    return service.to_issue_out(issue, settings.jwt_secret, user_id=user.id)
 
 
 @router.get("/{issue_id}", response_model=IssueOut)
@@ -209,6 +243,8 @@ async def remove_upvote_issue(
     user: CurrentUser,
     settings: SettingsDep,
 ) -> IssueOut:
+    if getattr(user, "is_guest", False):
+        raise AppError("Sign in required to remove upvote", status_code=403, code="guest_restricted")
     issue = await service.remove_upvote_issue(
         session,
         issue_id=issue_id,

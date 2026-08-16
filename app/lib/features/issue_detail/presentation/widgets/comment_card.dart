@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../../core/router/route_paths.dart';
 import '../../data/issue_detail_api.dart';
 
 /// Displays a comment and its nested replies with a clean threaded layout.
@@ -159,61 +161,77 @@ class _CommentBubble extends StatelessWidget {
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            CircleAvatar(
-              radius: 15,
-              backgroundColor: colorScheme.primaryContainer,
-              child: Text(
-                initial,
-                style: theme.textTheme.labelMedium?.copyWith(
-                  color: colorScheme.onPrimaryContainer,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Flexible(
-                        child: Text(
-                          comment.anonId,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.labelLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+              child: InkWell(
+                key: Key('commentAuthor_${comment.id}'),
+                onTap: comment.userId != null
+                    ? () => context.push(
+                          RoutePaths.publicProfileFor(comment.userId!),
+                        )
+                    : null,
+                borderRadius: BorderRadius.circular(8),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    CircleAvatar(
+                      radius: 15,
+                      backgroundColor: colorScheme.primaryContainer,
+                      child: Text(
+                        initial,
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          color: colorScheme.onPrimaryContainer,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                      if (comment.isAuthor) ...[
-                        const SizedBox(width: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: colorScheme.primaryContainer,
-                            borderRadius: BorderRadius.circular(6),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  comment.anonId,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: theme.textTheme.labelLarge?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              if (comment.isAuthor) ...[
+                                const SizedBox(width: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: colorScheme.primaryContainer,
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    'You',
+                                    style: theme.textTheme.labelSmall?.copyWith(
+                                      color: colorScheme.onPrimaryContainer,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
-                          child: Text(
-                            'You',
+                          Text(
+                            formatCommentTime(comment.createdAt),
                             style: theme.textTheme.labelSmall?.copyWith(
-                              color: colorScheme.onPrimaryContainer,
-                              fontWeight: FontWeight.w700,
+                              color: colorScheme.onSurfaceVariant,
                             ),
                           ),
-                        ),
-                      ],
-                    ],
-                  ),
-                  Text(
-                    formatCommentTime(comment.createdAt),
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
             if (comment.isAuthor)

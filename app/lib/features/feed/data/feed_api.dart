@@ -71,6 +71,7 @@ class FeedApi implements FeedRepository {
     required bool isAnonymous,
     bool isFuzzed = false,
     bool isShielded = false,
+    List<String> mediaUrls = const [],
   }) async {
     final data = await _client.postJson(
       '/issues',
@@ -84,6 +85,7 @@ class FeedApi implements FeedRepository {
         'is_fuzzed': isFuzzed,
         'fuzz_location': isFuzzed,
         'is_shielded': isShielded,
+        if (mediaUrls.isNotEmpty) 'media_urls': mediaUrls,
       },
     );
     return Issue.fromJson(data as Map<String, Object?>);
@@ -146,11 +148,12 @@ class FeedApi implements FeedRepository {
     return Issue.fromJson(data as Map<String, Object?>);
   }
 
+  @override
   Future<Issue> upvoteIssue(
-    int issueId,
-    double latitude,
-    double longitude,
-  ) async {
+    int issueId, {
+    required double latitude,
+    required double longitude,
+  }) async {
     final data = await _client.postJson(
       '/issues/$issueId/upvote',
       body: {
@@ -161,9 +164,48 @@ class FeedApi implements FeedRepository {
     return Issue.fromJson(data as Map<String, Object?>);
   }
 
+  @override
   Future<Issue> removeUpvote(int issueId) async {
-    final data = await (_client as dynamic).deleteJson('/issues/$issueId/upvote');
+    final data = await _client.deleteJson('/issues/$issueId/upvote');
     return Issue.fromJson(data as Map<String, Object?>);
+  }
+
+  @override
+  Future<Issue> toggleUpvote(
+    int issueId, {
+    required double latitude,
+    required double longitude,
+    required bool currentlyUpvoted,
+  }) async {
+    if (currentlyUpvoted) {
+      return removeUpvote(issueId);
+    } else {
+      return upvoteIssue(
+        issueId,
+        latitude: latitude,
+        longitude: longitude,
+      );
+    }
+  }
+
+  @override
+  Future<List<Issue>> fetchUserIssues({int? userId, String? status}) async {
+    final query = <String, dynamic>{};
+    if (userId != null) query['user_id'] = userId;
+    if (status != null) query['status'] = status;
+
+    final path = userId != null ? '/users/$userId/issues' : '/issues';
+    final data = await _client.getJson(path, query: query.isNotEmpty ? query : null);
+    final items = data as List<dynamic>;
+    return items
+        .map((item) => Issue.fromJson(item as Map<String, Object?>))
+        .toList(growable: false);
+  }
+
+  @override
+  Future<Map<String, dynamic>> fetchPublicUserProfile(int userId) async {
+    final data = await _client.getJson('/users/$userId/public-profile');
+    return (data as Map<dynamic, dynamic>).cast<String, dynamic>();
   }
 }
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/l10n/app_strings.dart';
 import '../domain/search_filters.dart';
 
 Future<SearchFilters?> showAdvancedFilterSheet(
@@ -47,9 +48,9 @@ class _AdvancedFilterSheetState extends ConsumerState<AdvancedFilterSheet> {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('Filters', style: theme.textTheme.titleLarge),
+            Text(context.tr('filter_title'), style: theme.textTheme.titleLarge),
             const SizedBox(height: 16),
-            Text('Status', style: sectionLabel),
+            Text(context.tr('filter_status'), style: sectionLabel),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
@@ -67,7 +68,7 @@ class _AdvancedFilterSheetState extends ConsumerState<AdvancedFilterSheet> {
               ],
             ),
             const SizedBox(height: 16),
-            Text('Category', style: sectionLabel),
+            Text(context.tr('filter_category'), style: sectionLabel),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
@@ -94,17 +95,23 @@ class _AdvancedFilterSheetState extends ConsumerState<AdvancedFilterSheet> {
               ],
             ),
             const SizedBox(height: 16),
-            Text('Distance', style: sectionLabel),
+            Text(context.tr('filter_distance'), style: sectionLabel),
             const SizedBox(height: 8),
             SegmentedButton<SearchDistanceOption>(
-              segments: const [
+              segments: [
                 ButtonSegment<SearchDistanceOption>(
                   value: SearchDistanceOption.any,
-                  label: Text('Any distance', key: Key('distanceAny')),
+                  label: Text(
+                    context.tr('filter_any_distance'),
+                    key: const Key('distanceAny'),
+                  ),
                 ),
                 ButtonSegment<SearchDistanceOption>(
                   value: SearchDistanceOption.within,
-                  label: Text('Within radius', key: Key('distanceWithin')),
+                  label: Text(
+                    context.tr('filter_within_radius'),
+                    key: const Key('distanceWithin'),
+                  ),
                 ),
               ],
               selected: {_selection.distanceOption},
@@ -127,7 +134,7 @@ class _AdvancedFilterSheetState extends ConsumerState<AdvancedFilterSheet> {
               ),
             ],
             const SizedBox(height: 16),
-            Text('Posted', style: sectionLabel),
+            Text(context.tr('filter_posted'), style: sectionLabel),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
@@ -151,13 +158,13 @@ class _AdvancedFilterSheetState extends ConsumerState<AdvancedFilterSheet> {
                 TextButton(
                   key: const Key('resetFiltersButton'),
                   onPressed: _resetLocal,
-                  child: const Text('Reset'),
+                  child: Text(context.tr('filter_reset')),
                 ),
                 const SizedBox(width: 8),
                 FilledButton(
                   key: const Key('applyFiltersButton'),
                   onPressed: _apply,
-                  child: const Text('Show results'),
+                  child: Text(context.tr('filter_show_results')),
                 ),
               ],
             ),

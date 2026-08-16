@@ -113,6 +113,7 @@ class FakeFeedRepository implements FeedRepository {
     required bool isAnonymous,
     bool isFuzzed = false,
     bool isShielded = false,
+    List<String> mediaUrls = const [],
   }) async {
     return buildIssue(title: title);
   }
@@ -144,6 +145,40 @@ class FakeFeedRepository implements FeedRepository {
     String? reason,
   }) async {
     return buildIssue(id: issueId, status: vote == 'confirm' ? 'resolved' : 'disputed');
+  }
+
+  @override
+  Future<Issue> upvoteIssue(
+    int issueId, {
+    required double latitude,
+    required double longitude,
+  }) async {
+    return buildIssue(id: issueId);
+  }
+
+  @override
+  Future<Issue> removeUpvote(int issueId) async {
+    return buildIssue(id: issueId);
+  }
+
+  @override
+  Future<Issue> toggleUpvote(
+    int issueId, {
+    required double latitude,
+    required double longitude,
+    required bool currentlyUpvoted,
+  }) async {
+    return buildIssue(id: issueId);
+  }
+
+  @override
+  Future<List<Issue>> fetchUserIssues({int? userId, String? status}) async {
+    return issues;
+  }
+
+  @override
+  Future<Map<String, dynamic>> fetchPublicUserProfile(int userId) async {
+    return {'id': userId, 'username': 'citizen_$userId'};
   }
 }
 

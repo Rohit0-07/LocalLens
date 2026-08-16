@@ -1,4 +1,5 @@
 import base64
+from pathlib import Path
 import typing
 
 from fastapi import (
@@ -16,8 +17,8 @@ from fastapi.responses import FileResponse
 from app.api.deps import SessionDep, get_optional_current_user
 from app.features.media.schemas import MediaUploadOut
 from app.features.media.service import (
-    UPLOAD_DIR,
     create_media_record,
+    find_media_path,
 )
 
 router = APIRouter()
@@ -89,7 +90,13 @@ async def upload_media(
 
 @router.get("/files/{filename}")
 async def get_media_file(filename: str) -> FileResponse:
-    file_path = UPLOAD_DIR / filename
-    if not file_path.exists():
+    clean_name = Path(filename).name
+    if not clean_name or clean_name != filename:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid filename",
+        )
+    file_path = find_media_path(clean_name)
+    if not file_path or not file_path.exists():
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")
     return FileResponse(file_path)

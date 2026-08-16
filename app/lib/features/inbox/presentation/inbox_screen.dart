@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/l10n/app_strings.dart';
 import '../../../core/router/route_paths.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/relative_time.dart';
@@ -55,14 +56,14 @@ class InboxScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Inbox'),
+        title: Text(context.tr('inbox_title')),
         actions: [
           Stack(
             alignment: Alignment.center,
             children: [
               IconButton(
                 icon: const Icon(Icons.notifications_outlined),
-                tooltip: 'Notifications',
+                tooltip: context.tr('action_notifications'),
                 onPressed: () => context.push(RoutePaths.notifications),
               ),
               if (unreadCount > 0)
@@ -122,15 +123,17 @@ class InboxScreen extends ConsumerWidget {
                         children: [
                           Text(
                             unreadCount > 0
-                                ? '$unreadCount unread updates'
-                                : 'Inbox is up to date',
+                                ? context
+                                    .tr('inbox_unread_updates')
+                                    .replaceFirst('{count}', '$unreadCount')
+                                : context.tr('inbox_up_to_date'),
                             style: theme.textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            'Civic activity digest & personal notifications',
+                            context.tr('inbox_digest_sub'),
                             style: theme.textTheme.bodySmall?.copyWith(
                               color: theme.colorScheme.onSurfaceVariant,
                             ),
@@ -149,7 +152,7 @@ class InboxScreen extends ConsumerWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Notifications Digest',
+                  context.tr('inbox_digest_header'),
                   style: theme.textTheme.titleSmall?.copyWith(
                     fontWeight: FontWeight.bold,
                     color: theme.colorScheme.onSurfaceVariant,
@@ -157,7 +160,7 @@ class InboxScreen extends ConsumerWidget {
                 ),
                 TextButton(
                   onPressed: () => context.push(RoutePaths.notifications),
-                  child: const Text('View All'),
+                  child: Text(context.tr('inbox_view_all')),
                 ),
               ],
             ),
@@ -184,7 +187,7 @@ class InboxScreen extends ConsumerWidget {
                   padding: const EdgeInsets.all(20.0),
                   child: Center(
                     child: Text(
-                      'No notifications right now.',
+                      context.tr('inbox_empty'),
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: theme.colorScheme.outline,
                       ),
@@ -199,7 +202,7 @@ class InboxScreen extends ConsumerWidget {
 
             const SizedBox(height: 24),
             Text(
-              'Activity Stream',
+              context.tr('inbox_activity_stream'),
               style: theme.textTheme.titleSmall?.copyWith(
                 fontWeight: FontWeight.bold,
                 color: theme.colorScheme.onSurfaceVariant,
@@ -209,17 +212,15 @@ class InboxScreen extends ConsumerWidget {
             _buildActivityInfoCard(
               context,
               icon: Icons.shield_outlined,
-              title: 'Neighborhood Quorum Active',
-              description:
-                  'Verified resolutions in your ward require 3 citizen confirmations within 7 days.',
+              title: context.tr('inbox_quorum_title'),
+              description: context.tr('inbox_quorum_desc'),
             ),
             const SizedBox(height: 8),
             _buildActivityInfoCard(
               context,
               icon: Icons.schedule_rounded,
-              title: '24-Hour Escalation Watch',
-              description:
-                  'Unacknowledged neighborhood issues automatically escalate to municipal ward officers.',
+              title: context.tr('inbox_escalation_title'),
+              description: context.tr('inbox_escalation_desc'),
             ),
           ],
         ),

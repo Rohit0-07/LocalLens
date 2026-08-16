@@ -1,47 +1,157 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../../core/l10n/app_strings.dart';
 import '../../../../core/router/route_paths.dart';
+import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/relative_time.dart';
+import '../../../../shared/widgets/media_preview_widget.dart';
 import '../../../../shared/widgets/status_badge.dart';
 import '../../../auth/presentation/auth_providers.dart';
 import '../../../auth/presentation/widgets/guest_guard.dart';
 import '../../../issue_detail/presentation/controllers/issue_detail_controller.dart';
+import '../../../issue_detail/presentation/widgets/comments_section.dart';
 import '../../../issues/presentation/widgets/flag_issue_dialog.dart';
 import '../../domain/feed_item.dart';
 import '../../domain/issue.dart';
 import '../feed_providers.dart';
 
+/// Clean, modern civic issue card.
+///
+/// High-contrast typography, clean solid category badges, instant
+/// engagement metrics, and zero artificial gradient noise.
 class IssueCard extends ConsumerWidget {
   const IssueCard({super.key, required this.issue});
 
   final Issue issue;
 
-  static const _categoryColors = <String, List<Color>>{
-    'road': [Color(0xFF8B5A2B), Color(0xFFD4A017)],
-    'water': [Color(0xFF0D47A1), Color(0xFF29B6F6)],
-    'power': [Color(0xFFF9A825), Color(0xFFEF6C00)],
-    'lighting': [Color(0xFF5E35B1), Color(0xFF9FA8DA)],
-    'waste': [Color(0xFF2E7D32), Color(0xFF9CCC65)],
-    'sewage': [Color(0xFF4E342E), Color(0xFF795548)],
-    'other': [Color(0xFF00695C), Color(0xFF26A69A)],
-  };
-
   static const _categoryIcons = <String, IconData>{
-    'road': Icons.alt_route,
+    'road': Icons.alt_route_rounded,
     'water': Icons.water_drop_outlined,
-    'power': Icons.bolt,
-    'lighting': Icons.lightbulb_outline,
-    'waste': Icons.delete_outline,
-    'sewage': Icons.water,
+    'power': Icons.bolt_rounded,
+    'lighting': Icons.lightbulb_outline_rounded,
+    'waste': Icons.delete_outline_rounded,
+    'sanitation': Icons.recycling_rounded,
+    'sewage': Icons.water_rounded,
     'other': Icons.flag_outlined,
   };
+
+  void _showCommentsModal(BuildContext context, Issue activeIssue) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (ctx) => DraggableScrollableSheet(
+        initialChildSize: 0.75,
+        minChildSize: 0.4,
+        maxChildSize: 0.95,
+        expand: false,
+        builder: (_, scrollController) => SafeArea(
+          child: Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(ctx).viewInsets.bottom,
+            ),
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              activeIssue.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(ctx)
+                                  .textTheme
+                                  .titleSmall
+                                  ?.copyWith(fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(height: 2),
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.categorySurfaceFor(
+                                      activeIssue.category,
+                                      isDark: Theme.of(ctx).brightness ==
+                                          Brightness.dark,
+                                    ),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    activeIssue.category.toUpperCase(),
+                                    style: TextStyle(
+                                      color: AppColors.categoryColorFor(
+                                        activeIssue.category,
+                                      ),
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    activeIssue.ward,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: Theme.of(ctx)
+                                        .textTheme
+                                        .bodySmall
+                                        ?.copyWith(
+                                          color: Theme.of(ctx)
+                                              .colorScheme
+                                              .onSurfaceVariant,
+                                        ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.open_in_new, size: 18),
+                        tooltip: 'View Full Issue',
+                        onPressed: () {
+                          Navigator.pop(ctx);
+                          context.push(
+                            RoutePaths.issueDetailFor(activeIssue.id),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1),
+                Expanded(
+                  child: SingleChildScrollView(
+                    controller: scrollController,
+                    child: CommentsSection(issueId: activeIssue.id),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final colorScheme = theme.colorScheme;
     final multiFeed = ref.watch(multiTypeFeedProvider);
     final multiIssue = multiFeed.asData?.value
@@ -50,80 +160,130 @@ class IssueCard extends ConsumerWidget {
         .firstWhere((i) => i?.id == issue.id, orElse: () => null);
     final activeIssue = multiIssue ?? issue;
 
-    final gradient =
-        _categoryColors[activeIssue.category] ??
-        _categoryColors['other']!;
+    final categoryColor = AppColors.categoryColorFor(activeIssue.category);
+    final categorySurface = AppColors.categorySurfaceFor(
+      activeIssue.category,
+      isDark: isDark,
+    );
     final categoryIcon =
-        _categoryIcons[activeIssue.category] ?? Icons.flag_outlined;
+        _categoryIcons[activeIssue.category.toLowerCase()] ??
+        Icons.flag_outlined;
+    final isAnonymous = activeIssue.isAnonymous;
 
     return Card(
       key: Key('issueCard_${activeIssue.id}'),
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18),
-        side: BorderSide(color: colorScheme.outlineVariant),
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+          width: 1,
+        ),
       ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: () => context.push(RoutePaths.issueDetailFor(activeIssue.id)),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 10, 8, 6),
-              child: Row(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ── Header: Identity & Meta ──────────────────────────────
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  CircleAvatar(
-                    radius: 18,
-                    backgroundColor: activeIssue.isAnonymous
-                        ? colorScheme.tertiaryContainer
-                        : colorScheme.primaryContainer,
-                    child: Icon(
-                      activeIssue.isAnonymous
-                          ? Icons.face_retouching_natural
-                          : Icons.account_circle,
-                      size: 20,
-                      color: activeIssue.isAnonymous
-                          ? colorScheme.onTertiaryContainer
-                          : colorScheme.onPrimaryContainer,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          activeIssue.reporterLabel,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.labelLarge?.copyWith(
-                            fontWeight: FontWeight.w700,
+                    child: InkWell(
+                      key: Key('issueCardReporter_${activeIssue.id}'),
+                      onTap: activeIssue.reporterId != null
+                          ? () => context.push(
+                                RoutePaths.publicProfileFor(
+                                  activeIssue.reporterId!,
+                                ),
+                              )
+                          : null,
+                      borderRadius: BorderRadius.circular(8),
+                      child: Row(
+                        children: [
+                          _CleanAvatar(
+                            isAnonymous: isAnonymous,
+                            reporterName: activeIssue.reporterLabel,
                           ),
-                        ),
-                        Text(
-                          '${activeIssue.ward} • ${formatRelativeTime(activeIssue.createdAt)}',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Flexible(
+                                      child: Text(
+                                        activeIssue.reporterLabel,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: theme.textTheme.titleSmall
+                                            ?.copyWith(
+                                          fontWeight: FontWeight.w700,
+                                          color: colorScheme.onSurface,
+                                        ),
+                                      ),
+                                    ),
+                                    if (!isAnonymous) ...[
+                                      const SizedBox(width: 4),
+                                      const Icon(
+                                        Icons.verified,
+                                        color: AppColors.verified,
+                                        size: 15,
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                                const SizedBox(height: 2),
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.location_on_outlined,
+                                      size: 13,
+                                      color: colorScheme.onSurfaceVariant,
+                                    ),
+                                    const SizedBox(width: 2),
+                                    Flexible(
+                                      child: Text(
+                                        '${activeIssue.ward} • ${formatRelativeTime(activeIssue.createdAt)}',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style:
+                                            theme.textTheme.bodySmall?.copyWith(
+                                          color: colorScheme.onSurfaceVariant,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                   PopupMenuButton<String>(
                     key: Key('issueCardOverflow_${activeIssue.id}'),
-                    iconSize: 18,
+                    icon: Icon(
+                      Icons.more_horiz_rounded,
+                      size: 20,
+                      color: colorScheme.onSurfaceVariant,
+                    ),
                     itemBuilder: (context) => [
                       PopupMenuItem<String>(
                         key: Key('flagIssueOption_${activeIssue.id}'),
                         value: 'flag',
                         onTap: () {
                           final session = ref.read(sessionProvider);
-                          final isGuest = session == null || session.isGuest;
-                          if (isGuest) {
+                          final isGuestUser =
+                              session == null || session.isGuest;
+                          if (isGuestUser) {
                             showDialog(
                               context: context,
                               builder: (_) => const GuestGuard(),
@@ -136,164 +296,360 @@ class IssueCard extends ConsumerWidget {
                             );
                           }
                         },
-                        child: Text(context.tr('flag_issue')),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.flag_outlined,
+                              size: 18,
+                              color: AppColors.urgent,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(context.tr('flag_issue')),
+                          ],
+                        ),
                       ),
                     ],
                   ),
                 ],
               ),
-            ),
-            // Cover gradient
-            Container(
-              height: 96,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: gradient,
-                ),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Row(
+              const SizedBox(height: 12),
+
+              // ── Category & Status Badges Row ─────────────────────────
+              Row(
                 children: [
                   Container(
-                    width: 52,
-                    height: 52,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.22),
-                      shape: BoxShape.circle,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 9,
+                      vertical: 4,
                     ),
-                    child: Icon(categoryIcon, color: Colors.white, size: 28),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    decoration: BoxDecoration(
+                      color: categorySurface,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: categoryColor.withValues(alpha: 0.25),
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
+                        Icon(categoryIcon, size: 14, color: categoryColor),
+                        const SizedBox(width: 5),
                         Text(
-                          activeIssue.title,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w800,
-                            color: Colors.white,
+                          activeIssue.category.toUpperCase(),
+                          style: TextStyle(
+                            color: categoryColor,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.4,
                           ),
                         ),
                       ],
                     ),
                   ),
+                  const SizedBox(width: 8),
                   StatusBadge(status: activeIssue.status),
+                  const Spacer(),
+                  if (activeIssue.isEscalating)
+                    const _StatusHint(
+                      icon: Icons.local_fire_department_rounded,
+                      color: AppColors.urgent,
+                      label: 'ESCALATING',
+                    )
+                  else if (activeIssue.isPendingQuorum)
+                    const _StatusHint(
+                      icon: Icons.how_to_vote_rounded,
+                      color: AppColors.verified,
+                      label: 'VERIFY',
+                    ),
                 ],
               ),
-            ),
-            // Body
-            if (activeIssue.description.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
-                child: Text(
-                  activeIssue.description,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                  ),
+              const SizedBox(height: 10),
+
+              // ── Title & Description ───────────────────────────────────
+              Text(
+                activeIssue.title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 16,
+                  height: 1.3,
+                  color: colorScheme.onSurface,
                 ),
               ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
-              child: Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  Chip(
-                    label: Text('#${activeIssue.category}'),
-                    visualDensity: VisualDensity.compact,
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              if (activeIssue.description.isNotEmpty) ...[
+                const SizedBox(height: 6),
+                _ExpandableDescription(
+                  text: activeIssue.description,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                    height: 1.4,
                   ),
-                  if (activeIssue.isFuzzed)
-                    Chip(
-                      avatar: const Icon(Icons.blur_on, size: 14),
-                      label: Text(context.tr('fuzzed')),
-                      visualDensity: VisualDensity.compact,
-                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    ),
-                  if (activeIssue.isShielded)
-                    Chip(
-                      avatar: const Icon(Icons.shield_outlined,
-                          size: 14, color: Colors.purple),
-                      label: Text(context.tr('shielded')),
-                      visualDensity: VisualDensity.compact,
-                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    ),
-                ],
+                ),
+              ],
+
+              // ── Visual Media (Photos, Video Demo, Resolution proof) ───
+              if (activeIssue.mediaUrls.isNotEmpty ||
+                  (activeIssue.videoUrl != null &&
+                      activeIssue.videoUrl!.trim().isNotEmpty) ||
+                  (activeIssue.resolutionProof != null &&
+                      activeIssue.resolutionProof!.trim().isNotEmpty)) ...[
+                const SizedBox(height: 10),
+                MediaPreviewWidget(
+                  key: Key('issueMedia_${activeIssue.id}'),
+                  mediaUrls: activeIssue.mediaUrls,
+                  videoUrl: activeIssue.videoUrl,
+                  resolutionProof: activeIssue.resolutionProof,
+                  maxHeight: 200,
+                  heroTagPrefix: 'issue_${activeIssue.id}',
+                ),
+              ],
+
+              // ── Meta tags (Shielded / Fuzzed) ────────────────────────
+              if (activeIssue.isFuzzed || activeIssue.isShielded) ...[
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    if (activeIssue.isFuzzed)
+                      _MetaChip(
+                        icon: Icons.blur_on_rounded,
+                        label: context.tr('fuzzed'),
+                      ),
+                    if (activeIssue.isShielded)
+                      _MetaChip(
+                        icon: Icons.shield_outlined,
+                        label: context.tr('shielded'),
+                        iconColor: AppColors.brand,
+                      ),
+                  ],
+                ),
+              ],
+
+              const SizedBox(height: 12),
+              Divider(
+                color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+                height: 1,
               ),
-            ),
-            // Social action row
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-              child: Row(
+              const SizedBox(height: 8),
+
+              // ── Engagement Actions Row ────────────────────────────────
+              Row(
                 children: [
                   _SocialAction(
                     key: Key('upvote_button_${activeIssue.id}'),
                     icon: activeIssue.hasUpvoted
-                        ? Icons.thumb_up
-                        : Icons.thumb_up_alt_outlined,
+                        ? Icons.thumb_up_rounded
+                        : Icons.thumb_up_outlined,
                     color: activeIssue.hasUpvoted
-                        ? colorScheme.primary
+                        ? AppColors.brand
                         : colorScheme.onSurfaceVariant,
+                    backgroundColor: activeIssue.hasUpvoted
+                        ? AppColors.brand.withValues(alpha: 0.12)
+                        : Colors.transparent,
                     label: Text('${activeIssue.upvotesCount}'),
                     onTap: () async {
                       try {
                         await ref
                             .read(multiTypeFeedProvider.notifier)
-                            .toggleUpvote(activeIssue.id, defaultLatitude,
-                                defaultLongitude);
-                      } catch (_) {
+                            .toggleUpvote(
+                              activeIssue.id,
+                              defaultLatitude,
+                              defaultLongitude,
+                              currentlyUpvoted: activeIssue.hasUpvoted,
+                            );
+                      } catch (err) {
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                                content: Text('Failed to toggle upvote')),
+                            SnackBar(
+                              content: Text(upvoteErrorMessage(err)),
+                            ),
                           );
                         }
                       }
                     },
                   ),
+                  const SizedBox(width: 8),
                   _SocialAction(
                     key: Key('comment_button_${activeIssue.id}'),
                     icon: Icons.chat_bubble_outline_rounded,
                     color: colorScheme.onSurfaceVariant,
                     label: _CommentCount(issueId: activeIssue.id),
-                    onTap: () =>
-                        context.push(RoutePaths.issueDetailFor(activeIssue.id)),
+                    onTap: () => _showCommentsModal(context, activeIssue),
                   ),
+                  const SizedBox(width: 8),
                   _SocialAction(
                     key: Key('share_button_${activeIssue.id}'),
                     icon: Icons.share_outlined,
                     color: colorScheme.onSurfaceVariant,
                     label: const SizedBox.shrink(),
-                    onTap: () => context
-                        .push(RoutePaths.issueDetailFor(activeIssue.id)),
+                    tooltip: context.tr('action_share'),
+                    onTap: () {
+                      final shareText =
+                          '${activeIssue.title} (Issue #${activeIssue.id}) — LocalLens\n'
+                          'locallens://issue/${activeIssue.id}';
+                      SharePlus.instance.share(ShareParams(text: shareText));
+                    },
                   ),
-                  const Spacer(),
-                  if (activeIssue.isEscalating)
-                    const Padding(
-                      padding: EdgeInsets.only(right: 8),
-                      child: Icon(Icons.local_fire_department,
-                          color: Colors.redAccent, size: 18),
-                    )
-                  else if (activeIssue.isPendingQuorum)
-                    const Padding(
-                      padding: EdgeInsets.only(right: 8),
-                      child: Icon(Icons.how_to_vote_rounded,
-                          color: Colors.blue, size: 18),
-                    ),
                 ],
               ),
-            ),
-          ],
+            ],
+          ),
         ),
+      ),
+    );
+  }
+}
+
+/// Clean reporter avatar with solid styling.
+class _CleanAvatar extends StatelessWidget {
+  const _CleanAvatar({
+    required this.isAnonymous,
+    required this.reporterName,
+  });
+
+  final bool isAnonymous;
+  final String reporterName;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    if (isAnonymous) {
+      return Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: AppColors.anonMask.withValues(alpha: 0.14),
+          border: Border.all(
+            color: AppColors.anonMask.withValues(alpha: 0.3),
+            width: 1,
+          ),
+        ),
+        child: const Icon(
+          Icons.shield_outlined,
+          size: 18,
+          color: AppColors.anonMask,
+        ),
+      );
+    }
+
+    final initial = reporterName.isNotEmpty
+        ? reporterName.substring(0, 1).toUpperCase()
+        : 'U';
+
+    return Container(
+      width: 36,
+      height: 36,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: colorScheme.primaryContainer,
+        border: Border.all(
+          color: colorScheme.primary.withValues(alpha: 0.2),
+          width: 1,
+        ),
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        initial,
+        style: TextStyle(
+          fontSize: 15,
+          fontWeight: FontWeight.w700,
+          color: colorScheme.onPrimaryContainer,
+        ),
+      ),
+    );
+  }
+}
+
+class _MetaChip extends StatelessWidget {
+  const _MetaChip({this.icon, required this.label, this.iconColor});
+
+  final IconData? icon;
+  final String label;
+  final Color? iconColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final colorScheme = theme.colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: isDark
+            ? colorScheme.surfaceContainerHighest.withValues(alpha: 0.5)
+            : colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(
+          color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+          width: 1,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(
+              icon,
+              size: 13,
+              color: iconColor ?? colorScheme.onSurfaceVariant,
+            ),
+            const SizedBox(width: 4),
+          ],
+          Text(
+            label,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+              fontWeight: FontWeight.w600,
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatusHint extends StatelessWidget {
+  const _StatusHint({
+    required this.icon,
+    required this.color,
+    required this.label,
+  });
+
+  final IconData icon;
+  final Color color;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: color, size: 14),
+          const SizedBox(width: 3),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontWeight: FontWeight.w800,
+              fontSize: 12,
+              letterSpacing: 0.5,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -306,35 +662,114 @@ class _SocialAction extends StatelessWidget {
     required this.color,
     required this.label,
     required this.onTap,
+    this.backgroundColor,
+    this.tooltip,
   });
 
   final IconData icon;
   final Color color;
   final Widget label;
   final VoidCallback onTap;
+  final Color? backgroundColor;
+  final String? tooltip;
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 22, color: color),
-            const SizedBox(width: 6),
-            DefaultTextStyle(
-              style: Theme.of(context).textTheme.labelLarge!.copyWith(
-                    color: color,
-                    fontWeight: FontWeight.w600,
-                  ),
-              child: label,
+    return Semantics(
+      button: true,
+      label: tooltip,
+      enabled: true,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 44),
+          child: Container(
+            alignment: Alignment.center,
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            decoration: BoxDecoration(
+              color: backgroundColor ?? Colors.transparent,
+              borderRadius: BorderRadius.circular(8),
             ),
-          ],
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 18, color: color),
+                const SizedBox(width: 5),
+                DefaultTextStyle(
+                  style: Theme.of(context).textTheme.labelMedium!.copyWith(
+                    color: color,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                  ),
+                  child: label,
+                ),
+              ],
+            ),
+          ),
         ),
       ),
+    );
+  }
+}
+
+/// Description text that can expand beyond the collapsed 3-line preview.
+/// A "Read more" affordance appears only when the text actually overflows.
+class _ExpandableDescription extends StatefulWidget {
+  const _ExpandableDescription({required this.text, required this.style});
+
+  final String text;
+  final TextStyle? style;
+
+  @override
+  State<_ExpandableDescription> createState() => _ExpandableDescriptionState();
+}
+
+class _ExpandableDescriptionState extends State<_ExpandableDescription> {
+  static const _collapsedLines = 3;
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final painter = TextPainter(
+          text: TextSpan(text: widget.text, style: widget.style),
+          maxLines: _collapsedLines,
+          textDirection: Directionality.of(context),
+        )..layout(maxWidth: constraints.maxWidth);
+        final overflows = painter.didExceedMaxLines;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              widget.text,
+              maxLines: _expanded ? null : _collapsedLines,
+              overflow: _expanded ? null : TextOverflow.ellipsis,
+              style: widget.style,
+            ),
+            if (overflows)
+              InkWell(
+                onTap: () => setState(() => _expanded = !_expanded),
+                borderRadius: BorderRadius.circular(4),
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 6, bottom: 2),
+                  child: Text(
+                    _expanded
+                        ? context.tr('show_less')
+                        : context.tr('read_more'),
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: AppColors.brand,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 }
@@ -351,3 +786,4 @@ class _CommentCount extends ConsumerWidget {
     return Text('$count');
   }
 }
+

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/l10n/app_strings.dart';
 import '../../../../core/theme/app_colors.dart';
 
 class AnonymityGuideScreen extends StatelessWidget {
@@ -12,7 +13,7 @@ class AnonymityGuideScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Anonymity & Privacy Guide'),
+        title: Text(context.tr('anonymity_guide_title')),
         centerTitle: false,
       ),
       body: ListView(
@@ -94,7 +95,7 @@ class AnonymityGuideScreen extends StatelessWidget {
                 'Complete identity decoupling for high-risk whistleblower issues.',
             body:
                 'For sensitive reports where safety is paramount, Shielded Mode removes even the anonymous identity token. '
-                'Reports are submitted independently to prevent retaliation while allowing public quorum validation.',
+                'Reports are submitted independently to prevent retaliation while allowing public community verification.',
           ),
           const SizedBox(height: 24),
         ],

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/l10n/app_strings.dart';
 import '../providers/ward_providers.dart';
 import '../widgets/ward_hero_banner.dart';
 import '../widgets/ward_metric_card.dart';
@@ -26,7 +27,7 @@ class WardDetailScreen extends ConsumerWidget {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.of(context).maybePop(),
         ),
-        title: const Text('Ward Details'),
+        title: Text(context.tr('ward_details')),
       ),
       body: asyncDetail.when(
         data: (wardDetail) {

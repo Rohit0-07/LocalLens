@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/theme/app_colors.dart';
+
 class MediaWatermarkBadge extends StatelessWidget {
   final bool isVerified;
   final String? customLabel;
@@ -18,12 +20,12 @@ class MediaWatermarkBadge extends StatelessWidget {
         (isVerified ? 'LocalLens Verified' : 'User Uploaded - Unverified');
 
     final backgroundColor = isVerified
-        ? const Color(0xFFE8F5E9)
-        : const Color(0xFFFFF8E1);
+        ? AppColors.watermarkVerifiedSurface
+        : AppColors.watermarkUnverifiedSurface;
 
     final borderAndTextColor = isVerified
-        ? const Color(0xFF2E7D32)
-        : const Color(0xFFE65100);
+        ? AppColors.watermarkVerified
+        : AppColors.watermarkUnverified;
 
     final icon = isVerified
         ? Icons.verified_user_rounded
@@ -58,13 +60,17 @@ class MediaWatermarkBadge extends StatelessWidget {
             color: borderAndTextColor,
           ),
           const SizedBox(width: 6.0),
-          Text(
-            label,
-            style: TextStyle(
-              color: borderAndTextColor,
-              fontSize: isCompact ? 11.0 : 13.0,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.2,
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: borderAndTextColor,
+                fontSize: isCompact ? 11.0 : 13.0,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.2,
+              ),
             ),
           ),
         ],

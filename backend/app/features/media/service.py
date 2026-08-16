@@ -11,6 +11,27 @@ UPLOAD_DIR = Path("uploads/media")
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 
+def find_media_path(filename: str) -> Path | None:
+    """Safely find a media file in upload or seed directories without path traversal."""
+    clean_name = Path(filename).name
+    if not clean_name or clean_name != filename:
+        return None
+
+    candidates = [
+        UPLOAD_DIR / clean_name,
+        Path("uploads/media") / clean_name,
+        Path("backend/uploads/media") / clean_name,
+        Path(__file__).resolve().parent.parent.parent.parent / "uploads" / "media" / clean_name,
+        Path(__file__).resolve().parent.parent.parent / "uploads" / "media" / clean_name,
+        Path(__file__).resolve().parent.parent.parent.parent / "seed" / "media" / clean_name,
+        Path(__file__).resolve().parent.parent.parent / "seed" / "media" / clean_name,
+    ]
+    for c in candidates:
+        if c.exists() and c.is_file():
+            return c
+    return None
+
+
 def derive_media_hash(image_bytes: bytes, user_id: str | int | None = None) -> str:
     """Compute cryptographic media hash derive_media_hash(image_bytes, user_id)."""
     hasher = hashlib.sha256(image_bytes)
@@ -69,6 +90,8 @@ async def create_media_record(
         from PIL import Image  # type: ignore
 
         img = Image.open(BytesIO(image_bytes))
+        if img.mode in ("RGBA", "P"):
+            img = img.convert("RGB")
         img.thumbnail((300, 300))
         img.save(thumb_path, format="JPEG")
     except Exception:

@@ -12,6 +12,7 @@ class Comment {
   final DateTime createdAt;
   final bool isAuthor;
   final List<Comment> replies;
+  final int? userId;
 
   const Comment({
     required this.id,
@@ -22,6 +23,7 @@ class Comment {
     required this.createdAt,
     required this.isAuthor,
     this.replies = const [],
+    this.userId,
   });
 
   factory Comment.fromJson(Map<String, dynamic> json) {
@@ -35,6 +37,7 @@ class Comment {
       content: json['content'] as String,
       createdAt: DateTime.parse(json['created_at'] as String),
       isAuthor: json['is_author'] as bool? ?? false,
+      userId: (json['user_id'] ?? json['author_id'] as num?)?.toInt(),
       replies: (json['replies'] as List<dynamic>?)
               ?.map((e) => Comment.fromJson(e as Map<String, dynamic>))
               .toList() ??

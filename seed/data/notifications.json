@@ -62,7 +62,7 @@
   {
     "id": "n0000000-0000-4000-8000-000000000007",
     "user_id": 4,
-    "title": "Resolution needs quorum",
+    "title": "Resolution needs community verification",
     "body": "A fix has been reported for 'Sewage overflowing into Gully Lane'. Confirm if it is fixed for you too.",
     "type": "quorum_request",
     "reference_id": "6",
@@ -92,7 +92,7 @@
   {
     "id": "n0000000-0000-4000-8000-000000000010",
     "user_id": 5,
-    "title": "Resolution needs quorum",
+    "title": "Resolution needs community verification",
     "body": "A fix has been reported for 'Road shoulder erosion near the culvert'. Confirm if it is fixed for you too.",
     "type": "quorum_request",
     "reference_id": "16",

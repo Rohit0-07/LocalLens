@@ -15,12 +15,12 @@ Below is the **strict dependency-resolved build order (DAG)**. Features in **Lay
 |---|---|---|---|---|---|
 | **Layer 0** | `F-01` | Core App Shell, Storage & Infrastructure | `[COMPLETED]` | *None (Root)* | All features (`F-02` – `F-14`) |
 | **Layer 1** | `F-02` | Authentication & Anonymous Identity | `[COMPLETED]` | `F-01` | `F-04`, `F-06`, `F-07`, `F-08`, `F-09`, `F-10`, `F-11`, `F-12`, `F-13`, `F-14` |
-| **Layer 2** | `F-03` | Spatial & Geofencing Engine | `[PARTIAL — Reverse-Geocode shipped]` | `F-01` | `F-04`, `F-05`, `F-06`, `F-08`, `F-09`, `F-14` |
+| **Layer 2** | `F-03` | Spatial & Geofencing Engine | `[PARTIAL — Reverse-Geocode + LocationService shipped]` | `F-01` | `F-04`, `F-05`, `F-06`, `F-08`, `F-09`, `F-14` |
 | **Layer 3** | `F-04` | Issue Data Model, Compose & Duplicate Guard | `[PARTIAL]` | `F-01`, `F-02`, `F-03` | `F-05`, `F-06`, `F-07`, `F-08`, `F-10`, `F-11`, `F-12`, `F-14` |
-| **Layer 4** | `F-05` | Camera & Media Integrity Pipeline | `[COMPLETED]` | `F-01`, `F-03`, `F-04` | `F-04`, `F-06`, `F-07` |
+| **Layer 4** | `F-05` | Camera & Media Integrity Pipeline | `[COMPLETED - Hardware Integration Active]` | `F-01`, `F-03`, `F-04` | `F-04`, `F-06`, `F-07` |
 | **Layer 5** | `F-06` | Home Feed & Discovery Engine | `[COMPLETED]` | `F-01`, `F-02`, `F-03`, `F-04`, `F-05` | `F-07`, `F-08`, `F-09`, `F-10`, `F-11`, `F-12` |
-| **Layer 6** | `F-07` | Escalation Ladder & Quorum Resolution | `[PARTIAL]` | `F-01`, `F-02`, `F-03`, `F-04`, `F-05`, `F-06` | `F-08`, `F-09`, `F-10`, `F-11`, `F-12`, `F-14` |
-| **Layer 7** | `F-08` | Interactive Map & Search Engine | `[COMPLETED]` | `F-01`, `F-03`, `F-04`, `F-06` | `F-09`, `F-11` |
+| **Layer 6** | `F-07` | Escalation Ladder & Quorum Resolution | `[COMPLETED]` | `F-01`, `F-02`, `F-03`, `F-04`, `F-05`, `F-06` | `F-08`, `F-09`, `F-10`, `F-11`, `F-12`, `F-14` |
+| **Layer 7** | `F-08` | Interactive Map & Search Engine | `[COMPLETED - Real Map SDK Active]` | `F-01`, `F-03`, `F-04`, `F-06` | `F-09`, `F-11` |
 | **Layer 8** | `F-09` | Community Social Layer ("Local Talk", Place Pages & Comments) | `[COMPLETED]` | `F-01`, `F-02`, `F-03`, `F-04`, `F-06`, `F-07` | `F-10`, `F-11`, `F-12` |
 | **Layer 9** | `F-10` | Notifications & Inbox Messaging Engine | `[COMPLETED]` | `F-01`, `F-02`, `F-04`, `F-06`, `F-07`, `F-09` | `F-11`, `F-12`, `F-13` |
 | **Layer 10** | `F-11` | Representative Dashboard & Governance Tools | `[COMPLETED]` | `F-01`, `F-02`, `F-03`, `F-04`, `F-06`, `F-07`, `F-09`, `F-10` | `F-09`, `F-12` |
@@ -167,7 +167,7 @@ flowchart TD
 ---
 
 ### F-05: Camera & Media Integrity Pipeline
-- **Status**: `[COMPLETED]` — **Media Integrity & Verification Pipeline shipped (2026-08-11 via F-05-MEDIA)**: backend `POST /api/v1/media/upload` (SHA-256 `derive_media_hash`, EXIF timestamp & GPS validation, "LocalLens Verified" vs "User Uploaded - Unverified" watermark badge, location fuzzing precision rounding); frontend `CameraViewfinder` UI (`Key('shutterButton')`, `Key('cameraFlipButton')`, `Key('flashToggleButton')`, `Key('gpsLockStatus')`, `Key('galleryPickerButton')`), `MediaWatermarkBadge` presentational overlay, `MediaService` compression & multipart upload, multi-select gallery picker (max 4 images). Validated `PASS`.
+- **Status**: `[COMPLETED - Hardware Integration Active]` — **Media Integrity & Verification Pipeline shipped (2026-08-11 via F-05-MEDIA; Hardware camera & GPS active 2026-08-16)**: backend `POST /api/v1/media/upload` (SHA-256 `derive_media_hash`, EXIF timestamp & GPS validation, "LocalLens Verified" vs "User Uploaded - Unverified" watermark badge, location fuzzing precision rounding); frontend `CameraViewfinder` UI with real `camera` package (`CameraController` + `CameraPreview`, flash toggle, lens direction flip, `geolocator` `LocationService` GPS coordinates, `Key('shutterButton')`, `Key('cameraFlipButton')`, `Key('flashToggleButton')`, `Key('gpsLockStatus')`, `Key('galleryPickerButton')`), `MediaWatermarkBadge` presentational overlay, `MediaService` compression & multipart upload, multi-select gallery picker (max 4 images). Validated `PASS`.
 - **Domain Responsibility**: Provides in-app camera capture, locks GPS metadata before shutter release, verifies photo EXIF data, signs image hashes, overlays "LocalLens Verified" vs "Unverified" watermarks, and uploads compressed media to object storage (S3/GCS).
 - **Upstream Dependencies**: `F-01`, `F-03`, `F-04`.
 - **Downstream Dependents**: `F-04` (Compose attachment), `F-06` (Feed media cards), `F-07` (Quorum resolution proof media).
@@ -199,7 +199,7 @@ flowchart TD
 ---
 
 ### F-07: Escalation Ladder & Dual-Verification Quorum Engine
-- **Status**: `[PARTIAL]` (`POST /acknowledge`, `/resolve`, `/quorum-vote`, `/check-quorum-status`, `/evaluate-escalations` backend services done; UI detail view timeline done; Win post generation pending)
+- **Status**: `[COMPLETED]` (`POST /acknowledge`, `/resolve`, `/quorum-vote`, `/check-quorum-status`, `/evaluate-escalations` backend services shipped; UI detail view timeline shipped; Win post auto-generation on 3rd quorum confirm shipped)
 - **Domain Responsibility**: Drives the automated accountability lifecycle of issues:
   1. Escalation Ladder (24h unacknowledged nudge $\rightarrow$ 24-72h escalating $\rightarrow$ >7d forwarded to council).
   2. Authority Resolution (`/resolve` $\rightarrow$ `pending_quorum`).
@@ -218,12 +218,12 @@ flowchart TD
 ---
 
 ### F-08: Interactive Map & Search Engine
-- **Status**: `[COMPLETED]` — **Search & Explore shipped (2026-08-10)**; **Advanced Search Filters shipped (2026-08-10)**; **Interactive Map & Spatial Pin Engine shipped (2026-08-11 via F-08-MAP)**: backend `GET /api/v1/geo/map-pins` (bounding box spatial query `min_lat`, `max_lat`, `min_lng`, `max_lng`, `category`/`status` filtering, shielded non-resolved exclusion, 60/min rate limit); frontend `MapScreen` interactive canvas, category filter chips (`Key('mapFilterChip_all')`, `Key('mapFilterChip_road')`, etc.), map pin markers (`Key('mapPin_<id>')`), `MapPinPreviewSheet` bottom sheet (`Key('mapPinPreviewSheet_<id>')`), "Search this area" floating button (`Key('searchThisAreaButton')`). Validated `PASS`.
+- **Status**: `[COMPLETED - Real Map SDK Active]` — **Search & Explore shipped (2026-08-10)**; **Advanced Search Filters shipped (2026-08-10)**; **Interactive Map & Spatial Pin Engine shipped (2026-08-11 via F-08-MAP; Real Map SDK active 2026-08-16)**: backend `GET /api/v1/geo/map-pins` (bounding box spatial query `min_lat`, `max_lat`, `min_lng`, `max_lng`, `category`/`status` filtering, shielded non-resolved exclusion, 60/min rate limit); frontend `MapScreen` real `flutter_map` + OpenStreetMap tile layer (`TileLayer` + `MarkerLayer`), GPS centering, MapController visibleBounds driving `GET /api/v1/geo/map-pins`, category filter chips (`Key('mapFilterChip_all')`, `Key('mapFilterChip_road')`, etc.), map pin markers (`Key('mapPin_<id>')`), `MapPinPreviewSheet` bottom sheet (`Key('mapPinPreviewSheet_<id>')`), "Search this area" floating button (`Key('searchThisAreaButton')`). Validated `PASS`.
 - **Domain Responsibility**: Provides spatial discovery via interactive vector/raster map pins, geohash cluster markers, bounding box issue queries (`GET /issues`), search query filtering (`GET /search`), and category/status chips. Excludes Shielded issues.
 - **Upstream Dependencies**: `F-01`, `F-03`, `F-04`, `F-06`.
 - **Downstream Dependents**: `F-09` (Ward Place Page entry from map), `F-11` (Planned work map).
 - **Component Interactions**:
-  - `app/lib/features/map/` renders Flutter map SDK, fetches markers within current visible map bounds, and opens issue preview bottom sheets. *(Not started.)*
+  - `app/lib/features/map/` renders Flutter map SDK (`flutter_map` + OpenStreetMap tiles), fetches markers within current visible map bounds, and opens issue preview bottom sheets.
   - `app/lib/features/search/` — `SearchScreen`, `search_providers.dart` (`searchRepositoryProvider`, `recentSearchStoreProvider`, `recentSearchesProvider`, `searchResultsProvider`), `SearchApi`, `HiveRecentSearchStore`, `/search` route and Feed app-bar search icon (2026-08-10); advanced filters `AdvancedFilterSheet` + `SearchFiltersNotifier` + `SearchFilters` model wiring `runQuery` (2026-08-10).
   - `backend/app/features/issues/router.py` (`GET /issues?lat&lng&radius_km`) serves map pin clusters.
   - `backend/app/features/search/` + `backend/app/core/ratelimit.py` + `backend/app/features/issues/geo.py` power `GET /api/v1/search` (2026-08-10).

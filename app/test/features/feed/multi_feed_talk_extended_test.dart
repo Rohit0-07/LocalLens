@@ -18,6 +18,7 @@ import 'package:local_lens/features/ward/domain/local_talk_post.dart';
 import 'package:local_lens/features/ward/domain/ward_detail_out.dart';
 import 'package:local_lens/features/ward/domain/ward_list_response.dart';
 import 'package:local_lens/features/ward/domain/ward_summary_out.dart';
+import 'package:local_lens/features/ward/presentation/widgets/local_talk_compose_sheet.dart';
 import 'package:local_lens/features/ward/presentation/providers/ward_providers.dart';
 
 class FakeMultiTypeFeedRepository implements FeedRepository {
@@ -76,6 +77,7 @@ class FakeMultiTypeFeedRepository implements FeedRepository {
     required bool isAnonymous,
     bool isFuzzed = false,
     bool isShielded = false,
+    List<String> mediaUrls = const [],
   }) async {
     throw UnimplementedError();
   }
@@ -106,6 +108,43 @@ class FakeMultiTypeFeedRepository implements FeedRepository {
     String? reason,
   }) async {
     throw UnimplementedError();
+  }
+
+  @override
+  Future<Issue> upvoteIssue(
+    int issueId, {
+    required double latitude,
+    required double longitude,
+  }) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<Issue> removeUpvote(int issueId) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<Issue> toggleUpvote(
+    int issueId, {
+    required double latitude,
+    required double longitude,
+    required bool currentlyUpvoted,
+  }) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<List<Issue>> fetchUserIssues({int? userId, String? status}) async {
+    return items
+        .where((i) => i.itemType == FeedItemType.issue && i.issue != null)
+        .map((i) => i.issue!)
+        .toList();
+  }
+
+  @override
+  Future<Map<String, dynamic>> fetchPublicUserProfile(int userId) async {
+    return {'id': userId};
   }
 }
 
@@ -304,14 +343,21 @@ void main() {
     expect(find.text('COMMUNITY WIN'), findsOneWidget);
     expect(find.text('Resolved: Broken Streetlight'), findsOneWidget);
     expect(find.text('BEFORE'), findsWidgets);
+
+    // Swipe the gallery left to reveal the AFTER page
+    await tester.fling(find.byType(PageView), const Offset(-400, 0), 1000);
+    await tester.pumpAndSettle();
     expect(find.text('AFTER'), findsWidgets);
+
     expect(find.text('Citizen John'), findsOneWidget);
     expect(find.text('Citizen Mary'), findsOneWidget);
 
-    // Tap share button
+    // Tap share button (opens the OS share sheet with the issue deep link;
+    // never a crash even when no share target is available in tests).
     await tester.tap(find.byIcon(Icons.share_outlined));
     await tester.pumpAndSettle();
-    expect(find.textContaining('locallens://issue/42'), findsOneWidget);
+    expect(find.byKey(const Key('winCard_202')), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('FE-FEED-04: NoticeCard rendering with official notice badge and validity timeframe', (tester) async {
@@ -346,10 +392,9 @@ void main() {
     expect(find.text('SANITATION'), findsOneWidget);
     expect(find.text('4 replies'), findsOneWidget);
 
-    // Tap Share button
-    await tester.tap(find.byIcon(Icons.share_outlined));
-    await tester.pumpAndSettle();
-    expect(find.textContaining('locallens://talk/404'), findsOneWidget);
+    // The Talk detail route is not built yet, so the share affordance stays
+    // hidden rather than pointing at a dead-end placeholder route.
+    expect(find.byIcon(Icons.share_outlined), findsNothing);
   });
 
   testWidgets('FE-FEED-06: Opening LocalTalkComposeSheet, filling inputs, and tapping submit', (tester) async {
@@ -359,8 +404,8 @@ void main() {
     await tester.pumpWidget(buildTestWidget(feedRepo: feedRepo, wardRepo: wardRepo));
     await tester.pumpAndSettle();
 
-    // Tap FAB to open LocalTalkComposeSheet
-    await tester.tap(find.byIcon(Icons.record_voice_over));
+    final BuildContext context = tester.element(find.byType(FeedScreen));
+    LocalTalkComposeSheet.show(context, 'ward-45');
     await tester.pumpAndSettle();
 
     expect(find.text('Start a Ward Discussion'), findsOneWidget);

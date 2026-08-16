@@ -33,6 +33,13 @@ _Issue _$IssueFromJson(Map<String, dynamic> json) => _Issue(
   confirmationsCount: (json['confirmations_count'] as num?)?.toInt() ?? 0,
   disputesCount: (json['disputes_count'] as num?)?.toInt() ?? 0,
   hasUpvoted: json['has_upvoted'] as bool? ?? false,
+  mediaUrls:
+      (json['media_urls'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList() ??
+      const <String>[],
+  videoUrl: json['video_url'] as String?,
+  reporterId: (json['reporter_id'] as num?)?.toInt(),
 );
 
 Map<String, dynamic> _$IssueToJson(_Issue instance) => <String, dynamic>{
@@ -58,4 +65,7 @@ Map<String, dynamic> _$IssueToJson(_Issue instance) => <String, dynamic>{
   'confirmations_count': instance.confirmationsCount,
   'disputes_count': instance.disputesCount,
   'has_upvoted': instance.hasUpvoted,
+  'media_urls': instance.mediaUrls,
+  'video_url': instance.videoUrl,
+  'reporter_id': instance.reporterId,
 };

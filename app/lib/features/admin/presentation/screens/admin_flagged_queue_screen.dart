@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/l10n/app_strings.dart';
 import '../providers/admin_flagged_queue_provider.dart';
 
 class AdminFlaggedQueueScreen extends StatefulWidget {
@@ -18,19 +19,19 @@ class _AdminFlaggedQueueScreenState extends State<AdminFlaggedQueueScreen> {
     final filter = FlaggedQueueFilter(status: selectedFilter);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Admin Flagged Queue'),
+        title: Text(context.tr('admin_queue_title')),
       ),
       body: Column(
         children: [
           DropdownButton<String>(
             key: const Key('adminQueueFilterSelect'),
             value: selectedFilter,
-            items: const [
-              DropdownMenuItem(value: 'pending', child: Text('Pending')),
-              DropdownMenuItem(value: 'reviewed', child: Text('Reviewed')),
-              DropdownMenuItem(value: 'dismissed', child: Text('Dismissed')),
-              DropdownMenuItem(value: 'hidden', child: Text('Hidden')),
-              DropdownMenuItem(value: 'all', child: Text('All')),
+            items: [
+              DropdownMenuItem(value: 'pending', child: Text(context.tr('admin_status_pending'))),
+              DropdownMenuItem(value: 'reviewed', child: Text(context.tr('admin_status_reviewed'))),
+              DropdownMenuItem(value: 'dismissed', child: Text(context.tr('admin_status_dismissed'))),
+              DropdownMenuItem(value: 'hidden', child: Text(context.tr('admin_status_hidden'))),
+              DropdownMenuItem(value: 'all', child: Text(context.tr('admin_status_all'))),
             ],
             onChanged: (val) {
               if (val != null) {
@@ -47,7 +48,7 @@ class _AdminFlaggedQueueScreenState extends State<AdminFlaggedQueueScreen> {
                 return queueAsync.when(
                   data: (response) {
                     if (response.items.isEmpty) {
-                      return const Center(child: Text('No items in queue'));
+                      return Center(child: Text(context.tr('admin_no_items')));
                     }
                     return ListView.builder(
                       itemCount: response.items.length,
@@ -68,14 +69,14 @@ class _AdminFlaggedQueueScreenState extends State<AdminFlaggedQueueScreen> {
                                     reason: 'Moderated by admin',
                                   );
                             },
-                            child: const Text('Moderate'),
+                            child: Text(context.tr('admin_moderate')),
                           ),
                         );
                       },
                     );
                   },
                   loading: () => const CircularProgressIndicator(),
-                  error: (err, stack) => Text('Error: $err'),
+                  error: (err, stack) => Text('${context.tr('admin_error')} $err'),
                 );
               },
             ),

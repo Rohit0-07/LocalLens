@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/l10n/app_strings.dart';
 import '../../../core/router/route_paths.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/relative_time.dart';
@@ -56,7 +57,7 @@ class NotificationsScreen extends ConsumerWidget {
     if (isGuest) {
       return Scaffold(
         appBar: AppBar(
-          title: const Text('Notifications'),
+          title: Text(context.tr('notifications_title')),
         ),
         body: Center(
           child: Padding(
@@ -71,7 +72,7 @@ class NotificationsScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'Sign in to view notifications',
+                  context.tr('notifications_sign_in_prompt'),
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
@@ -79,7 +80,7 @@ class NotificationsScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Get real-time updates on reported issues, community votes, and official responses.',
+                  context.tr('notifications_sign_in_desc'),
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
@@ -89,7 +90,7 @@ class NotificationsScreen extends ConsumerWidget {
                 FilledButton.icon(
                   onPressed: () => context.go(RoutePaths.signIn),
                   icon: const Icon(Icons.login_rounded),
-                  label: const Text('Sign In'),
+                  label: Text(context.tr('notifications_sign_in_button')),
                 ),
               ],
             ),
@@ -100,13 +101,13 @@ class NotificationsScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Notifications'),
+        title: Text(context.tr('notifications_title')),
         actions: [
           if (state.unreadCount > 0)
             TextButton.icon(
               onPressed: () => controller.markAllAsRead(),
               icon: const Icon(Icons.done_all_rounded, size: 18),
-              label: const Text('Mark all read'),
+              label: Text(context.tr('notifications_mark_all_read')),
             ),
         ],
       ),
@@ -114,10 +115,14 @@ class NotificationsScreen extends ConsumerWidget {
         children: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Row(
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
               children: [
                 FilterChip(
-                  label: Text('All (${state.filter == NotificationFilter.all ? state.notifications.length : '...'})'),
+                  label: Text(
+                    '${context.tr('notifications_all_filter')} (${state.filter == NotificationFilter.all ? state.notifications.length : '...'})',
+                  ),
                   selected: state.filter == NotificationFilter.all,
                   onSelected: (_) => controller.setFilter(NotificationFilter.all),
                 ),
@@ -126,7 +131,7 @@ class NotificationsScreen extends ConsumerWidget {
                   label: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text('Unread'),
+                      Text(context.tr('notifications_unread_filter')),
                       if (state.unreadCount > 0) ...[
                         const SizedBox(width: 6),
                         Container(
@@ -206,8 +211,8 @@ class NotificationsScreen extends ConsumerWidget {
                 const SizedBox(height: 12),
                 Text(
                   state.filter == NotificationFilter.unread
-                      ? 'No unread notifications'
-                      : 'No notifications yet',
+                      ? context.tr('notifications_empty_unread')
+                      : context.tr('notifications_empty'),
                   style: theme.textTheme.titleMedium?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                     fontWeight: FontWeight.w600,
@@ -215,7 +220,7 @@ class NotificationsScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'We\'ll notify you when issues get updated or escalated.',
+                  context.tr('notifications_empty_desc'),
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.outline,
                   ),

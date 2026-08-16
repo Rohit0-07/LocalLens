@@ -28,6 +28,9 @@ abstract class Issue with _$Issue {
     @JsonKey(name: 'confirmations_count') @Default(0) int confirmationsCount,
     @JsonKey(name: 'disputes_count') @Default(0) int disputesCount,
     @JsonKey(name: 'has_upvoted') @Default(false) bool hasUpvoted,
+    @JsonKey(name: 'media_urls') @Default(<String>[]) List<String> mediaUrls,
+    @JsonKey(name: 'video_url') String? videoUrl,
+    @JsonKey(name: 'reporter_id') int? reporterId,
   }) = _Issue;
 
   const Issue._();

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/l10n/app_strings.dart';
 import '../rep_dashboard_providers.dart';
 
 class PostOfficialResponseDialog extends ConsumerStatefulWidget {
@@ -37,7 +38,11 @@ class _PostOfficialResponseDialogState extends ConsumerState<PostOfficialRespons
   Widget build(BuildContext context) {
     return AlertDialog(
       key: const Key('postOfficialResponseDialog'),
-      title: Text('Post Official Response (#${widget.issueId})'),
+      title: Text(
+        context
+            .tr('official_response_title')
+            .replaceFirst('{id}', '${widget.issueId}'),
+      ),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -47,10 +52,10 @@ class _PostOfficialResponseDialogState extends ConsumerState<PostOfficialRespons
               key: const Key('officialResponseInput'),
               controller: _messageController,
               maxLines: 3,
-              decoration: const InputDecoration(
-                labelText: 'Official Response Message',
-                hintText: 'Enter response message for citizens...',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: context.tr('official_response_message_label'),
+                hintText: context.tr('official_response_message_hint'),
+                border: const OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 16),
@@ -58,10 +63,10 @@ class _PostOfficialResponseDialogState extends ConsumerState<PostOfficialRespons
               key: const Key('officialEtaInput'),
               controller: _etaController,
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Estimated Resolution (Days)',
-                hintText: 'e.g. 3',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: context.tr('official_eta_label'),
+                hintText: context.tr('official_eta_hint'),
+                border: const OutlineInputBorder(),
               ),
             ),
           ],
@@ -71,7 +76,7 @@ class _PostOfficialResponseDialogState extends ConsumerState<PostOfficialRespons
         TextButton(
           key: const Key('cancelOfficialResponseButton'),
           onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
+          child: Text(context.tr('action_cancel')),
         ),
         FilledButton(
           key: const Key('submitOfficialResponseButton'),
@@ -91,7 +96,7 @@ class _PostOfficialResponseDialogState extends ConsumerState<PostOfficialRespons
               Navigator.pop(context);
             }
           },
-          child: const Text('Submit Response'),
+          child: Text(context.tr('official_response_submit')),
         ),
       ],
     );

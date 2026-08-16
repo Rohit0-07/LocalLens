@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/l10n/app_strings.dart';
+import '../../core/theme/app_colors.dart';
 
 class StatusBadge extends StatelessWidget {
   const StatusBadge({super.key, required this.status});
@@ -8,12 +9,12 @@ class StatusBadge extends StatelessWidget {
   final String status;
 
   static const _colors = <String, Color>{
-    'open': Color(0xFFC62828),
-    'escalating': Color(0xFFC62828),
-    'review': Color(0xFFEF6C00),
-    'pending_verification': Color(0xFFEF6C00),
-    'resolved': Color(0xFF2E7D32),
-    'disputed': Color(0xFF6A1B9A),
+    'open': AppColors.urgent,
+    'escalating': AppColors.urgent,
+    'review': AppColors.review,
+    'pending_verification': AppColors.review,
+    'resolved': AppColors.resolved,
+    'disputed': AppColors.disputed,
   };
 
   @override

@@ -1,56 +1,79 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
 
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/utils/media_url.dart';
+import '../../../../shared/widgets/media_preview_widget.dart';
+import '../../../../shared/widgets/shimmer_loading.dart';
 import '../../domain/win.dart';
 
+/// Twitter-style "COMMUNITY WIN" card with an Instagram-style swipeable
+/// before/after gallery. Emerald reads as the reward/success signal across themes.
 class WinCard extends StatefulWidget {
   final WinItem win;
 
-  const WinCard({
-    super.key,
-    required this.win,
-  });
+  const WinCard({super.key, required this.win});
 
   @override
   State<WinCard> createState() => _WinCardState();
 }
 
 class _WinCardState extends State<WinCard> {
-  double _sliderValue = 0.5;
+  final PageController _pageController = PageController();
+  int _currentPage = 0;
 
-  void _shareWin(BuildContext context) {
+  List<MediaItem> get _galleryItems => [
+        if (widget.win.beforeImageUrl != null)
+          MediaItem(
+            url: widget.win.beforeImageUrl!,
+            label: 'BEFORE: ${widget.win.title}',
+          ),
+        if (widget.win.afterImageUrl != null)
+          MediaItem(
+            url: widget.win.afterImageUrl!,
+            label: 'AFTER: ${widget.win.title}',
+          ),
+      ];
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _shareWin(BuildContext context) async {
     final deepLink = 'locallens://issue/${widget.win.issueId}';
-    Clipboard.setData(ClipboardData(text: deepLink));
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Deep link copied: $deepLink'),
-        duration: const Duration(seconds: 2),
-      ),
-    );
+    try {
+      await SharePlus.instance.share(
+        ShareParams(
+          text: '${widget.win.title} — LocalLens\n$deepLink',
+        ),
+      );
+    } catch (_) {}
   }
 
   @override
   Widget build(BuildContext context) {
     final win = widget.win;
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final colorScheme = theme.colorScheme;
+    final galleryItems = _galleryItems;
 
     return Card(
       key: Key('winCard_${win.id}'),
       margin: EdgeInsets.zero,
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+          width: 1,
+        ),
+      ),
       clipBehavior: Clip.antiAlias,
       child: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              const Color(0xFF059669).withValues(alpha: 0.15),
-              theme.colorScheme.surface,
-            ],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
+        color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -58,9 +81,12 @@ class _WinCardState extends State<WinCard> {
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF059669),
+                    color: AppColors.win,
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: const Row(
@@ -72,7 +98,7 @@ class _WinCardState extends State<WinCard> {
                         'COMMUNITY WIN',
                         style: TextStyle(
                           color: Colors.white,
-                          fontSize: 11,
+                          fontSize: 12,
                           fontWeight: FontWeight.bold,
                           letterSpacing: 0.5,
                         ),
@@ -99,75 +125,109 @@ class _WinCardState extends State<WinCard> {
               const SizedBox(height: 4),
               Text(
                 win.description,
-                style: theme.textTheme.bodyMedium,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
             ],
             const SizedBox(height: 12),
 
-            // Before / After slider widget
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    height: 180,
-                    width: double.infinity,
-                    color: Colors.black12,
-                    child: Stack(
-                      children: [
-                        Positioned.fill(
-                          child: Row(
-                            children: [
-                              Expanded(
-                                flex: (_sliderValue * 100).toInt(),
-                                child: Container(
-                                  color: Colors.amber.shade900.withValues(alpha: 0.3),
-                                  child: Center(
-                                    child: win.beforeImageUrl != null
-                                        ? Image.network(win.beforeImageUrl!, fit: BoxFit.cover, errorBuilder: (_, _, _) => _buildPlaceholder('BEFORE'))
-                                        : _buildPlaceholder('BEFORE'),
-                                  ),
+            // Instagram-style swipeable before / after gallery
+            if (galleryItems.isNotEmpty)
+              Column(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(14),
+                    child: SizedBox(
+                      height: 220,
+                      width: double.infinity,
+                      child: Stack(
+                        children: [
+                          PageView.builder(
+                            controller: _pageController,
+                            itemCount: galleryItems.length,
+                            onPageChanged: (index) {
+                              setState(() => _currentPage = index);
+                            },
+                            itemBuilder: (context, index) {
+                              final item = galleryItems[index];
+                              return GestureDetector(
+                                onTap: () =>
+                                    MediaPreviewWidget.openFullScreen(
+                                  context,
+                                  items: galleryItems,
+                                  initialIndex: index,
+                                  title:
+                                      'Community Win: Before & After',
                                 ),
-                              ),
-                              Expanded(
-                                flex: ((1 - _sliderValue) * 100).toInt(),
-                                child: Container(
-                                  color: const Color(0xFF059669).withValues(alpha: 0.3),
-                                  child: Center(
-                                    child: win.afterImageUrl != null
-                                        ? Image.network(win.afterImageUrl!, fit: BoxFit.cover, errorBuilder: (_, _, _) => _buildPlaceholder('AFTER'))
-                                        : _buildPlaceholder('AFTER'),
-                                  ),
-                                ),
-                              ),
-                            ],
+                                child: _GalleryImage(item: item),
+                              );
+                            },
                           ),
-                        ),
-                        Positioned(
-                          top: 8,
-                          left: 8,
-                          child: _buildLabel('BEFORE', Colors.amber.shade800),
-                        ),
-                        Positioned(
-                          top: 8,
-                          right: 8,
-                          child: _buildLabel('AFTER', const Color(0xFF059669)),
-                        ),
-                      ],
+                          Positioned(
+                            top: 8,
+                            left: 8,
+                            child: _buildLabel(
+                              galleryItems[_currentPage].label ==
+                                  'BEFORE: ${win.title}'
+                                  ? 'BEFORE'
+                                  : 'AFTER',
+                              _currentPage == 0
+                                  ? Colors.amber.shade800
+                                  : AppColors.win,
+                            ),
+                          ),
+                          if (galleryItems.length > 1)
+                            Positioned(
+                              bottom: 8,
+                              left: 0,
+                              right: 0,
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.center,
+                                children: List.generate(
+                                  galleryItems.length,
+                                  (index) => AnimatedContainer(
+                                    duration:
+                                        const Duration(milliseconds: 200),
+                                    margin: const EdgeInsets.symmetric(
+                                      horizontal: 3,
+                                    ),
+                                    width: _currentPage == index ? 16 : 7,
+                                    height: 7,
+                                    decoration: BoxDecoration(
+                                      color: _currentPage == index
+                                          ? Colors.white
+                                          : Colors.white54,
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-                Slider(
-                  value: _sliderValue,
-                  onChanged: (val) => setState(() => _sliderValue = val),
-                  activeColor: const Color(0xFF059669),
-                  inactiveColor: Colors.amber.shade600,
-                ),
-              ],
-            ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.swipe_rounded,
+                          size: 14, color: Colors.grey),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Swipe to compare before & after',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
 
             if (win.contributorCredits.isNotEmpty) ...[
               const SizedBox(height: 8),
@@ -177,13 +237,13 @@ class _WinCardState extends State<WinCard> {
                 children: win.contributorCredits.map((credit) {
                   return Chip(
                     avatar: const Icon(Icons.person_pin, size: 14),
-                    label: Text(
-                      credit,
-                      style: const TextStyle(fontSize: 11),
-                    ),
+                    label: Text(credit, style: const TextStyle(fontSize: 12)),
+                    labelStyle: TextStyle(color: colorScheme.onSurfaceVariant),
                     padding: EdgeInsets.zero,
                     materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     visualDensity: VisualDensity.compact,
+                    side: BorderSide(color: colorScheme.outlineVariant),
+                    backgroundColor: colorScheme.surfaceContainerLow,
                   );
                 }).toList(),
               ),
@@ -191,27 +251,6 @@ class _WinCardState extends State<WinCard> {
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildPlaceholder(String label) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Icon(
-          label == 'BEFORE' ? Icons.history : Icons.check_circle,
-          size: 32,
-          color: Colors.grey.shade700,
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: TextStyle(
-            color: Colors.grey.shade800,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ],
     );
   }
 
@@ -226,10 +265,52 @@ class _WinCardState extends State<WinCard> {
         text,
         style: const TextStyle(
           color: Colors.white,
-          fontSize: 10,
+          fontSize: 12,
           fontWeight: FontWeight.bold,
         ),
       ),
+    );
+  }
+}
+
+/// Full-bleed image inside the swipeable gallery with shimmer + fallback.
+class _GalleryImage extends StatelessWidget {
+  const _GalleryImage({required this.item});
+
+  final MediaItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Image.network(
+          resolveMediaUrl(item.url),
+          fit: BoxFit.cover,
+          loadingBuilder: (context, child, progress) {
+            if (progress == null) return child;
+            return ShimmerLoading(
+              child: Container(
+                color: isDark ? AppColors.skeletonBaseDark : AppColors.skeletonBase,
+              ),
+            );
+          },
+          errorBuilder: (_, _, _) => Container(
+            color: isDark
+                ? const Color(0xFF1E2430)
+                : const Color(0xFFE8EEF5),
+            alignment: Alignment.center,
+            child: Icon(
+              Icons.image_outlined,
+              size: 32,
+              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

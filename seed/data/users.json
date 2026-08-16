@@ -5,6 +5,8 @@
     "email": "admin@locallens.dev",
     "is_admin": true,
     "role": "admin",
+    "is_verified": true,
+    "ward": "Ward 45, Urban Central",
     "is_banned": false,
     "created_at": "2026-06-25T10:00:00"
   },
@@ -14,6 +16,8 @@
     "email": "meera.iyer@example.com",
     "is_admin": false,
     "role": "citizen",
+    "is_verified": true,
+    "ward": "Ward 45, Urban Central",
     "is_banned": false,
     "created_at": "2026-06-30T10:00:00"
   },
@@ -23,6 +27,8 @@
     "email": "asha.deshmukh@example.com",
     "is_admin": false,
     "role": "citizen",
+    "is_verified": true,
+    "ward": "Ward 45, Urban Central",
     "is_banned": false,
     "created_at": "2026-07-05T10:00:00"
   },
@@ -32,6 +38,8 @@
     "email": "vikram.patil@example.com",
     "is_admin": false,
     "role": "citizen",
+    "is_verified": true,
+    "ward": "Ward 45, Urban Central",
     "is_banned": false,
     "created_at": "2026-07-10T10:00:00"
   },
@@ -41,6 +49,8 @@
     "email": "farah.ansari@example.com",
     "is_admin": false,
     "role": "citizen",
+    "is_verified": true,
+    "ward": "Ward 45, Urban Central",
     "is_banned": false,
     "created_at": "2026-07-15T10:00:00"
   },
@@ -50,6 +60,8 @@
     "email": "rahul.kadam@example.com",
     "is_admin": false,
     "role": "citizen",
+    "is_verified": true,
+    "ward": "Ward 45, Urban Central",
     "is_banned": false,
     "created_at": "2026-07-20T10:00:00"
   },
@@ -59,6 +71,8 @@
     "email": null,
     "is_admin": false,
     "role": "citizen",
+    "is_verified": false,
+    "ward": "Ward 45, Urban Central",
     "is_banned": true,
     "created_at": "2026-07-25T10:00:00"
   },
@@ -68,6 +82,8 @@
     "email": "priya.nair@example.com",
     "is_admin": false,
     "role": "citizen",
+    "is_verified": true,
+    "ward": "Ward 45, Urban Central",
     "is_banned": false,
     "created_at": "2026-08-01T10:00:00"
   },
@@ -77,6 +93,8 @@
     "email": "deepak.more@example.com",
     "is_admin": false,
     "role": "citizen",
+    "is_verified": true,
+    "ward": "Ward 45, Urban Central",
     "is_banned": false,
     "created_at": "2026-08-02T10:00:00"
   },
@@ -86,6 +104,8 @@
     "email": "sunita.joshi@example.com",
     "is_admin": false,
     "role": "citizen",
+    "is_verified": true,
+    "ward": "Ward 45, Urban Central",
     "is_banned": false,
     "created_at": "2026-08-05T10:00:00"
   }

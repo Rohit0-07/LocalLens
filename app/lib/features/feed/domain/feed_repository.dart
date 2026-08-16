@@ -29,6 +29,7 @@ abstract interface class FeedRepository {
     required bool isAnonymous,
     bool isFuzzed = false,
     bool isShielded = false,
+    List<String> mediaUrls = const [],
   });
 
   Future<List<NearDuplicateCandidate>> checkNearDuplicates({
@@ -50,6 +51,25 @@ abstract interface class FeedRepository {
     required double longitude,
     String? reason,
   });
+
+  Future<Issue> upvoteIssue(
+    int issueId, {
+    required double latitude,
+    required double longitude,
+  });
+
+  Future<Issue> removeUpvote(int issueId);
+
+  Future<Issue> toggleUpvote(
+    int issueId, {
+    required double latitude,
+    required double longitude,
+    required bool currentlyUpvoted,
+  });
+
+  Future<List<Issue>> fetchUserIssues({int? userId, String? status});
+
+  Future<Map<String, dynamic>> fetchPublicUserProfile(int userId);
 }
 
 

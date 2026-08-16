@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:local_lens/core/services/location_service.dart';
 import 'package:local_lens/features/map/data/map_api.dart';
 import 'package:local_lens/features/map/presentation/controllers/map_controller.dart';
 import 'package:local_lens/features/map/presentation/screens/map_screen.dart';
@@ -8,6 +10,12 @@ import 'package:local_lens/features/map/presentation/widgets/map_pin_preview_she
 import 'package:mocktail/mocktail.dart';
 
 class MockMapApi extends Mock implements MapApi {}
+
+/// Instantly returns null so the notifier constructor doesn't block on GPS.
+class _ImmediateNullLocationService implements LocationService {
+  @override
+  Future<Position?> getCurrentPosition() async => null;
+}
 
 void main() {
   late MockMapApi mockMapApi;
@@ -30,10 +38,10 @@ void main() {
     title: 'Water Leakage Near School',
     category: 'water',
     status: 'in_progress',
-    latitude: 19.15,
-    longitude: 72.88,
+    latitude: 19.08,
+    longitude: 72.87,
     wardName: 'Ward 45, Urban Central',
-    isShielded: true,
+    isShielded: false,
     upvotesCount: 8,
     createdAt: DateTime.now(),
   );
@@ -59,6 +67,9 @@ void main() {
     return ProviderScope(
       overrides: [
         mapApiProvider.overrideWithValue(mockMapApi),
+        // Override locationServiceProvider so the notifier constructor does not
+        // block on real GPS during tests.
+        locationServiceProvider.overrideWithValue(_ImmediateNullLocationService()),
         ...overrides,
       ],
       child: MaterialApp(
@@ -84,7 +95,8 @@ void main() {
       // Verify progress indicator appears during loading state before settlement
       expect(find.byType(LinearProgressIndicator), findsOneWidget);
 
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump();
 
       // Verify progress indicator disappears after load
       expect(find.byType(LinearProgressIndicator), findsNothing);
@@ -116,7 +128,8 @@ void main() {
           )).thenAnswer((_) async => [samplePin1]);
 
       await tester.pumpWidget(buildTestableWidget(const MapScreen()));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump();
 
       // Verify initial pins
       expect(find.byKey(const Key('mapPin_101')), findsOneWidget);
@@ -125,7 +138,8 @@ void main() {
 
       // Tap on 'road' category filter chip
       await tester.tap(find.byKey(const Key('mapFilterChip_road')));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump();
 
       // Verify map pins filtered down to road pin only
       expect(find.byKey(const Key('mapPin_101')), findsOneWidget);
@@ -145,11 +159,13 @@ void main() {
           )).thenAnswer((_) async => [samplePin1]);
 
       await tester.pumpWidget(buildTestableWidget(const MapScreen()));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump();
 
       // Tap on map pin 101
       await tester.tap(find.byKey(const Key('mapPin_101')));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump();
 
       // Verify preview sheet opens
       expect(find.byType(MapPinPreviewSheet), findsOneWidget);
@@ -193,7 +209,8 @@ void main() {
         container: container,
         child: const MaterialApp(home: MapScreen()),
       ));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump();
 
       expect(find.byKey(const Key('searchThisAreaButton')), findsNothing);
 
@@ -201,14 +218,16 @@ void main() {
       container.read(mapPinsNotifierProvider.notifier).updateBounds(
             const MapBounds(minLat: 19.05, maxLat: 19.25, minLng: 72.82, maxLng: 72.92),
           );
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump();
 
       // Search this area button is now visible
       expect(find.byKey(const Key('searchThisAreaButton')), findsOneWidget);
 
       // Tap search this area button
       await tester.tap(find.byKey(const Key('searchThisAreaButton')), warnIfMissed: false);
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump();
 
       // Button disappears and new pins rendered
       expect(find.byKey(const Key('searchThisAreaButton')), findsNothing);
@@ -228,7 +247,8 @@ void main() {
           )).thenThrow(Exception('Failed to fetch pins from server'));
 
       await tester.pumpWidget(buildTestableWidget(const MapScreen()));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump();
 
       // Verify error message and retry button
       expect(find.textContaining('Failed to load map pins'), findsOneWidget);
@@ -246,7 +266,8 @@ void main() {
 
       // Tap retry button
       await tester.tap(find.byKey(const Key('mapErrorRetryButton')));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump();
 
       // Error message gone and pins rendered
       expect(find.textContaining('Failed to load map pins'), findsNothing);
@@ -265,7 +286,8 @@ void main() {
           )).thenAnswer((_) async => []);
 
       await tester.pumpWidget(buildTestableWidget(const MapScreen()));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump();
 
       // Verify Key('mapEmptyState') card and text 'No issues found in this area'
       expect(find.byKey(const Key('mapEmptyState')), findsOneWidget);

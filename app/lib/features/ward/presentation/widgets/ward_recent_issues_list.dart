@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/l10n/app_strings.dart';
 import '../../../feed/domain/issue.dart';
 import '../../../feed/presentation/widgets/issue_card.dart';
 
@@ -15,17 +16,17 @@ class WardRecentIssuesList extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Recent Ward Issues',
+          context.tr('ward_recent_issues_header'),
           style: theme.textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.bold,
           ),
         ),
         const SizedBox(height: 12),
         if (issues.isEmpty)
-          const Card(
+          Card(
             child: Padding(
-              padding: EdgeInsets.all(16),
-              child: Text('No recent issues reported in this ward.'),
+              padding: const EdgeInsets.all(16),
+              child: Text(context.tr('ward_no_recent_issues')),
             ),
           )
         else

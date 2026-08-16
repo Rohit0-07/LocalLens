@@ -58,7 +58,7 @@ def to_issue_out(
     label = reporter_label_for(issue)
     anon_id = (
         derive_anonymous_identity(issue.reporter_id, secret)
-        if (secret and issue.is_anonymous)
+        if (secret and issue.is_anonymous and issue.reporter_id is not None)
         else None
     )
 
@@ -78,6 +78,29 @@ def to_issue_out(
         if official_resps:
             has_official_response = len(official_resps) > 0
 
+    media_urls_list: list[str] = []
+    raw_urls = getattr(issue, "media_urls", None)
+    if raw_urls:
+        try:
+            parsed = json.loads(raw_urls)
+            if isinstance(parsed, list):
+                media_urls_list = [str(u) for u in parsed]
+            elif isinstance(parsed, str):
+                media_urls_list = [parsed]
+        except Exception:
+            media_urls_list = [raw_urls]
+
+    media_url = getattr(issue, "media_url", None) or (media_urls_list[0] if media_urls_list else None)
+    video_url = getattr(issue, "video_url", None)
+    if media_url and media_url not in media_urls_list:
+        media_urls_list.insert(0, media_url)
+    if video_url and video_url not in media_urls_list:
+        media_urls_list.append(video_url)
+
+    reporter_id_val = None
+    if not issue.is_anonymous or (user_id is not None and user_id == issue.reporter_id):
+        reporter_id_val = issue.reporter_id
+
     return IssueOut(
         id=issue.id,
         title=issue.title,
@@ -92,8 +115,12 @@ def to_issue_out(
         fuzz_location=issue.fuzz_location or issue.is_fuzzed,
         is_fuzzed=issue.is_fuzzed or issue.fuzz_location,
         is_shielded=issue.is_shielded,
+        reporter_id=reporter_id_val,
         reporter_label=label,
         anonymous_identity=anon_id,
+        media_url=media_url,
+        video_url=video_url,
+        media_urls=media_urls_list,
         created_at=issue.created_at,
         acknowledged_at=issue.acknowledged_at,
         resolved_at=issue.resolved_at,
@@ -108,7 +135,10 @@ def to_issue_out(
     )
 
 
-async def create_issue(session: AsyncSession, payload: IssueCreate, reporter_id: int) -> Issue:
+async def create_issue(
+    session: AsyncSession, payload: IssueCreate, reporter_id: int | None = None
+) -> Issue:
+    effective_reporter_id = payload.reporter_id if payload.reporter_id is not None else reporter_id
     is_fuzzed = payload.is_fuzzed or payload.fuzz_location
     if is_fuzzed:
         lat = round(payload.latitude, 2)
@@ -118,6 +148,14 @@ async def create_issue(session: AsyncSession, payload: IssueCreate, reporter_id:
         lng = payload.longitude
 
     gh = encode_geohash(lat, lng)
+
+    media_urls_list = list(payload.media_urls) if payload.media_urls else []
+    if payload.media_url and payload.media_url not in media_urls_list:
+        media_urls_list.insert(0, payload.media_url)
+    if payload.video_url and payload.video_url not in media_urls_list:
+        media_urls_list.append(payload.video_url)
+
+    first_media = payload.media_url or (media_urls_list[0] if media_urls_list else None)
 
     issue = Issue(
         title=payload.title,
@@ -131,7 +169,10 @@ async def create_issue(session: AsyncSession, payload: IssueCreate, reporter_id:
         fuzz_location=is_fuzzed,
         is_fuzzed=is_fuzzed,
         is_shielded=payload.is_shielded,
-        reporter_id=reporter_id,
+        reporter_id=effective_reporter_id,
+        media_url=first_media,
+        video_url=payload.video_url,
+        media_urls=json.dumps(media_urls_list) if media_urls_list else None,
         status="unacknowledged",
     )
     session.add(issue)
@@ -342,7 +383,7 @@ async def create_win_for_issue(session: AsyncSession, issue: Issue) -> Win:
         credits_list.append("Verified Citizen")
 
     if issue.confirmations_count > 0:
-        credits_list.append(f"{issue.confirmations_count} Quorum Verifiers")
+        credits_list.append(f"{issue.confirmations_count} Community Verifiers")
 
     before_url = None
     try:
@@ -438,7 +479,7 @@ def _to_naive_utc(dt: datetime) -> datetime:
 
 def evaluate_escalation(issue: Issue, now: datetime | None = None) -> bool:
     now_dt = _to_naive_utc(now or _utc_now())
-    if issue.status in ("resolved", "forwarded"):
+    if issue.status in ("resolved", "forwarded", "pending_quorum", "disputed"):
         return False
 
     modified = False

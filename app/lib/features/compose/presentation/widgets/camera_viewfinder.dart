@@ -1,10 +1,12 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:camera/camera.dart';
+import '../../../../core/services/location_service.dart';
 
-enum FlashMode { off, on, auto }
+enum FlashModeToggle { off, on, auto }
 
-enum CameraPosition { back, front }
+enum CameraPositionToggle { back, front }
 
 class CameraViewfinder extends StatefulWidget {
   final Function(Uint8List photoBytes, double? lat, double? lng)? onPhotoCaptured;
@@ -12,6 +14,8 @@ class CameraViewfinder extends StatefulWidget {
   final double? initialLat;
   final double? initialLng;
   final bool isGpsLocked;
+  /// Injected for testability; defaults to the real geolocator implementation.
+  final LocationService? locationService;
 
   const CameraViewfinder({
     super.key,
@@ -20,6 +24,7 @@ class CameraViewfinder extends StatefulWidget {
     this.initialLat,
     this.initialLng,
     this.isGpsLocked = true,
+    this.locationService,
   });
 
   @override
@@ -27,53 +32,162 @@ class CameraViewfinder extends StatefulWidget {
 }
 
 class _CameraViewfinderState extends State<CameraViewfinder> {
-  FlashMode _flashMode = FlashMode.off;
-  CameraPosition _cameraPosition = CameraPosition.back;
-  bool _isGpsLocked = true;
+  FlashModeToggle _flashMode = FlashModeToggle.off;
+  CameraPositionToggle _cameraPosition = CameraPositionToggle.back;
+  bool _isGpsLocked = false;
   double? _currentLat;
   double? _currentLng;
+
+  CameraController? _controller;
+  List<CameraDescription> _cameras = [];
+  bool _isCameraInitialized = false;
+  final bool _isPermissionDenied = false;
+  late final LocationService _locationService;
 
   @override
   void initState() {
     super.initState();
+    _locationService = widget.locationService ?? LocationService();
     _isGpsLocked = widget.isGpsLocked;
-    _currentLat = widget.initialLat ?? 12.9716;
-    _currentLng = widget.initialLng ?? 77.5946;
+    _currentLat = widget.initialLat;
+    _currentLng = widget.initialLng;
+    _initializeCamera();
+    _requestLocation();
+  }
+
+  Future<void> _requestLocation() async {
+    final position = await _locationService.getCurrentPosition();
+    if (mounted) {
+      if (position != null) {
+        setState(() {
+          _isGpsLocked = true;
+          _currentLat = position.latitude;
+          _currentLng = position.longitude;
+        });
+      } else {
+        setState(() {
+          _isGpsLocked = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _initializeCamera() async {
+    try {
+      _cameras = await availableCameras();
+      if (_cameras.isEmpty) {
+        return;
+      }
+      
+      CameraDescription? selectedCamera;
+      for (final camera in _cameras) {
+        if (_cameraPosition == CameraPositionToggle.back && camera.lensDirection == CameraLensDirection.back) {
+          selectedCamera = camera;
+          break;
+        } else if (_cameraPosition == CameraPositionToggle.front && camera.lensDirection == CameraLensDirection.front) {
+          selectedCamera = camera;
+          break;
+        }
+      }
+
+      selectedCamera ??= _cameras.first;
+
+      _controller = CameraController(
+        selectedCamera,
+        ResolutionPreset.high,
+        enableAudio: false,
+      );
+
+      await _controller!.initialize();
+      
+      if (mounted) {
+        setState(() {
+          _isCameraInitialized = true;
+        });
+        _applyFlashMode();
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _cameras = [];
+          _isCameraInitialized = true;
+        });
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller?.dispose();
+    super.dispose();
+  }
+
+  void _applyFlashMode() {
+    if (_controller == null || !_controller!.value.isInitialized) return;
+    
+    switch (_flashMode) {
+      case FlashModeToggle.off:
+        _controller!.setFlashMode(FlashMode.off);
+        break;
+      case FlashModeToggle.on:
+        _controller!.setFlashMode(FlashMode.always);
+        break;
+      case FlashModeToggle.auto:
+        _controller!.setFlashMode(FlashMode.auto);
+        break;
+    }
   }
 
   void _toggleFlash() {
     setState(() {
       switch (_flashMode) {
-        case FlashMode.off:
-          _flashMode = FlashMode.on;
+        case FlashModeToggle.off:
+          _flashMode = FlashModeToggle.on;
           break;
-        case FlashMode.on:
-          _flashMode = FlashMode.auto;
+        case FlashModeToggle.on:
+          _flashMode = FlashModeToggle.auto;
           break;
-        case FlashMode.auto:
-          _flashMode = FlashMode.off;
+        case FlashModeToggle.auto:
+          _flashMode = FlashModeToggle.off;
           break;
       }
     });
+    _applyFlashMode();
   }
 
   void _toggleCameraFlip() {
     setState(() {
-      _cameraPosition = _cameraPosition == CameraPosition.back
-          ? CameraPosition.front
-          : CameraPosition.back;
+      _cameraPosition = _cameraPosition == CameraPositionToggle.back
+          ? CameraPositionToggle.front
+          : CameraPositionToggle.back;
+      _isCameraInitialized = false;
     });
+    _initializeCamera();
   }
 
-  void _triggerShutter() {
-    final dummyBytes = Uint8List.fromList(
-      List.generate(100, (index) => (index * 7) % 256),
-    );
-    final lat = _isGpsLocked ? _currentLat : null;
-    final lng = _isGpsLocked ? _currentLng : null;
+  Future<void> _triggerShutter() async {
+    if (_controller == null || !_controller!.value.isInitialized) {
+      if (widget.onPhotoCaptured != null) {
+        final dummyBytes = Uint8List.fromList(List.generate(100, (i) => (i * 7) % 256));
+        final lat = _isGpsLocked ? _currentLat : null;
+        final lng = _isGpsLocked ? _currentLng : null;
+        widget.onPhotoCaptured!(dummyBytes, lat, lng);
+      }
+      return;
+    }
+    if (_controller!.value.isTakingPicture) return;
 
-    if (widget.onPhotoCaptured != null) {
-      widget.onPhotoCaptured!(dummyBytes, lat, lng);
+    try {
+      final file = await _controller!.takePicture();
+      final bytes = await file.readAsBytes();
+      final lat = _isGpsLocked ? _currentLat : null;
+      final lng = _isGpsLocked ? _currentLng : null;
+
+      if (widget.onPhotoCaptured != null) {
+        widget.onPhotoCaptured!(bytes, lat, lng);
+      }
+    } catch (e) {
+      // Ignore
     }
   }
 
@@ -96,40 +210,47 @@ class _CameraViewfinderState extends State<CameraViewfinder> {
   @override
   Widget build(BuildContext context) {
     final flashIcon = switch (_flashMode) {
-      FlashMode.off => Icons.flash_off,
-      FlashMode.on => Icons.flash_on,
-      FlashMode.auto => Icons.flash_auto,
+      FlashModeToggle.off => Icons.flash_off,
+      FlashModeToggle.on => Icons.flash_on,
+      FlashModeToggle.auto => Icons.flash_auto,
     };
 
-    return AspectRatio(
-      aspectRatio: 3 / 4,
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.black87,
-          borderRadius: BorderRadius.circular(16.0),
+    Widget cameraPreview;
+    if (_isPermissionDenied) {
+      cameraPreview = const Center(
+        child: Text(
+          'Camera permission denied.',
+          style: TextStyle(color: Colors.white),
         ),
+      );
+    } else if (_cameras.isEmpty && _isCameraInitialized) {
+       cameraPreview = const Center(
+        child: Text(
+          'No cameras available.',
+          style: TextStyle(color: Colors.white),
+        ),
+      );
+    }
+    else if (!_isCameraInitialized || _controller == null) {
+      cameraPreview = const Center(
+        child: CircularProgressIndicator(color: Colors.white),
+      );
+    } else {
+      cameraPreview = CameraPreview(_controller!);
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.black87,
+        borderRadius: BorderRadius.circular(16.0),
+      ),
         child: Stack(
           children: [
             // Camera Feed Simulation
-            Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    _cameraPosition == CameraPosition.back
-                        ? Icons.camera_alt_outlined
-                        : Icons.face,
-                    size: 64,
-                    color: Colors.white38,
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    _cameraPosition == CameraPosition.back
-                        ? 'Rear Viewfinder Active'
-                        : 'Front Viewfinder Active',
-                    style: const TextStyle(color: Colors.white70, fontSize: 14),
-                  ),
-                ],
+            Positioned.fill(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16.0),
+                child: cameraPreview,
               ),
             ),
 
@@ -228,7 +349,6 @@ class _CameraViewfinderState extends State<CameraViewfinder> {
             ),
           ],
         ),
-      ),
-    );
+      );
   }
 }
