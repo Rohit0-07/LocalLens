@@ -304,6 +304,8 @@ class UserSettingsNotifier extends StateNotifier<UserSettings> {
       _save(state.copyWith(syncWorkerIntervalMinutes: minutes));
   Future<void> setProfileAlias(String alias) =>
       _save(state.copyWith(profileAlias: alias));
+  Future<void> setShowDisplayName(bool val) =>
+      _save(state.copyWith(showDisplayName: val));
   Future<void> clearOfflineCache() =>
       _save(state.copyWith(offlineCacheSizeMb: 0.0));
 }

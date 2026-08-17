@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 export 'storage_providers.dart';
 
-
 class LocalStore {
   LocalStore._();
 
@@ -16,6 +15,7 @@ class LocalStore {
   static const _tokenKey = 'access_token';
   static const _userIdKey = 'user_id';
   static const _draftKey = 'current_draft';
+  static const _savedDraftsKey = 'saved_drafts';
   static const _hasCompletedOnboardingKey = 'has_completed_onboarding';
 
   Box<String>? _sessionBox;
@@ -45,7 +45,6 @@ class LocalStore {
     _wardCacheBox = await Hive.openBox<String>(_wardCacheBoxName);
   }
 
-
   String? restoreAccessToken() => _sessionBox?.get(_tokenKey);
 
   String? restoreUserId() => _sessionBox?.get(_userIdKey);
@@ -73,6 +72,66 @@ class LocalStore {
     await _draftsBox?.delete(_draftKey);
   }
 
+  /// Returns the raw JSON payloads of every saved draft, newest first.
+  /// Empty or malformed stored data resolves to an empty list.
+  List<String> loadAllDrafts() {
+    final raw = _draftsBox?.get(_savedDraftsKey);
+    if (raw == null || raw.isEmpty) return [];
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! List) return [];
+      final items = decoded
+          .whereType<Map>()
+          .map((e) => e['data'])
+          .whereType<String>()
+          .toList()
+          .reversed
+          .toList();
+      return items;
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<void> saveDraftItem(String id, String json) async {
+    final items = _readDraftItems();
+    final entry = {'id': id, 'data': json};
+    final index = items.indexWhere((e) => e['id'] == id);
+    if (index >= 0) {
+      items[index] = entry;
+    } else {
+      items.insert(0, entry);
+    }
+    await _writeDraftItems(items);
+  }
+
+  Future<void> deleteDraftItem(String id) async {
+    final items = _readDraftItems();
+    items.removeWhere((e) => e['id'] == id);
+    await _writeDraftItems(items);
+  }
+
+  List<Map<String, String>> _readDraftItems() {
+    final raw = _draftsBox?.get(_savedDraftsKey);
+    if (raw == null || raw.isEmpty) return [];
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! List) return [];
+      return decoded.whereType<Map>().map((e) {
+        return {
+          'id': (e['id'] as String?) ?? '',
+          'data': (e['data'] as String?) ?? '',
+        };
+      }).toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<void> _writeDraftItems(List<Map<String, String>> items) async {
+    await _draftsBox?.put(_savedDraftsKey, jsonEncode(items));
+  }
+
   String? loadOutbox() => _draftsBox?.get('pending_outbox');
 
   Future<void> saveOutbox(String json) async {
@@ -96,7 +155,9 @@ class LocalStore {
   }
 
   Set<int> getFlaggedIssueIds() {
-    final raw = _flaggedIssuesBox?.get('user_flagged_issue_ids') ?? _draftsBox?.get('user_flagged_issue_ids');
+    final raw =
+        _flaggedIssuesBox?.get('user_flagged_issue_ids') ??
+        _draftsBox?.get('user_flagged_issue_ids');
     if (raw == null) return {};
     try {
       final decoded = jsonDecode(raw);
@@ -126,7 +187,8 @@ class LocalStore {
   }
 
   String? getWardDetailCache(String slug) {
-    return _wardCacheBox?.get('ward_detail_$slug') ?? _draftsBox?.get('ward_detail_$slug');
+    return _wardCacheBox?.get('ward_detail_$slug') ??
+        _draftsBox?.get('ward_detail_$slug');
   }
 
   Future<void> saveWardDetailCache(String slug, String jsonStr) async {
@@ -134,5 +196,3 @@ class LocalStore {
     await _draftsBox?.put('ward_detail_$slug', jsonStr);
   }
 }
-
-

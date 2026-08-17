@@ -146,6 +146,9 @@ class FakeMultiTypeFeedRepository implements FeedRepository {
   Future<Map<String, dynamic>> fetchPublicUserProfile(int userId) async {
     return {'id': userId};
   }
+
+  @override
+  Future<void> deleteIssue(int issueId) async {}
 }
 
 class FakeWardRepository implements WardRepository {

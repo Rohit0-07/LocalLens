@@ -30,6 +30,13 @@ final draftStoreProvider = Provider<DraftStore>(
   (ref) => HiveDraftStore(ref.watch(localStoreProvider)),
 );
 
+/// The multi-draft list backing the Drafts page. Auto-disposes so a fresh
+/// read happens each time the page is opened; explicit invalidation after
+/// save/delete keeps an already-open page in sync.
+final savedDraftsProvider = FutureProvider.autoDispose<List<ComposeDraft>>(
+  (ref) async => ref.watch(draftStoreProvider).loadAll(),
+);
+
 final offlineOutboxProvider = Provider<OfflineOutboxQueue>((ref) {
   return OfflineOutboxQueue(
     ref.watch(localStoreProvider),
@@ -37,12 +44,14 @@ final offlineOutboxProvider = Provider<OfflineOutboxQueue>((ref) {
   );
 });
 
-final nearDuplicateCheckProvider = FutureProvider.family<
-    List<NearDuplicateCandidate>,
-    ({double lat, double lng})>((ref, pos) async {
-  final repo = ref.watch(feedRepositoryProvider);
-  return repo.checkNearDuplicates(latitude: pos.lat, longitude: pos.lng);
-});
+final nearDuplicateCheckProvider =
+    FutureProvider.family<
+      List<NearDuplicateCandidate>,
+      ({double lat, double lng})
+    >((ref, pos) async {
+      final repo = ref.watch(feedRepositoryProvider);
+      return repo.checkNearDuplicates(latitude: pos.lat, longitude: pos.lng);
+    });
 
 final composeControllerProvider =
     NotifierProvider<ComposeController, ComposeDraft>(ComposeController.new);
@@ -62,11 +71,45 @@ class ComposeController extends Notifier<ComposeDraft> {
 
   Future<void> update(ComposeDraft draft) async {
     state = draft;
-    await ref.read(draftStoreProvider).save(draft);
+    // The single autosave draft never carries media bytes: attachments live
+    // in widget state (and in saved drafts) and are re-attached on restore.
+    await ref
+        .read(draftStoreProvider)
+        .save(draft.copyWith(mediaBytes: const []));
+  }
+
+  /// Pre-fills the controller with a draft opened from the Drafts page.
+  void loadDraft(ComposeDraft draft) {
+    state = draft;
+  }
+
+  /// Persists the current composition as a saved draft. When the composition
+  /// already belongs to a saved draft (opened from the Drafts page) the same
+  /// item is updated in place rather than duplicated.
+  Future<ComposeDraft> saveAsDraft({List<String> mediaBytes = const []}) async {
+    final current = state;
+    final now = DateTime.now();
+    final draft = current.copyWith(
+      id: current.id.isNotEmpty ? current.id : _generateDraftId(),
+      createdAt: current.createdAt ?? now,
+      updatedAt: now,
+      mediaBytes: mediaBytes,
+    );
+    await ref.read(draftStoreProvider).saveItem(draft);
+    state = draft;
+    return draft;
+  }
+
+  Future<void> deleteSavedDraft(String id) async {
+    await ref.read(draftStoreProvider).deleteItem(id);
   }
 
   /// Discards the current draft without publishing it.
   Future<void> discard() async {
+    final current = state;
+    if (current.id.isNotEmpty) {
+      await ref.read(draftStoreProvider).deleteItem(current.id);
+    }
     await ref.read(draftStoreProvider).clear();
     state = const ComposeDraft();
   }
@@ -125,9 +168,13 @@ class ComposeController extends Notifier<ComposeDraft> {
       directSuccess = false;
     }
 
+    if (current.id.isNotEmpty) {
+      await ref.read(draftStoreProvider).deleteItem(current.id);
+    }
     await ref.read(draftStoreProvider).clear();
     state = const ComposeDraft();
     return directSuccess;
   }
 }
 
+String _generateDraftId() => 'draft_${DateTime.now().microsecondsSinceEpoch}';

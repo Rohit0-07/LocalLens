@@ -70,6 +70,8 @@ abstract interface class FeedRepository {
   Future<List<Issue>> fetchUserIssues({int? userId, String? status});
 
   Future<Map<String, dynamic>> fetchPublicUserProfile(int userId);
+
+  Future<void> deleteIssue(int issueId);
 }
 
 

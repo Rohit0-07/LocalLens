@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, Date, DateTime, String, func
+from sqlalchemy import Boolean, Date, DateTime, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -20,6 +20,13 @@ class User(Base):
     username: Mapped[str | None] = mapped_column(String(40), unique=True, nullable=True, index=True)
     date_of_birth: Mapped[date | None] = mapped_column(Date, nullable=True)
     photo_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    bio: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    display_name_changes_count: Mapped[int] = mapped_column(
+        Integer, default=0, server_default="0", nullable=False
+    )
+    display_name_updated_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    bio_updated_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    photo_updated_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     role: Mapped[str] = mapped_column(String(32), default="citizen", nullable=False)
     is_verified: Mapped[bool | None] = mapped_column(

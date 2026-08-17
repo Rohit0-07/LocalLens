@@ -176,10 +176,13 @@ class FakeFeedRepository implements FeedRepository {
     return issues;
   }
 
-  @override
+@override
   Future<Map<String, dynamic>> fetchPublicUserProfile(int userId) async {
     return {'id': userId, 'username': 'citizen_$userId'};
   }
+
+  @override
+  Future<void> deleteIssue(int issueId) async {}
 }
 
 

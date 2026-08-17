@@ -215,5 +215,10 @@ class FeedApi implements FeedRepository {
     final data = await _client.getJson('/users/$userId');
     return (data as Map<dynamic, dynamic>).cast<String, dynamic>();
   }
+
+  @override
+  Future<void> deleteIssue(int issueId) async {
+    await _client.deleteJson('/issues/$issueId');
+  }
 }
 

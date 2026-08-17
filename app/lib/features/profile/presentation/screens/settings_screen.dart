@@ -37,12 +37,19 @@ class SettingsScreen extends ConsumerWidget {
               icon: Icons.notifications_active_outlined,
             ),
             Card(
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(color: colorScheme.outlineVariant),
+              ),
               child: Column(
                 children: [
                   SwitchListTile.adaptive(
                     key: const Key('settingsPushNotificationsToggle'),
                     title: const Text('Push Notifications'),
-                    subtitle: const Text('Receive real-time alerts on your device'),
+                    subtitle: const Text(
+                      'Receive real-time alerts on your device',
+                    ),
                     value: settings.pushNotifications,
                     onChanged: (val) =>
                         settingsNotifier.setPushNotifications(val),
@@ -51,7 +58,9 @@ class SettingsScreen extends ConsumerWidget {
                   SwitchListTile.adaptive(
                     key: const Key('settingsDailyDigestToggle'),
                     title: const Text('Daily Ward Digest'),
-                    subtitle: const Text('Summary of local issues and wins in your ward'),
+                    subtitle: const Text(
+                      'Summary of local issues and wins in your ward',
+                    ),
                     value: settings.dailyWardDigest,
                     onChanged: (val) =>
                         settingsNotifier.setDailyWardDigest(val),
@@ -60,7 +69,9 @@ class SettingsScreen extends ConsumerWidget {
                   SwitchListTile.adaptive(
                     key: const Key('settingsStatusChangeAlertsToggle'),
                     title: const Text('My Issues Status Changes'),
-                    subtitle: const Text('Alerts when your reported issues are updated'),
+                    subtitle: const Text(
+                      'Alerts when your reported issues are updated',
+                    ),
                     value: settings.statusChangeAlerts,
                     onChanged: (val) =>
                         settingsNotifier.setStatusChangeAlerts(val),
@@ -69,7 +80,9 @@ class SettingsScreen extends ConsumerWidget {
                   SwitchListTile.adaptive(
                     key: const Key('settingsVerificationRequestsToggle'),
                     title: const Text('Community Verification Requests'),
-                    subtitle: const Text('Notify when community verification voting starts near you'),
+                    subtitle: const Text(
+                      'Notify when community verification voting starts near you',
+                    ),
                     value: settings.communityVerificationRequests,
                     onChanged: (val) =>
                         settingsNotifier.setCommunityVerificationRequests(val),
@@ -78,19 +91,21 @@ class SettingsScreen extends ConsumerWidget {
                   SwitchListTile.adaptive(
                     key: const Key('settingsCommentRepliesToggle'),
                     title: const Text('Comment & Thread Replies'),
-                    subtitle: const Text('Alerts when someone replies to your discussions'),
+                    subtitle: const Text(
+                      'Alerts when someone replies to your discussions',
+                    ),
                     value: settings.commentReplies,
-                    onChanged: (val) =>
-                        settingsNotifier.setCommentReplies(val),
+                    onChanged: (val) => settingsNotifier.setCommentReplies(val),
                   ),
                   const Divider(height: 1),
                   SwitchListTile.adaptive(
                     key: const Key('settingsHapticFeedbackToggle'),
                     title: const Text('Haptic Feedback'),
-                    subtitle: const Text('Tactile response on upvotes and voting actions'),
+                    subtitle: const Text(
+                      'Tactile response on upvotes and voting actions',
+                    ),
                     value: settings.hapticFeedback,
-                    onChanged: (val) =>
-                        settingsNotifier.setHapticFeedback(val),
+                    onChanged: (val) => settingsNotifier.setHapticFeedback(val),
                   ),
                 ],
               ),
@@ -103,12 +118,19 @@ class SettingsScreen extends ConsumerWidget {
               icon: Icons.shield_outlined,
             ),
             Card(
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(color: colorScheme.outlineVariant),
+              ),
               child: Column(
                 children: [
                   SwitchListTile.adaptive(
                     key: const Key('settingsDefaultAnonymousToggle'),
                     title: const Text('Default Post Anonymously'),
-                    subtitle: const Text('Always mask identity on new civic reports'),
+                    subtitle: const Text(
+                      'Always mask identity on new civic reports',
+                    ),
                     value: settings.defaultPostAnonymously,
                     onChanged: (val) =>
                         settingsNotifier.setDefaultPostAnonymously(val),
@@ -117,7 +139,9 @@ class SettingsScreen extends ConsumerWidget {
                   SwitchListTile.adaptive(
                     key: const Key('settingsLocationFuzzingToggle'),
                     title: const Text('Location Fuzzing by Default'),
-                    subtitle: const Text('Coarsen coordinates by ~100m for home privacy'),
+                    subtitle: const Text(
+                      'Coarsen coordinates by ~100m for home privacy',
+                    ),
                     value: settings.locationFuzzingByDefault,
                     onChanged: (val) =>
                         settingsNotifier.setLocationFuzzingByDefault(val),
@@ -126,7 +150,9 @@ class SettingsScreen extends ConsumerWidget {
                   SwitchListTile.adaptive(
                     key: const Key('settingsShieldedModeToggle'),
                     title: const Text('Shielded Mode by Default'),
-                    subtitle: const Text('Route sensitive submissions through proxy relays'),
+                    subtitle: const Text(
+                      'Route sensitive submissions through proxy relays',
+                    ),
                     value: settings.shieldedModeByDefault,
                     onChanged: (val) =>
                         settingsNotifier.setShieldedModeByDefault(val),
@@ -135,7 +161,9 @@ class SettingsScreen extends ConsumerWidget {
                   SwitchListTile.adaptive(
                     key: const Key('settingsExifScrubberToggle'),
                     title: const Text('Photo EXIF Scrubber'),
-                    subtitle: const Text('Automatically strip GPS & camera metadata from uploads'),
+                    subtitle: const Text(
+                      'Automatically strip GPS & camera metadata from uploads',
+                    ),
                     value: settings.photoExifScrubber,
                     onChanged: (val) =>
                         settingsNotifier.setPhotoExifScrubber(val),
@@ -159,6 +187,11 @@ class SettingsScreen extends ConsumerWidget {
               icon: Icons.palette_outlined,
             ),
             Card(
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(color: colorScheme.outlineVariant),
+              ),
               child: Padding(
                 padding: const EdgeInsets.all(12),
                 child: Column(
@@ -217,10 +250,12 @@ class SettingsScreen extends ConsumerWidget {
                         child: SegmentedButton<String>(
                           key: const Key('settingsLanguageSegmentedButton'),
                           showSelectedIcon: false,
-                          segments: AppLocaleController.supportedLocales
-                              .map((locale) {
-                            final name = AppLocaleController.languageNames[
-                                    locale.languageCode] ??
+                          segments: AppLocaleController.supportedLocales.map((
+                            locale,
+                          ) {
+                            final name =
+                                AppLocaleController.languageNames[locale
+                                    .languageCode] ??
                                 locale.languageCode;
                             return ButtonSegment<String>(
                               value: locale.languageCode,
@@ -245,7 +280,9 @@ class SettingsScreen extends ConsumerWidget {
                       key: const Key('settingsHighContrastToggle'),
                       contentPadding: EdgeInsets.zero,
                       title: const Text('High Contrast Mode'),
-                      subtitle: const Text('Enhance contrast for maximum legibility in sunlight'),
+                      subtitle: const Text(
+                        'Enhance contrast for maximum legibility in sunlight',
+                      ),
                       value: settings.highContrastMode,
                       onChanged: (val) =>
                           settingsNotifier.setHighContrastMode(val),
@@ -262,12 +299,19 @@ class SettingsScreen extends ConsumerWidget {
               icon: Icons.storage_outlined,
             ),
             Card(
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(color: colorScheme.outlineVariant),
+              ),
               child: Column(
                 children: [
                   SwitchListTile.adaptive(
                     key: const Key('settingsWifiOnlyToggle'),
                     title: const Text('Wi-Fi Only Media Download'),
-                    subtitle: const Text('Do not auto-download high-res proofs on cellular data'),
+                    subtitle: const Text(
+                      'Do not auto-download high-res proofs on cellular data',
+                    ),
                     value: settings.wifiOnlyMediaDownload,
                     onChanged: (val) =>
                         settingsNotifier.setWifiOnlyMediaDownload(val),
@@ -276,7 +320,9 @@ class SettingsScreen extends ConsumerWidget {
                   ListTile(
                     key: const Key('settingsSyncIntervalTile'),
                     title: const Text('Offline Sync Interval'),
-                    subtitle: Text('Background worker syncs every ${settings.syncWorkerIntervalMinutes} minutes'),
+                    subtitle: Text(
+                      'Background worker syncs every ${settings.syncWorkerIntervalMinutes} minutes',
+                    ),
                     trailing: DropdownButton<int>(
                       value: settings.syncWorkerIntervalMinutes,
                       underline: const SizedBox.shrink(),
@@ -307,7 +353,9 @@ class SettingsScreen extends ConsumerWidget {
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
-                              content: Text('Offline cache cleared successfully'),
+                              content: Text(
+                                'Offline cache cleared successfully',
+                              ),
                               duration: Duration(seconds: 2),
                             ),
                           );
@@ -327,8 +375,22 @@ class SettingsScreen extends ConsumerWidget {
               icon: Icons.account_circle_outlined,
             ),
             Card(
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(color: colorScheme.outlineVariant),
+              ),
               child: Column(
                 children: [
+                  ListTile(
+                    key: const Key('viewGamificationButton'),
+                    leading: const Icon(Icons.workspace_premium_outlined),
+                    title: Text(context.tr('profile_gamification')),
+                    subtitle: Text(context.tr('profile_gamification_sub')),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push(RoutePaths.gamification),
+                  ),
+                  const Divider(height: 1),
                   ListTile(
                     key: const Key('settingsEditAliasTile'),
                     leading: const Icon(Icons.badge_outlined),
@@ -340,14 +402,19 @@ class SettingsScreen extends ConsumerWidget {
                     ),
                     trailing: const Icon(Icons.edit_outlined, size: 20),
                     onTap: () => _showEditAliasDialog(
-                        context, settings.profileAlias, settingsNotifier),
+                      context,
+                      settings.profileAlias,
+                      settingsNotifier,
+                    ),
                   ),
                   const Divider(height: 1),
                   ListTile(
                     key: const Key('settingsExportDataTile'),
                     leading: const Icon(Icons.download_outlined),
                     title: const Text('Export My Civic Activity Data'),
-                    subtitle: const Text('Download a copy of your reported issues & votes in JSON'),
+                    subtitle: const Text(
+                      'Download a copy of your reported issues & votes in JSON',
+                    ),
                     onTap: () {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
@@ -382,8 +449,11 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
-  static void _showEditAliasDialog(BuildContext context, String currentAlias,
-      UserSettingsNotifier notifier) {
+  static void _showEditAliasDialog(
+    BuildContext context,
+    String currentAlias,
+    UserSettingsNotifier notifier,
+  ) {
     final textController = TextEditingController(text: currentAlias);
     showDialog<void>(
       context: context,

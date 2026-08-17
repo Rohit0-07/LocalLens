@@ -134,6 +134,9 @@ class _FakeFeedRepository implements FeedRepository {
   @override
   Future<Map<String, dynamic>> fetchPublicUserProfile(int userId) async =>
       {'user_id': userId};
+
+  @override
+  Future<void> deleteIssue(int issueId) async {}
 }
 
 Issue _createIssue({

@@ -250,6 +250,7 @@ async def list_issues_near(
     offset: int,
 ) -> list[Issue]:
     statement = await bbox_statement(latitude, longitude, radius_km)
+    statement = statement.where(Issue.is_hidden.is_(False))
     if status_filter:
         statement = statement.where(Issue.status == status_filter)
     statement = statement.order_by(Issue.created_at.desc()).limit(limit).offset(offset)
@@ -285,6 +286,28 @@ async def get_issue(session: AsyncSession, issue_id: int) -> Issue | None:
         if evaluate_escalation(issue, _utc_now()):
             await session.commit()
             await session.refresh(issue)
+    return issue
+
+
+async def delete_issue(
+    session: AsyncSession,
+    issue_id: int,
+    user_id: int,
+) -> Issue | None:
+    """Soft-delete an issue owned by the given user.
+
+    Returns the soft-deleted issue, or None if it does not exist.
+    """
+    issue = await session.get(Issue, issue_id)
+    if issue is None:
+        return None
+    if issue.reporter_id != user_id:
+        raise AppError(
+            "Not authorized to delete this issue", status_code=403, code="forbidden"
+        )
+    issue.is_hidden = True
+    await session.commit()
+    await session.refresh(issue)
     return issue
 
 

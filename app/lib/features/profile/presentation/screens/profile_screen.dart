@@ -1,15 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 
+import '../../../../core/feedback/app_messenger.dart';
 import '../../../../core/l10n/app_strings.dart';
+import '../../../../core/network/api_exceptions.dart';
+import '../../../../core/network/network_providers.dart';
 import '../../../../core/router/route_paths.dart';
+import '../../../../core/storage/local_store.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/media_url.dart';
-import '../../../auth/presentation/controllers/auth_controller.dart';
+import '../../../compose/data/media_service.dart';
 import '../../../compose/presentation/compose_providers.dart';
 import '../../../feed/domain/issue.dart';
+import '../../../feed/presentation/feed_providers.dart';
 import '../profile_providers.dart';
+import '../widgets/profile_avatar.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -19,6 +26,34 @@ class ProfileScreen extends ConsumerStatefulWidget {
 }
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
+  final _nameController = TextEditingController();
+  final _bioController = TextEditingController();
+
+  String _savedBio = '';
+  bool _isEditingBio = false;
+  bool _bioChanged = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _bioController.addListener(_onBioChanged);
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _bioController.removeListener(_onBioChanged);
+    _bioController.dispose();
+    super.dispose();
+  }
+
+  void _onBioChanged() {
+    final changed = _bioController.text.trim() != _savedBio;
+    if (changed != _bioChanged) {
+      setState(() => _bioChanged = changed);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final profileAsync = ref.watch(userProfileProvider);
@@ -26,9 +61,18 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final pendingOutboxCount = outbox.pendingCount;
     final selectedFilter = ref.watch(myIssuesFilterProvider);
     final myIssuesAsync = ref.watch(myIssuesProvider);
+    final settings = ref.watch(userSettingsProvider);
+    final settingsNotifier = ref.read(userSettingsProvider.notifier);
+    final draftsAsync = ref.watch(savedDraftsProvider);
 
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+
+    final draftsCount = draftsAsync.when(
+      loading: () => null,
+      error: (_, _) => 0,
+      data: (drafts) => drafts.length,
+    );
 
     return Scaffold(
       appBar: AppBar(
@@ -79,116 +123,161 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // ── Header section: Avatar, Anon ID & Verified Badge ──
-                  Center(
-                    child: Column(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(3),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color:
-                                  colorScheme.primary.withValues(alpha: 0.25),
-                              width: 2,
+                  // ── Header: photo on left, identity + bio on right ──
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      GestureDetector(
+                        key: const Key('editProfilePhotoButton'),
+                        onTap: profile.isGuest
+                            ? null
+                            : () => _editPhoto(profile),
+                        child: Stack(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(3),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: colorScheme.primary.withValues(
+                                    alpha: 0.25,
+                                  ),
+                                  width: 2,
+                                ),
+                              ),
+                              child: ProfileAvatar(
+                                photoUrl: profile.photoUrl,
+                                displayName: profile.displayName,
+                                isGuest: profile.isGuest,
+                              ),
                             ),
-                          ),
-                          child: profile.photoUrl != null &&
-                                  profile.photoUrl!.isNotEmpty
-                              ? ClipOval(
-                                  child: Image.network(
-                                    resolveMediaUrl(profile.photoUrl),
-                                    width: 80,
-                                    height: 80,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (_, _, _) => const Icon(
-                                      Icons.masks_outlined,
-                                      size: 34,
-                                      color: AppColors.anonMask,
+                            if (!profile.isGuest)
+                              Positioned(
+                                right: 0,
+                                bottom: 0,
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: BoxDecoration(
+                                    color: colorScheme.primary,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: colorScheme.surface,
+                                      width: 2,
                                     ),
                                   ),
-                                )
-                              : CircleAvatar(
-                                  radius: 40,
-                                  backgroundColor: AppColors.anonMask.withValues(
-                                    alpha: 0.14,
-                                  ),
-                                  child: Icon(
-                                    profile.isGuest
-                                        ? Icons.person_outline
-                                        : Icons.masks_outlined,
-                                    size: 34,
-                                    color: AppColors.anonMask,
+                                  child: const Icon(
+                                    Icons.camera_alt,
+                                    size: 11,
+                                    color: Colors.white,
                                   ),
                                 ),
+                              ),
+                          ],
                         ),
-                        const SizedBox(height: 10),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Flexible(
-                              child: Text(
-                                profile.displayName != null &&
-                                        profile.displayName!.isNotEmpty
-                                    ? profile.displayName!
-                                    : profile.phone != null
-                                        ? profile.phone!
-                                        : profile.email != null
-                                            ? profile.email!
-                                            : profile.isGuest
-                                                ? 'Guest Session'
-                                                : 'Anonymous Citizen',
-                                style: theme.textTheme.titleLarge?.copyWith(
-                                  fontWeight: FontWeight.w800,
+                            Row(
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    _primaryIdentityLabel(
+                                      profile,
+                                      settings.showDisplayName,
+                                    ),
+                                    style: theme.textTheme.titleLarge?.copyWith(
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                if (!profile.isGuest) ...[
+                                  const SizedBox(width: 5),
+                                  const Icon(
+                                    Icons.verified,
+                                    color: AppColors.verified,
+                                    size: 18,
+                                  ),
+                                  IconButton(
+                                    key: const Key('editNameButton'),
+                                    onPressed: () => _editName(profile),
+                                    icon: const Icon(
+                                      Icons.edit_outlined,
+                                      size: 16,
+                                    ),
+                                    tooltip: 'Edit Name',
+                                    visualDensity: VisualDensity.compact,
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(
+                                      minWidth: 26,
+                                      minHeight: 26,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                            _buildBioSection(profile),
+                            const SizedBox(height: 4),
+                            Chip(
+                              visualDensity: VisualDensity.compact,
+                              avatar: const Icon(Icons.fingerprint, size: 14),
+                              label: Text(
+                                'Anon ID: ${_truncateAnonId(profile.anonId)}',
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  fontFamily: 'monospace',
                                 ),
                                 overflow: TextOverflow.ellipsis,
                               ),
+                              backgroundColor: colorScheme.surfaceContainerHigh,
                             ),
                             if (!profile.isGuest) ...[
-                              const SizedBox(width: 5),
-                              const Icon(
-                                Icons.verified,
-                                color: AppColors.verified,
-                                size: 18,
+                              const SizedBox(height: 8),
+                              FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerLeft,
+                                child: SegmentedButton<bool>(
+                                  key: const Key('profileIdentityToggle'),
+                                  showSelectedIcon: false,
+                                  segments: const [
+                                    ButtonSegment(
+                                      value: true,
+                                      label: Text('Display Name'),
+                                    ),
+                                    ButtonSegment(
+                                      value: false,
+                                      label: Text('Anon ID'),
+                                    ),
+                                  ],
+                                  selected: {settings.showDisplayName},
+                                  onSelectionChanged: (selection) {
+                                    if (selection.isNotEmpty) {
+                                      settingsNotifier.setShowDisplayName(
+                                        selection.first,
+                                      );
+                                    }
+                                  },
+                                ),
                               ),
                             ],
                           ],
                         ),
-                        const SizedBox(height: 4),
-                        Chip(
-                          visualDensity: VisualDensity.compact,
-                          avatar: const Icon(Icons.fingerprint, size: 14),
-                          label: Text(
-                            'Anon ID: ${_truncateAnonId(profile.anonId)}',
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              fontFamily: 'monospace',
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          backgroundColor: colorScheme.surfaceContainerHigh,
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-
-                  if (!profile.isGuest)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: Center(
-                        child: FilledButton.tonalIcon(
-                          key: const Key('editProfileButton'),
-                          onPressed: () => context.push(RoutePaths.editProfile),
-                          icon: const Icon(Icons.edit_outlined, size: 16),
-                          label: const Text('Edit Profile'),
-                        ),
                       ),
-                    ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
 
                   // ── Guest Banner ──────────────────────────────────────
                   if (profile.isGuest) ...[
                     Card(
+                      elevation: 0,
                       color: colorScheme.tertiaryContainer,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        side: BorderSide(color: colorScheme.outlineVariant),
+                      ),
                       child: Padding(
                         padding: const EdgeInsets.all(10),
                         child: Row(
@@ -218,6 +307,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
                   // ── User Activity Stats Card ──────────────────────────
                   Card(
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      side: BorderSide(color: colorScheme.outlineVariant),
+                    ),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
                         vertical: 12,
@@ -260,12 +354,19 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   ),
                   const SizedBox(height: 4),
                   Card(
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      side: BorderSide(color: colorScheme.outlineVariant),
+                    ),
                     child: Padding(
                       padding: const EdgeInsets.all(12),
                       child: Row(
                         children: [
-                          Icon(Icons.outbox_rounded,
-                              color: colorScheme.primary),
+                          Icon(
+                            Icons.outbox_rounded,
+                            color: colorScheme.primary,
+                          ),
                           const SizedBox(width: 12),
                           Expanded(
                             child: Column(
@@ -298,6 +399,55 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             child: Text(context.tr('profile_view')),
                           ),
                         ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Card(
+                    elevation: 0,
+                    clipBehavior: Clip.antiAlias,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      side: BorderSide(color: colorScheme.outlineVariant),
+                    ),
+                    child: InkWell(
+                      key: const Key('profileDraftsButton'),
+                      onTap: () => context.push(RoutePaths.drafts),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 12,
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.drafts_outlined,
+                              color: colorScheme.primary,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                'Drafts',
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            if (draftsCount != null)
+                              Text(
+                                '$draftsCount saved',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            const SizedBox(width: 4),
+                            Icon(
+                              Icons.chevron_right,
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -337,27 +487,27 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           key: const Key('myIssuesFilter_all'),
                           label: 'All',
                           selected: selectedFilter == 'all',
-                          onSelected: () => ref
-                              .read(myIssuesFilterProvider.notifier)
-                              .state = 'all',
+                          onSelected: () =>
+                              ref.read(myIssuesFilterProvider.notifier).state =
+                                  'all',
                         ),
                         const SizedBox(width: 8),
                         _FilterChip(
                           key: const Key('myIssuesFilter_active'),
                           label: 'Unresolved',
                           selected: selectedFilter == 'active',
-                          onSelected: () => ref
-                              .read(myIssuesFilterProvider.notifier)
-                              .state = 'active',
+                          onSelected: () =>
+                              ref.read(myIssuesFilterProvider.notifier).state =
+                                  'active',
                         ),
                         const SizedBox(width: 8),
                         _FilterChip(
                           key: const Key('myIssuesFilter_resolved'),
                           label: 'Resolved',
                           selected: selectedFilter == 'resolved',
-                          onSelected: () => ref
-                              .read(myIssuesFilterProvider.notifier)
-                              .state = 'resolved',
+                          onSelected: () =>
+                              ref.read(myIssuesFilterProvider.notifier).state =
+                                  'resolved',
                         ),
                       ],
                     ),
@@ -367,6 +517,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   // List of User Issues
                   if (profile.isGuest)
                     Card(
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        side: BorderSide(color: colorScheme.outlineVariant),
+                      ),
                       child: Padding(
                         padding: const EdgeInsets.all(16),
                         child: Center(
@@ -389,6 +544,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         ),
                       ),
                       error: (err, _) => Card(
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          side: BorderSide(color: colorScheme.outlineVariant),
+                        ),
                         child: Padding(
                           padding: const EdgeInsets.all(16),
                           child: Center(
@@ -414,6 +574,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       data: (issues) {
                         if (issues.isEmpty) {
                           return Card(
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              side: BorderSide(
+                                color: colorScheme.outlineVariant,
+                              ),
+                            ),
                             child: Padding(
                               padding: const EdgeInsets.all(24),
                               child: Center(
@@ -427,10 +594,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                     const SizedBox(height: 8),
                                     Text(
                                       'No issues found in this filter.',
-                                      style:
-                                          theme.textTheme.bodyMedium?.copyWith(
-                                        color: colorScheme.onSurfaceVariant,
-                                      ),
+                                      style: theme.textTheme.bodyMedium
+                                          ?.copyWith(
+                                            color: colorScheme.onSurfaceVariant,
+                                          ),
                                     ),
                                   ],
                                 ),
@@ -444,10 +611,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           physics: const NeverScrollableScrollPhysics(),
                           gridDelegate:
                               const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 3,
-                            crossAxisSpacing: 4,
-                            mainAxisSpacing: 4,
-                          ),
+                                crossAxisCount: 3,
+                                crossAxisSpacing: 4,
+                                mainAxisSpacing: 4,
+                              ),
                           itemCount: issues.length,
                           itemBuilder: (context, index) {
                             final issue = issues[index];
@@ -456,64 +623,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               onTap: () => context.push(
                                 RoutePaths.issueDetailFor(issue.id),
                               ),
+                              onDelete: () => _confirmDeleteIssue(issue),
                             );
                           },
                         );
                       },
                     ),
-                  const SizedBox(height: 16),
-
-                  // ── Settings Link Section ────────────────────────────
-                  Text(
-                    context.tr('profile_settings_header'),
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.1,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  Card(
-                    child: Column(
-                      children: [
-                        ListTile(
-                          key: const Key('viewGamificationButton'),
-                          dense: true,
-                          leading:
-                              const Icon(Icons.workspace_premium_outlined),
-                          title: Text(
-                            context.tr('profile_gamification'),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          subtitle: Text(
-                            context.tr('profile_gamification_sub'),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          trailing: const Icon(Icons.chevron_right),
-                          onTap: () => context.push(RoutePaths.gamification),
-                        ),
-                        const Divider(height: 1),
-                        ListTile(
-                          dense: true,
-                          leading:
-                              Icon(Icons.logout, color: colorScheme.error),
-                          title: Text(
-                            profile.isGuest
-                                ? 'End Guest Session'
-                                : 'Sign Out',
-                            style: TextStyle(
-                              color: colorScheme.error,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          onTap: () async {
-                            await ref.read(authControllerProvider).signOut();
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
                   const SizedBox(height: 16),
                 ],
               ),
@@ -524,14 +639,344 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
+  String _primaryIdentityLabel(UserProfile profile, bool showDisplayName) {
+    if (!showDisplayName) {
+      return _truncateAnonId(profile.anonId);
+    }
+    if (profile.displayName != null && profile.displayName!.isNotEmpty) {
+      return profile.displayName!;
+    }
+    if (profile.phone != null) return profile.phone!;
+    if (profile.email != null) return profile.email!;
+    if (profile.isGuest) return 'Guest Session';
+    return 'Anonymous Citizen';
+  }
+
+  Future<void> _showChangeLimitsNoticeIfNeeded() async {
+    final store = ref.read(localStoreProvider);
+    if (store.getString('has_seen_change_limits') == 'true') return;
+    await store.setString('has_seen_change_limits', 'true');
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Profile Change Limits'),
+        content: const Text(
+          'Your display name can be changed up to 2 times in total. '
+          'Your bio can be updated once per week and your profile photo once '
+          'per hour. Your first-time setup does not count toward these limits.',
+        ),
+        actions: [
+          FilledButton(
+            key: const Key('changeLimitsOkButton'),
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Got it'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _editName(UserProfile profile) async {
+    await _showChangeLimitsNoticeIfNeeded();
+    if (!mounted) return;
+    _nameController.text = profile.displayName ?? '';
+    final remaining = profile.displayNameChangesRemaining;
+    final saved = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Edit Display Name'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextField(
+              key: const Key('editNameField'),
+              controller: _nameController,
+              autofocus: true,
+              textCapitalization: TextCapitalization.words,
+              decoration: const InputDecoration(
+                labelText: 'Display Name',
+                hintText: 'What neighbours will see on your reports',
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Changes remaining: $remaining',
+              style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                color: Theme.of(ctx).colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            key: const Key('saveNameButton'),
+            onPressed: () => Navigator.of(ctx).pop(_nameController.text.trim()),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    if (saved == null || saved.isEmpty || !mounted) return;
+    await _patchProfile({
+      'display_name': saved,
+    }, successMessage: 'Display name updated');
+  }
+
+  Future<void> _startEditBio(UserProfile profile) async {
+    await _showChangeLimitsNoticeIfNeeded();
+    if (!mounted) return;
+    setState(() {
+      _savedBio = profile.bio ?? '';
+      _bioController.text = profile.bio ?? '';
+      _isEditingBio = true;
+    });
+  }
+
+  void _cancelEditBio() {
+    setState(() {
+      _bioController.text = _savedBio;
+      _isEditingBio = false;
+    });
+  }
+
+  Future<void> _saveBio() async {
+    final saved = _bioController.text.trim();
+    setState(() => _isEditingBio = false);
+    await _patchProfile({'bio': saved}, successMessage: 'Bio updated');
+  }
+
+  Widget _buildBioSection(UserProfile profile) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final bio = profile.bio?.trim().isNotEmpty == true
+        ? profile.bio!.trim()
+        : null;
+
+    if (!_isEditingBio) {
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Text(
+                bio ?? 'Add a short bio',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: bio == null
+                      ? colorScheme.onSurfaceVariant.withValues(alpha: 0.6)
+                      : colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+          ),
+          if (!profile.isGuest)
+            IconButton(
+              key: const Key('editBioButton'),
+              onPressed: () => _startEditBio(profile),
+              icon: const Icon(Icons.edit_outlined, size: 16),
+              tooltip: bio == null ? 'Add Bio' : 'Edit Bio',
+              visualDensity: VisualDensity.compact,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 26, minHeight: 26),
+            ),
+        ],
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextField(
+          key: const Key('editBioField'),
+          controller: _bioController,
+          autofocus: true,
+          minLines: 2,
+          maxLines: 3,
+          maxLength: 280,
+          decoration: const InputDecoration(
+            isDense: true,
+            hintText: 'Tell your neighbours a little about you',
+          ),
+        ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            if (_bioChanged) ...[
+              TextButton(
+                onPressed: _cancelEditBio,
+                child: const Text('Cancel'),
+              ),
+              const SizedBox(width: 8),
+              FilledButton(
+                key: const Key('saveBioButton'),
+                onPressed: _saveBio,
+                child: const Text('Save'),
+              ),
+            ] else
+              IconButton(
+                onPressed: _cancelEditBio,
+                icon: const Icon(Icons.close, size: 18),
+                tooltip: 'Close',
+                visualDensity: VisualDensity.compact,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 26, minHeight: 26),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Future<void> _editPhoto(UserProfile profile) async {
+    await _showChangeLimitsNoticeIfNeeded();
+    if (!mounted) return;
+    final nextAllowed = profile.photoNextChangeAllowedAt;
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (nextAllowed != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                child: Text(
+                  'Next photo change allowed: ${_formatDateTime(nextAllowed)}',
+                  style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(ctx).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            ListTile(
+              key: const Key('pickPhotoGalleryButton'),
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('Choose from Gallery'),
+              onTap: () => Navigator.of(ctx).pop(ImageSource.gallery),
+            ),
+            ListTile(
+              leading: const Icon(Icons.camera_alt_outlined),
+              title: const Text('Take a Photo'),
+              onTap: () => Navigator.of(ctx).pop(ImageSource.camera),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (source == null || !mounted) return;
+    final picker = ImagePicker();
+    final image = await picker.pickImage(source: source);
+    if (image == null || !mounted) return;
+    final bytes = await image.readAsBytes();
+    if (!mounted) return;
+    try {
+      final media = ref.read(mediaServiceProvider);
+      final result = await media.uploadMedia(
+        bytes: bytes,
+        isInAppCamera: false,
+      );
+      if (!mounted) return;
+      await _patchProfile({
+        'photo_url': result.url,
+      }, successMessage: 'Profile photo updated');
+    } catch (err) {
+      if (mounted) {
+        ref
+            .read(appMessengerProvider.notifier)
+            .show('Photo upload failed. $err');
+      }
+    }
+  }
+
+  Future<void> _patchProfile(
+    Map<String, dynamic> body, {
+    required String successMessage,
+  }) async {
+    try {
+      await ref.read(apiClientProvider).patchJson('/auth/me', body: body);
+      ref.invalidate(userProfileProvider);
+      if (mounted) {
+        ref.read(appMessengerProvider.notifier).show(successMessage);
+      }
+    } on ApiServerException catch (e) {
+      if (mounted) {
+        final message = e.statusCode == 429
+            ? 'Change limit reached. ${e.message}'
+            : 'Could not update profile. ${e.message}';
+        ref.read(appMessengerProvider.notifier).show(message);
+      }
+    } catch (err) {
+      if (mounted) {
+        ref
+            .read(appMessengerProvider.notifier)
+            .show('Could not update profile. $err');
+      }
+    }
+  }
+
+  Future<void> _confirmDeleteIssue(Issue issue) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Report'),
+        content: const Text(
+          'Are you sure you want to delete this report? This cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            key: const Key('confirmDeleteIssueButton'),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    try {
+      await ref.read(feedRepositoryProvider).deleteIssue(issue.id);
+      if (!mounted) return;
+      ref.invalidate(myIssuesProvider);
+      ref.invalidate(userProfileProvider);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Report deleted'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    } catch (err) {
+      if (mounted) {
+        ref
+            .read(appMessengerProvider.notifier)
+            .show('Could not delete report. $err');
+      }
+    }
+  }
+
   static String _truncateAnonId(String id) {
     if (id.length <= 16) return id;
     return '${id.substring(0, 8)}...${id.substring(id.length - 6)}';
   }
 
+  static String _formatDateTime(DateTime value) {
+    final local = value.toLocal();
+    final day = local.day.toString().padLeft(2, '0');
+    final month = local.month.toString().padLeft(2, '0');
+    final hour = local.hour.toString().padLeft(2, '0');
+    final minute = local.minute.toString().padLeft(2, '0');
+    return '$day/$month/${local.year} $hour:$minute';
+  }
+
   Widget _buildDivider(ColorScheme colorScheme) {
-    return Container(
-        height: 32, width: 1, color: colorScheme.outlineVariant);
+    return Container(height: 32, width: 1, color: colorScheme.outlineVariant);
   }
 }
 
@@ -559,9 +1004,7 @@ class _FilterChip extends StatelessWidget {
       labelStyle: TextStyle(
         fontSize: 12,
         fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-        color: selected
-            ? colorScheme.onPrimary
-            : colorScheme.onSurfaceVariant,
+        color: selected ? colorScheme.onPrimary : colorScheme.onSurfaceVariant,
       ),
       selectedColor: colorScheme.primary,
       backgroundColor: colorScheme.surfaceContainerHigh,
@@ -575,10 +1018,12 @@ class _UserIssueGridTile extends StatelessWidget {
   const _UserIssueGridTile({
     required this.issue,
     required this.onTap,
+    this.onDelete,
   });
 
   final Issue issue;
   final VoidCallback onTap;
+  final VoidCallback? onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -589,6 +1034,7 @@ class _UserIssueGridTile extends StatelessWidget {
     return GestureDetector(
       key: Key('userIssueItem_${issue.id}'),
       onTap: onTap,
+      onLongPress: onDelete,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(10),
         child: Stack(
@@ -598,11 +1044,8 @@ class _UserIssueGridTile extends StatelessWidget {
               Image.network(
                 resolveMediaUrl(issue.mediaUrls.first),
                 fit: BoxFit.cover,
-                errorBuilder: (_, _, _) => _gridFallback(
-                  theme,
-                  colorScheme,
-                  categoryColor,
-                ),
+                errorBuilder: (_, _, _) =>
+                    _gridFallback(theme, colorScheme, categoryColor),
                 loadingBuilder: (context, child, progress) => progress == null
                     ? child
                     : _gridFallback(theme, colorScheme, categoryColor),
@@ -613,8 +1056,7 @@ class _UserIssueGridTile extends StatelessWidget {
               left: 4,
               top: 4,
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
                   color: Colors.black.withValues(alpha: 0.55),
                   borderRadius: BorderRadius.circular(6),
@@ -644,6 +1086,27 @@ class _UserIssueGridTile extends StatelessWidget {
                 ),
               ),
             ),
+            if (onDelete != null)
+              Positioned(
+                right: 4,
+                top: 4,
+                child: GestureDetector(
+                  key: Key('deleteIssue_${issue.id}'),
+                  onTap: onDelete,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.55),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.delete_outline,
+                      size: 11,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
       ),
@@ -658,11 +1121,7 @@ class _UserIssueGridTile extends StatelessWidget {
     return Container(
       color: categoryColor.withValues(alpha: 0.18),
       alignment: Alignment.center,
-      child: Icon(
-        Icons.flag_outlined,
-        size: 26,
-        color: categoryColor,
-      ),
+      child: Icon(Icons.flag_outlined, size: 26, color: categoryColor),
     );
   }
 }

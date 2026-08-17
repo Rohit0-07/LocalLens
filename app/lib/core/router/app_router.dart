@@ -7,7 +7,9 @@ import '../../features/auth/presentation/auth_providers.dart';
 import '../../features/auth/presentation/screens/otp_screen.dart';
 import '../../features/auth/presentation/screens/sign_in_screen.dart';
 import '../../features/auth/presentation/widgets/guest_guard.dart';
+import '../../features/compose/domain/compose_draft.dart';
 import '../../features/compose/presentation/compose_screen.dart';
+import '../../features/compose/presentation/drafts_screen.dart';
 import '../../features/feed/presentation/feed_providers.dart';
 import '../../features/feed/presentation/feed_screen.dart';
 import '../../features/inbox/presentation/inbox_screen.dart';
@@ -103,7 +105,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         // (Talk / Representative / Win / Notice details). Redirect straight
         // to the feed instead of dead-ending on a placeholder.
         final legacyHost =
-            uri.host == 'talk' || uri.host == 'rep' || uri.host == 'win' || uri.host == 'notice';
+            uri.host == 'talk' ||
+            uri.host == 'rep' ||
+            uri.host == 'win' ||
+            uri.host == 'notice';
         if (legacyHost) {
           return RoutePaths.feed;
         }
@@ -153,7 +158,16 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RoutePaths.compose,
         parentNavigatorKey: rootNavigatorKey,
-        builder: (context, state) => const ComposeScreen(),
+        builder: (context, state) => ComposeScreen(
+          draft: state.extra is ComposeDraft
+              ? state.extra as ComposeDraft
+              : null,
+        ),
+      ),
+      GoRoute(
+        path: RoutePaths.drafts,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const DraftsScreen(),
       ),
       GoRoute(
         path: RoutePaths.signIn,

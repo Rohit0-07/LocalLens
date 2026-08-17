@@ -112,6 +112,9 @@ class _StubFeedRepository implements FeedRepository {
   @override
   Future<Map<String, dynamic>> fetchPublicUserProfile(int userId) async =>
       {'user_id': userId};
+
+  @override
+  Future<void> deleteIssue(int issueId) async {}
 }
 
 Issue _createIssue({int id = 1, int? reporterId, int upvotesCount = 0}) {

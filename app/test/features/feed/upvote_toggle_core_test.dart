@@ -211,6 +211,9 @@ class _MockFeedRepository implements FeedRepository {
   @override
   Future<Map<String, dynamic>> fetchPublicUserProfile(int userId) async =>
       {'user_id': userId, 'username': 'citizen_$userId'};
+
+  @override
+  Future<void> deleteIssue(int issueId) async {}
 }
 
 void main() {

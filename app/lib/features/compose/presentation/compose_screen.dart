@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,6 +13,7 @@ import '../../feed/presentation/feed_providers.dart';
 import '../../geo/presentation/providers/geo_providers.dart';
 import '../../geo/presentation/widgets/ward_location_chip.dart';
 import 'compose_providers.dart';
+import '../domain/compose_draft.dart';
 import '../domain/near_duplicate_candidate.dart';
 import 'widgets/camera_viewfinder.dart';
 import 'widgets/media_watermark_badge.dart';
@@ -39,7 +41,12 @@ class _AttachedMedia {
 }
 
 class ComposeScreen extends ConsumerStatefulWidget {
-  const ComposeScreen({super.key});
+  const ComposeScreen({super.key, this.draft});
+
+  /// A saved draft opened from the Drafts page. When present the composition
+  /// is pre-filled (including the saved media bytes) so it can be edited and
+  /// saved back onto the same draft id.
+  final ComposeDraft? draft;
 
   @override
   ConsumerState<ComposeScreen> createState() => _ComposeScreenState();
@@ -47,6 +54,32 @@ class ComposeScreen extends ConsumerStatefulWidget {
 
 class _ComposeScreenState extends ConsumerState<ComposeScreen> {
   final List<_AttachedMedia> _attachedMediaList = [];
+
+  @override
+  void initState() {
+    super.initState();
+    final draft = widget.draft;
+    if (draft == null) return;
+    // Defer the provider mutation until after the first build frame so we do
+    // not modify a Riverpod provider while the widget tree is still building.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ref.read(composeControllerProvider.notifier).loadDraft(draft);
+    });
+    for (final base64 in draft.mediaBytes.take(4)) {
+      try {
+        final bytes = base64Decode(base64);
+        if (bytes.isEmpty) continue;
+        _attachedMediaList.add(
+          _AttachedMedia(
+            id: 'draft_${DateTime.now().microsecondsSinceEpoch}_${_attachedMediaList.length}',
+            bytes: bytes,
+            isVerified: false,
+          ),
+        );
+      } catch (_) {}
+    }
+  }
 
   Future<void> _openCameraModal() async {
     final availableSlots = 4 - _attachedMediaList.length;
@@ -164,6 +197,21 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
     });
   }
 
+  Future<void> _saveAsDraft() async {
+    await ref
+        .read(composeControllerProvider.notifier)
+        .saveAsDraft(
+          mediaBytes: _attachedMediaList
+              .map((m) => base64Encode(m.bytes))
+              .toList(),
+        );
+    ref.invalidate(savedDraftsProvider);
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Draft saved')));
+  }
+
   Future<void> _useMyLocation() async {
     // Resolve through the same coordinate source the home feed queries so a
     // locked location always lands inside the feed's radius (see
@@ -185,12 +233,9 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
     }
 
     final draft = ref.read(composeControllerProvider);
-    await ref.read(composeControllerProvider.notifier).update(
-          draft.copyWith(
-            latitude: lockedLat,
-            longitude: lockedLng,
-          ),
-        );
+    await ref
+        .read(composeControllerProvider.notifier)
+        .update(draft.copyWith(latitude: lockedLat, longitude: lockedLng));
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -221,9 +266,7 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
     } catch (_) {}
   }
 
-  Future<bool> _showNearDuplicates(
-    List<NearDuplicateCandidate> dups,
-  ) async {
+  Future<bool> _showNearDuplicates(List<NearDuplicateCandidate> dups) async {
     final proceed = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
@@ -251,8 +294,8 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
                 dups.isEmpty
                     ? context.tr('near_dup_none_body')
                     : context
-                        .tr('near_dup_found_body')
-                        .replaceFirst('{count}', '${dups.length}'),
+                          .tr('near_dup_found_body')
+                          .replaceFirst('{count}', '${dups.length}'),
                 style: Theme.of(ctx).textTheme.bodyMedium,
               ),
               const SizedBox(height: 12),
@@ -318,8 +361,7 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
         .read(composeControllerProvider.notifier)
         .submit(
           mediaBytes: _attachedMediaList.map((m) => m.bytes).toList(),
-          isInAppCamera:
-              _attachedMediaList.any((m) => m.id.startsWith('cam_')),
+          isInAppCamera: _attachedMediaList.any((m) => m.id.startsWith('cam_')),
         );
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -331,6 +373,7 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
         ),
       ),
     );
+    ref.invalidate(savedDraftsProvider);
     context.go(RoutePaths.feed);
     ref.invalidate(multiTypeFeedProvider);
   }
@@ -349,14 +392,25 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
               child: WardLocationChip(state: ref.watch(wardLocationProvider)),
             ),
           ),
+          IconButton(
+            key: const Key('draftsButton'),
+            tooltip: 'Drafts',
+            icon: const Icon(Icons.drafts_outlined),
+            onPressed: () => context.push(RoutePaths.drafts),
+          ),
+          IconButton(
+            key: const Key('saveAsDraftButton'),
+            tooltip: 'Save as draft',
+            icon: const Icon(Icons.save_outlined),
+            onPressed: _saveAsDraft,
+          ),
           if (draft.hasContent)
             IconButton(
               tooltip: context.tr('compose_discard'),
               icon: const Icon(Icons.delete_outline),
               onPressed: () async {
-                await ref
-                    .read(composeControllerProvider.notifier)
-                    .discard();
+                await ref.read(composeControllerProvider.notifier).discard();
+                ref.invalidate(savedDraftsProvider);
                 if (context.mounted) context.pop();
               },
             ),
@@ -560,9 +614,7 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
                             children: [
                               Text(
                                 context.tr('compose_location_header'),
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .titleSmall
+                                style: Theme.of(context).textTheme.titleSmall
                                     ?.copyWith(fontWeight: FontWeight.bold),
                               ),
                               const SizedBox(height: 2),
@@ -664,10 +716,7 @@ class _CategoryChoiceChip extends StatelessWidget {
       avatar: Container(
         width: 10,
         height: 10,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: color,
-        ),
+        decoration: BoxDecoration(shape: BoxShape.circle, color: color),
       ),
       label: Text(category),
       selected: selected,

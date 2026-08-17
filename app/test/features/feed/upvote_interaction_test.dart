@@ -82,6 +82,9 @@ class UpvoteTestFeedRepository implements FeedRepository {
   }
 
   @override
+  Future<void> deleteIssue(int issueId) async {}
+
+  @override
   Future<List<Issue>> fetchNearby({
     required double latitude,
     required double longitude,

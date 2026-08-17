@@ -35,7 +35,9 @@ class BadgeItem {
       category: json['category'] as String,
       threshold: json['threshold'] as int,
       isUnlocked: json['is_unlocked'] as bool? ?? (json['unlocked_at'] != null),
-      unlockedAt: json['unlocked_at'] != null ? DateTime.parse(json['unlocked_at'] as String) : null,
+      unlockedAt: json['unlocked_at'] != null
+          ? DateTime.parse(json['unlocked_at'] as String)
+          : null,
     );
   }
 }
@@ -82,17 +84,53 @@ class GamificationProfile {
 
 // --- Fake Providers & Notifiers ---
 
-final testGamificationProfileProvider = StateProvider<AsyncValue<GamificationProfile>>((ref) {
-  return const AsyncValue.loading();
-});
+final testGamificationProfileProvider =
+    StateProvider<AsyncValue<GamificationProfile>>((ref) {
+      return const AsyncValue.loading();
+    });
 
 final testAllBadgesProvider = FutureProvider<List<BadgeItem>>((ref) async {
   return [
-    const BadgeItem(key: 'first_report', name: 'First Report', description: 'Create 1st issue', iconName: 'report', category: 'reporting', threshold: 1),
-    const BadgeItem(key: 'civic_voter', name: 'Civic Voter', description: 'Cast 5 upvotes', iconName: 'vote', category: 'voting', threshold: 5),
-    const BadgeItem(key: 'quorum_hero', name: 'Quorum Hero', description: 'Cast 3 quorum votes', iconName: 'quorum', category: 'quorum', threshold: 3),
-    const BadgeItem(key: 'neighborhood_voice', name: 'Neighborhood Voice', description: 'Post 5 comments', iconName: 'comment', category: 'social', threshold: 5),
-    const BadgeItem(key: 'streak_master', name: 'Streak Master', description: '7-day streak', iconName: 'fire', category: 'streaks', threshold: 7),
+    const BadgeItem(
+      key: 'first_report',
+      name: 'First Report',
+      description: 'Create 1st issue',
+      iconName: 'report',
+      category: 'reporting',
+      threshold: 1,
+    ),
+    const BadgeItem(
+      key: 'civic_voter',
+      name: 'Civic Voter',
+      description: 'Cast 5 upvotes',
+      iconName: 'vote',
+      category: 'voting',
+      threshold: 5,
+    ),
+    const BadgeItem(
+      key: 'quorum_hero',
+      name: 'Quorum Hero',
+      description: 'Cast 3 quorum votes',
+      iconName: 'quorum',
+      category: 'quorum',
+      threshold: 3,
+    ),
+    const BadgeItem(
+      key: 'neighborhood_voice',
+      name: 'Neighborhood Voice',
+      description: 'Post 5 comments',
+      iconName: 'comment',
+      category: 'social',
+      threshold: 5,
+    ),
+    const BadgeItem(
+      key: 'streak_master',
+      name: 'Streak Master',
+      description: '7-day streak',
+      iconName: 'fire',
+      category: 'streaks',
+      threshold: 7,
+    ),
   ];
 });
 
@@ -103,8 +141,11 @@ class ClaimStreakState {
 }
 
 class FakeClaimStreakNotifier extends StateNotifier<ClaimStreakState> {
-  FakeClaimStreakNotifier(this._ref, {this.isGuest = false, this.alreadyClaimed = false})
-      : super(ClaimStreakState());
+  FakeClaimStreakNotifier(
+    this._ref, {
+    this.isGuest = false,
+    this.alreadyClaimed = false,
+  }) : super(ClaimStreakState());
 
   final Ref _ref;
   final bool isGuest;
@@ -114,11 +155,15 @@ class FakeClaimStreakNotifier extends StateNotifier<ClaimStreakState> {
   Future<void> claimStreak() async {
     claimCalls++;
     if (isGuest) {
-      state = ClaimStreakState(errorMessage: 'Guest users cannot claim daily streaks. Please sign in.');
+      state = ClaimStreakState(
+        errorMessage: 'Guest users cannot claim daily streaks. Please sign in.',
+      );
       return;
     }
     if (alreadyClaimed) {
-      state = ClaimStreakState(errorMessage: 'Daily streak already claimed today');
+      state = ClaimStreakState(
+        errorMessage: 'Daily streak already claimed today',
+      );
       return;
     }
 
@@ -127,29 +172,39 @@ class FakeClaimStreakNotifier extends StateNotifier<ClaimStreakState> {
     _ref.read(testGamificationProfileProvider.notifier).update((old) {
       if (old.value == null) return old;
       final val = old.value!;
-      return AsyncValue.data(GamificationProfile(
-        isGuest: val.isGuest,
-        impactScore: val.impactScore + 15,
-        level: val.level,
-        levelName: val.levelName,
-        nextLevelScore: val.nextLevelScore,
-        streakDays: val.streakDays + 1,
-        lastStreakDate: DateTime.now().toUtc().toIso8601String().substring(0, 10),
-        canClaimStreak: false,
-        badges: val.badges,
-        activityCounts: val.activityCounts,
-      ));
+      return AsyncValue.data(
+        GamificationProfile(
+          isGuest: val.isGuest,
+          impactScore: val.impactScore + 15,
+          level: val.level,
+          levelName: val.levelName,
+          nextLevelScore: val.nextLevelScore,
+          streakDays: val.streakDays + 1,
+          lastStreakDate: DateTime.now().toUtc().toIso8601String().substring(
+            0,
+            10,
+          ),
+          canClaimStreak: false,
+          badges: val.badges,
+          activityCounts: val.activityCounts,
+        ),
+      );
     });
   }
 }
 
-final testClaimStreakNotifierProvider = StateNotifierProvider.family<FakeClaimStreakNotifier, ClaimStreakState, Map<String, dynamic>>((ref, params) {
-  return FakeClaimStreakNotifier(
-    ref,
-    isGuest: params['isGuest'] as bool? ?? false,
-    alreadyClaimed: params['alreadyClaimed'] as bool? ?? false,
-  );
-});
+final testClaimStreakNotifierProvider =
+    StateNotifierProvider.family<
+      FakeClaimStreakNotifier,
+      ClaimStreakState,
+      Map<String, dynamic>
+    >((ref, params) {
+      return FakeClaimStreakNotifier(
+        ref,
+        isGuest: params['isGuest'] as bool? ?? false,
+        alreadyClaimed: params['alreadyClaimed'] as bool? ?? false,
+      );
+    });
 
 // --- Testable Widgets for F-12 ---
 
@@ -159,15 +214,39 @@ class TestableProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('User Profile')),
-      body: Center(
-        child: ElevatedButton(
-          key: const Key('viewGamificationButton'),
-          onPressed: () {
-            context.go('/gamification');
-          },
-          child: const Text('View Civic Impact & Badges'),
-        ),
+      appBar: AppBar(
+        title: const Text('User Profile'),
+        actions: [
+          IconButton(
+            key: const Key('openSettingsButton'),
+            icon: const Icon(Icons.settings_outlined),
+            tooltip: 'Settings',
+            onPressed: () => context.push('/settings'),
+          ),
+        ],
+      ),
+      body: const Center(child: Text('Profile')),
+    );
+  }
+}
+
+class TestableSettingsScreen extends StatelessWidget {
+  const TestableSettingsScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Settings')),
+      body: ListView(
+        children: [
+          ListTile(
+            key: const Key('viewGamificationButton'),
+            leading: const Icon(Icons.workspace_premium_outlined),
+            title: const Text('View Civic Impact & Badges'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push('/gamification'),
+          ),
+        ],
       ),
     );
   }
@@ -190,9 +269,7 @@ class TestableGamificationScreen extends ConsumerWidget {
 
     return Scaffold(
       key: const Key('gamificationScreen'),
-      appBar: AppBar(
-        title: const Text('Civic Impact & Badges'),
-      ),
+      appBar: AppBar(title: const Text('Civic Impact & Badges')),
       body: profileAsync.when(
         data: (profile) => _buildBody(context, ref, profile, claimState),
         loading: () {
@@ -202,12 +279,19 @@ class TestableGamificationScreen extends ConsumerWidget {
               isGuest: offlineCacheData!['is_guest'] as bool? ?? false,
               impactScore: offlineCacheData!['impact_score'] as int? ?? 150,
               level: offlineCacheData!['level'] as int? ?? 2,
-              levelName: offlineCacheData!['level_name'] as String? ?? 'Active Neighbor',
-              nextLevelScore: offlineCacheData!['next_level_score'] as int? ?? 300,
+              levelName:
+                  offlineCacheData!['level_name'] as String? ??
+                  'Active Neighbor',
+              nextLevelScore:
+                  offlineCacheData!['next_level_score'] as int? ?? 300,
               streakDays: offlineCacheData!['streak_days'] as int? ?? 4,
-              canClaimStreak: offlineCacheData!['can_claim_streak'] as bool? ?? true,
+              canClaimStreak:
+                  offlineCacheData!['can_claim_streak'] as bool? ?? true,
               badges: [],
-              activityCounts: const ActivityCounts(issuesCreated: 2, upvotesCast: 10),
+              activityCounts: const ActivityCounts(
+                issuesCreated: 2,
+                upvotesCast: 10,
+              ),
             );
             return _buildBody(context, ref, cachedProfile, claimState);
           }
@@ -218,9 +302,15 @@ class TestableGamificationScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildBody(BuildContext context, WidgetRef ref, GamificationProfile profile, ClaimStreakState claimState) {
+  Widget _buildBody(
+    BuildContext context,
+    WidgetRef ref,
+    GamificationProfile profile,
+    ClaimStreakState claimState,
+  ) {
     // Level progress bar fraction calculation handling Level 5 null next_level_score
-    final double progressFraction = profile.nextLevelScore == null || profile.nextLevelScore == 0
+    final double progressFraction =
+        profile.nextLevelScore == null || profile.nextLevelScore == 0
         ? 1.0
         : (profile.impactScore / profile.nextLevelScore!).clamp(0.0, 1.0);
 
@@ -237,12 +327,12 @@ class TestableGamificationScreen extends ConsumerWidget {
                   Text(
                     '${profile.impactScore}',
                     key: const Key('impactScoreValue'),
-                    style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                  Text(
-                    profile.levelName,
-                    key: const Key('levelNameLabel'),
-                  ),
+                  Text(profile.levelName, key: const Key('levelNameLabel')),
                   LinearProgressIndicator(
                     key: const Key('levelProgressBar'),
                     value: progressFraction,
@@ -271,18 +361,29 @@ class TestableGamificationScreen extends ConsumerWidget {
                           context: context,
                           builder: (_) => const AlertDialog(
                             title: Text('GuestGuard'),
-                            content: Text('Please sign in to claim daily streaks.'),
+                            content: Text(
+                              'Please sign in to claim daily streaks.',
+                            ),
                           ),
                         );
                       } else {
-                        ref.read(testClaimStreakNotifierProvider(streakParams).notifier).claimStreak().then((_) {
-                          final state = ref.read(testClaimStreakNotifierProvider(streakParams));
-                          if (state.errorMessage != null) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text(state.errorMessage!)),
-                            );
-                          }
-                        });
+                        ref
+                            .read(
+                              testClaimStreakNotifierProvider(
+                                streakParams,
+                              ).notifier,
+                            )
+                            .claimStreak()
+                            .then((_) {
+                              final state = ref.read(
+                                testClaimStreakNotifierProvider(streakParams),
+                              );
+                              if (state.errorMessage != null) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text(state.errorMessage!)),
+                                );
+                              }
+                            });
                       }
                     },
                     child: const Text('Claim Daily Streak'),
@@ -314,7 +415,9 @@ class TestableGamificationScreen extends ConsumerWidget {
                 Text('Issues Created: ${profile.activityCounts.issuesCreated}'),
                 Text('Upvotes Cast: ${profile.activityCounts.upvotesCast}'),
                 Text('Quorum Votes: ${profile.activityCounts.quorumVotesCast}'),
-                Text('Comments Posted: ${profile.activityCounts.commentsPosted}'),
+                Text(
+                  'Comments Posted: ${profile.activityCounts.commentsPosted}',
+                ),
               ],
             ),
           ),
@@ -326,7 +429,14 @@ class TestableGamificationScreen extends ConsumerWidget {
   Widget _buildBadgeCard(String key, List<BadgeItem> userBadges) {
     final badge = userBadges.firstWhere(
       (b) => b.key == key,
-      orElse: () => BadgeItem(key: key, name: key, description: '', iconName: 'lock', category: '', threshold: 1),
+      orElse: () => BadgeItem(
+        key: key,
+        name: key,
+        description: '',
+        iconName: 'lock',
+        category: '',
+        threshold: 1,
+      ),
     );
 
     return Card(
@@ -338,7 +448,10 @@ class TestableGamificationScreen extends ConsumerWidget {
           Icon(badge.isUnlocked ? Icons.stars : Icons.lock),
           Text(badge.name),
           if (badge.isUnlocked && badge.unlockedAt != null)
-            Text(badge.unlockedAt!.toIso8601String().substring(0, 10), style: const TextStyle(fontSize: 10)),
+            Text(
+              badge.unlockedAt!.toIso8601String().substring(0, 10),
+              style: const TextStyle(fontSize: 10),
+            ),
         ],
       ),
     );
@@ -349,446 +462,594 @@ class TestableGamificationScreen extends ConsumerWidget {
 
 void main() {
   group('F-12 Gamification Engine - Frontend Unit, Provider & Widget Tests', () {
+    // FE-GAM-001: Settings Screen Navigation Button
+    testWidgets(
+      'FE-GAM-001: Settings screen contains viewGamificationButton key and navigates to /gamification',
+      (tester) async {
+        final router = GoRouter(
+          initialLocation: '/profile',
+          routes: [
+            GoRoute(
+              path: '/profile',
+              builder: (context, state) => const TestableProfileScreen(),
+            ),
+            GoRoute(
+              path: '/settings',
+              builder: (context, state) => const TestableSettingsScreen(),
+            ),
+            GoRoute(
+              path: '/gamification',
+              builder: (context, state) => const TestableGamificationScreen(),
+            ),
+          ],
+        );
 
-    // FE-GAM-001: Profile Screen Navigation Button
-    testWidgets('FE-GAM-001: ProfileScreen contains viewGamificationButton key and navigates to /gamification', (tester) async {
-      final router = GoRouter(
-        initialLocation: '/profile',
-        routes: [
-          GoRoute(path: '/profile', builder: (context, state) => const TestableProfileScreen()),
-          GoRoute(path: '/gamification', builder: (context, state) => const TestableGamificationScreen()),
-        ],
-      );
+        await tester.pumpWidget(
+          ProviderScope(child: MaterialApp.router(routerConfig: router)),
+        );
+        await tester.pumpAndSettle();
 
-      await tester.pumpWidget(
-        ProviderScope(
-          child: MaterialApp.router(routerConfig: router),
-        ),
-      );
-      await tester.pumpAndSettle();
+        // The gamification tile is no longer on the profile page.
+        expect(find.byKey(const Key('viewGamificationButton')), findsNothing);
 
-      final navButton = find.byKey(const Key('viewGamificationButton'));
-      expect(navButton, findsOneWidget);
+        // Navigate to the settings screen where the tile now lives.
+        await tester.tap(find.byKey(const Key('openSettingsButton')));
+        await tester.pumpAndSettle();
 
-      await tester.tap(navButton);
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 500));
+        final navButton = find.byKey(const Key('viewGamificationButton'));
+        expect(navButton, findsOneWidget);
 
-      expect(find.byKey(const Key('gamificationScreen')), findsOneWidget);
-    });
+        await tester.tap(navButton);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+
+        expect(find.byKey(const Key('gamificationScreen')), findsOneWidget);
+      },
+    );
 
     // FE-GAM-002: GamificationScreen Rendering & Header
-    testWidgets('FE-GAM-002: GamificationScreen renders header text "Civic Impact & Badges"', (tester) async {
-      final profile = GamificationProfile(
-        isGuest: false,
-        impactScore: 120,
-        level: 2,
-        levelName: 'Active Neighbor',
-        nextLevelScore: 300,
-        streakDays: 3,
-        canClaimStreak: true,
-        badges: const [],
-        activityCounts: const ActivityCounts(issuesCreated: 2),
-      );
+    testWidgets(
+      'FE-GAM-002: GamificationScreen renders header text "Civic Impact & Badges"',
+      (tester) async {
+        final profile = GamificationProfile(
+          isGuest: false,
+          impactScore: 120,
+          level: 2,
+          levelName: 'Active Neighbor',
+          nextLevelScore: 300,
+          streakDays: 3,
+          canClaimStreak: true,
+          badges: const [],
+          activityCounts: const ActivityCounts(issuesCreated: 2),
+        );
 
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            testGamificationProfileProvider.overrideWith((ref) => AsyncValue.data(profile)),
-          ],
-          child: const MaterialApp(home: TestableGamificationScreen()),
-        ),
-      );
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              testGamificationProfileProvider.overrideWith(
+                (ref) => AsyncValue.data(profile),
+              ),
+            ],
+            child: const MaterialApp(home: TestableGamificationScreen()),
+          ),
+        );
+        await tester.pumpAndSettle();
 
-      expect(find.byKey(const Key('gamificationScreen')), findsOneWidget);
-      expect(find.text('Civic Impact & Badges'), findsOneWidget);
-    });
+        expect(find.byKey(const Key('gamificationScreen')), findsOneWidget);
+        expect(find.text('Civic Impact & Badges'), findsOneWidget);
+      },
+    );
 
     // FE-GAM-003: Impact Score Card Widget & Key
-    testWidgets('FE-GAM-003: Impact Score Card renders Key("impactScoreCard") and Key("impactScoreValue")', (tester) async {
-      final profile = GamificationProfile(
-        isGuest: false,
-        impactScore: 210,
-        level: 2,
-        levelName: 'Active Neighbor',
-        nextLevelScore: 300,
-        streakDays: 3,
-        canClaimStreak: true,
-        badges: const [],
-        activityCounts: const ActivityCounts(),
-      );
+    testWidgets(
+      'FE-GAM-003: Impact Score Card renders Key("impactScoreCard") and Key("impactScoreValue")',
+      (tester) async {
+        final profile = GamificationProfile(
+          isGuest: false,
+          impactScore: 210,
+          level: 2,
+          levelName: 'Active Neighbor',
+          nextLevelScore: 300,
+          streakDays: 3,
+          canClaimStreak: true,
+          badges: const [],
+          activityCounts: const ActivityCounts(),
+        );
 
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            testGamificationProfileProvider.overrideWith((ref) => AsyncValue.data(profile)),
-          ],
-          child: const MaterialApp(home: TestableGamificationScreen()),
-        ),
-      );
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              testGamificationProfileProvider.overrideWith(
+                (ref) => AsyncValue.data(profile),
+              ),
+            ],
+            child: const MaterialApp(home: TestableGamificationScreen()),
+          ),
+        );
+        await tester.pumpAndSettle();
 
-      expect(find.byKey(const Key('impactScoreCard')), findsOneWidget);
-      expect(find.byKey(const Key('impactScoreValue')), findsOneWidget);
-      expect(find.text('210'), findsOneWidget);
-    });
+        expect(find.byKey(const Key('impactScoreCard')), findsOneWidget);
+        expect(find.byKey(const Key('impactScoreValue')), findsOneWidget);
+        expect(find.text('210'), findsOneWidget);
+      },
+    );
 
     // FE-GAM-004: Level Name Label & Progress Bar
-    testWidgets('FE-GAM-004: Displays Key("levelNameLabel") and Key("levelProgressBar")', (tester) async {
-      final profile = GamificationProfile(
-        isGuest: false,
-        impactScore: 150,
-        level: 2,
-        levelName: 'Active Neighbor',
-        nextLevelScore: 300,
-        streakDays: 2,
-        canClaimStreak: true,
-        badges: const [],
-        activityCounts: const ActivityCounts(),
-      );
+    testWidgets(
+      'FE-GAM-004: Displays Key("levelNameLabel") and Key("levelProgressBar")',
+      (tester) async {
+        final profile = GamificationProfile(
+          isGuest: false,
+          impactScore: 150,
+          level: 2,
+          levelName: 'Active Neighbor',
+          nextLevelScore: 300,
+          streakDays: 2,
+          canClaimStreak: true,
+          badges: const [],
+          activityCounts: const ActivityCounts(),
+        );
 
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            testGamificationProfileProvider.overrideWith((ref) => AsyncValue.data(profile)),
-          ],
-          child: const MaterialApp(home: TestableGamificationScreen()),
-        ),
-      );
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              testGamificationProfileProvider.overrideWith(
+                (ref) => AsyncValue.data(profile),
+              ),
+            ],
+            child: const MaterialApp(home: TestableGamificationScreen()),
+          ),
+        );
+        await tester.pumpAndSettle();
 
-      expect(find.byKey(const Key('levelNameLabel')), findsOneWidget);
-      expect(find.text('Active Neighbor'), findsOneWidget);
+        expect(find.byKey(const Key('levelNameLabel')), findsOneWidget);
+        expect(find.text('Active Neighbor'), findsOneWidget);
 
-      final progressFinder = find.byKey(const Key('levelProgressBar'));
-      expect(progressFinder, findsOneWidget);
-      final progressWidget = tester.widget<LinearProgressIndicator>(progressFinder);
-      expect(progressWidget.value, 0.5); // 150 / 300
-    });
+        final progressFinder = find.byKey(const Key('levelProgressBar'));
+        expect(progressFinder, findsOneWidget);
+        final progressWidget = tester.widget<LinearProgressIndicator>(
+          progressFinder,
+        );
+        expect(progressWidget.value, 0.5); // 150 / 300
+      },
+    );
 
     // FE-GAM-005: Streak Banner & Claim Button
-    testWidgets('FE-GAM-005: Displays Key("streakBanner"), Key("streakDaysCounter"), Key("claimStreakButton")', (tester) async {
-      final profile = GamificationProfile(
-        isGuest: false,
-        impactScore: 50,
-        level: 1,
-        levelName: 'Civic Rookie',
-        nextLevelScore: 100,
-        streakDays: 5,
-        canClaimStreak: true,
-        badges: const [],
-        activityCounts: const ActivityCounts(),
-      );
+    testWidgets(
+      'FE-GAM-005: Displays Key("streakBanner"), Key("streakDaysCounter"), Key("claimStreakButton")',
+      (tester) async {
+        final profile = GamificationProfile(
+          isGuest: false,
+          impactScore: 50,
+          level: 1,
+          levelName: 'Civic Rookie',
+          nextLevelScore: 100,
+          streakDays: 5,
+          canClaimStreak: true,
+          badges: const [],
+          activityCounts: const ActivityCounts(),
+        );
 
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            testGamificationProfileProvider.overrideWith((ref) => AsyncValue.data(profile)),
-          ],
-          child: const MaterialApp(home: TestableGamificationScreen()),
-        ),
-      );
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              testGamificationProfileProvider.overrideWith(
+                (ref) => AsyncValue.data(profile),
+              ),
+            ],
+            child: const MaterialApp(home: TestableGamificationScreen()),
+          ),
+        );
+        await tester.pumpAndSettle();
 
-      expect(find.byKey(const Key('streakBanner')), findsOneWidget);
-      expect(find.byKey(const Key('streakDaysCounter')), findsOneWidget);
-      expect(find.text('5 Day Streak'), findsOneWidget);
-      expect(find.byKey(const Key('claimStreakButton')), findsOneWidget);
-    });
+        expect(find.byKey(const Key('streakBanner')), findsOneWidget);
+        expect(find.byKey(const Key('streakDaysCounter')), findsOneWidget);
+        expect(find.text('5 Day Streak'), findsOneWidget);
+        expect(find.byKey(const Key('claimStreakButton')), findsOneWidget);
+      },
+    );
 
     // FE-GAM-006: Badges Grid & Individual Cards
-    testWidgets('FE-GAM-006: Displays Key("badgesGrid") and 5 badge cards with exact keys', (tester) async {
-      final profile = GamificationProfile(
-        isGuest: false,
-        impactScore: 0,
-        level: 1,
-        levelName: 'Civic Rookie',
-        nextLevelScore: 100,
-        streakDays: 0,
-        canClaimStreak: false,
-        badges: const [],
-        activityCounts: const ActivityCounts(),
-      );
+    testWidgets(
+      'FE-GAM-006: Displays Key("badgesGrid") and 5 badge cards with exact keys',
+      (tester) async {
+        final profile = GamificationProfile(
+          isGuest: false,
+          impactScore: 0,
+          level: 1,
+          levelName: 'Civic Rookie',
+          nextLevelScore: 100,
+          streakDays: 0,
+          canClaimStreak: false,
+          badges: const [],
+          activityCounts: const ActivityCounts(),
+        );
 
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            testGamificationProfileProvider.overrideWith((ref) => AsyncValue.data(profile)),
-          ],
-          child: const MaterialApp(home: TestableGamificationScreen()),
-        ),
-      );
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              testGamificationProfileProvider.overrideWith(
+                (ref) => AsyncValue.data(profile),
+              ),
+            ],
+            child: const MaterialApp(home: TestableGamificationScreen()),
+          ),
+        );
+        await tester.pumpAndSettle();
 
-      expect(find.byKey(const Key('badgesGrid')), findsOneWidget);
-      expect(find.byKey(const Key('badgeCard_first_report')), findsOneWidget);
-      expect(find.byKey(const Key('badgeCard_civic_voter')), findsOneWidget);
-      expect(find.byKey(const Key('badgeCard_quorum_hero')), findsOneWidget);
-      expect(find.byKey(const Key('badgeCard_neighborhood_voice')), findsOneWidget);
-      expect(find.byKey(const Key('badgeCard_streak_master')), findsOneWidget);
-    });
+        expect(find.byKey(const Key('badgesGrid')), findsOneWidget);
+        expect(find.byKey(const Key('badgeCard_first_report')), findsOneWidget);
+        expect(find.byKey(const Key('badgeCard_civic_voter')), findsOneWidget);
+        expect(find.byKey(const Key('badgeCard_quorum_hero')), findsOneWidget);
+        expect(
+          find.byKey(const Key('badgeCard_neighborhood_voice')),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(const Key('badgeCard_streak_master')),
+          findsOneWidget,
+        );
+      },
+    );
 
     // FE-GAM-007: Activity Breakdown Card Widget
-    testWidgets('FE-GAM-007: Displays Key("activityBreakdownCard") rendering counts', (tester) async {
-      final profile = GamificationProfile(
-        isGuest: false,
-        impactScore: 210,
-        level: 2,
-        levelName: 'Active Neighbor',
-        nextLevelScore: 300,
-        streakDays: 3,
-        canClaimStreak: false,
-        badges: const [],
-        activityCounts: const ActivityCounts(
-          issuesCreated: 2,
-          upvotesCast: 5,
-          quorumVotesCast: 1,
-          commentsPosted: 2,
-        ),
-      );
+    testWidgets(
+      'FE-GAM-007: Displays Key("activityBreakdownCard") rendering counts',
+      (tester) async {
+        final profile = GamificationProfile(
+          isGuest: false,
+          impactScore: 210,
+          level: 2,
+          levelName: 'Active Neighbor',
+          nextLevelScore: 300,
+          streakDays: 3,
+          canClaimStreak: false,
+          badges: const [],
+          activityCounts: const ActivityCounts(
+            issuesCreated: 2,
+            upvotesCast: 5,
+            quorumVotesCast: 1,
+            commentsPosted: 2,
+          ),
+        );
 
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            testGamificationProfileProvider.overrideWith((ref) => AsyncValue.data(profile)),
-          ],
-          child: const MaterialApp(home: TestableGamificationScreen()),
-        ),
-      );
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              testGamificationProfileProvider.overrideWith(
+                (ref) => AsyncValue.data(profile),
+              ),
+            ],
+            child: const MaterialApp(home: TestableGamificationScreen()),
+          ),
+        );
+        await tester.pumpAndSettle();
 
-      expect(find.byKey(const Key('activityBreakdownCard')), findsOneWidget);
-      expect(find.text('Issues Created: 2'), findsOneWidget);
-      expect(find.text('Upvotes Cast: 5'), findsOneWidget);
-      expect(find.text('Quorum Votes: 1'), findsOneWidget);
-      expect(find.text('Comments Posted: 2'), findsOneWidget);
-    });
+        expect(find.byKey(const Key('activityBreakdownCard')), findsOneWidget);
+        expect(find.text('Issues Created: 2'), findsOneWidget);
+        expect(find.text('Upvotes Cast: 5'), findsOneWidget);
+        expect(find.text('Quorum Votes: 1'), findsOneWidget);
+        expect(find.text('Comments Posted: 2'), findsOneWidget);
+      },
+    );
 
     // FE-GAM-008: Riverpod `gamificationProfileProvider` Lifecycle
-    test('FE-GAM-008: gamificationProfileProvider emits loading state then data state', () {
-      final container = ProviderContainer(
-        overrides: [
-          testGamificationProfileProvider.overrideWith((ref) => const AsyncValue.loading()),
-        ],
-      );
-      addTearDown(container.dispose);
+    test(
+      'FE-GAM-008: gamificationProfileProvider emits loading state then data state',
+      () {
+        final container = ProviderContainer(
+          overrides: [
+            testGamificationProfileProvider.overrideWith(
+              (ref) => const AsyncValue.loading(),
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
 
-      expect(container.read(testGamificationProfileProvider), isA<AsyncLoading>());
+        expect(
+          container.read(testGamificationProfileProvider),
+          isA<AsyncLoading>(),
+        );
 
-      container.read(testGamificationProfileProvider.notifier).state = AsyncValue.data(
-        const GamificationProfile(
+        container
+            .read(testGamificationProfileProvider.notifier)
+            .state = AsyncValue.data(
+          const GamificationProfile(
+            isGuest: false,
+            impactScore: 100,
+            level: 2,
+            levelName: 'Active Neighbor',
+            nextLevelScore: 300,
+            streakDays: 1,
+            canClaimStreak: false,
+            badges: [],
+            activityCounts: ActivityCounts(),
+          ),
+        );
+
+        expect(
+          container.read(testGamificationProfileProvider).value?.impactScore,
+          100,
+        );
+      },
+    );
+
+    // FE-GAM-009: Riverpod `allBadgesProvider` Lifecycle
+    test(
+      'FE-GAM-009: allBadgesProvider fetches array of 5 badge metadata items',
+      () async {
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+
+        final badges = await container.read(testAllBadgesProvider.future);
+        expect(badges.length, 5);
+        expect(
+          badges.map((b) => b.key),
+          containsAll([
+            'first_report',
+            'civic_voter',
+            'quorum_hero',
+            'neighborhood_voice',
+            'streak_master',
+          ]),
+        );
+      },
+    );
+
+    // FE-GAM-010: Riverpod `claimStreakNotifierProvider` Success Action
+    testWidgets(
+      'FE-GAM-010: claimStreak() updates notifier state and invalidates/refreshes profile',
+      (tester) async {
+        final profile = GamificationProfile(
           isGuest: false,
           impactScore: 100,
           level: 2,
           levelName: 'Active Neighbor',
           nextLevelScore: 300,
-          streakDays: 1,
-          canClaimStreak: false,
-          badges: [],
-          activityCounts: ActivityCounts(),
-        ),
-      );
+          streakDays: 2,
+          canClaimStreak: true,
+          badges: const [],
+          activityCounts: const ActivityCounts(),
+        );
 
-      expect(container.read(testGamificationProfileProvider).value?.impactScore, 100);
-    });
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              testGamificationProfileProvider.overrideWith(
+                (ref) => AsyncValue.data(profile),
+              ),
+            ],
+            child: const MaterialApp(
+              home: TestableGamificationScreen(
+                streakParams: {'isGuest': false, 'alreadyClaimed': false},
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
 
-    // FE-GAM-009: Riverpod `allBadgesProvider` Lifecycle
-    test('FE-GAM-009: allBadgesProvider fetches array of 5 badge metadata items', () async {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
+        await tester.tap(find.byKey(const Key('claimStreakButton')));
+        await tester.pumpAndSettle();
 
-      final badges = await container.read(testAllBadgesProvider.future);
-      expect(badges.length, 5);
-      expect(badges.map((b) => b.key), containsAll(['first_report', 'civic_voter', 'quorum_hero', 'neighborhood_voice', 'streak_master']));
-    });
-
-    // FE-GAM-010: Riverpod `claimStreakNotifierProvider` Success Action
-    testWidgets('FE-GAM-010: claimStreak() updates notifier state and invalidates/refreshes profile', (tester) async {
-      final profile = GamificationProfile(
-        isGuest: false,
-        impactScore: 100,
-        level: 2,
-        levelName: 'Active Neighbor',
-        nextLevelScore: 300,
-        streakDays: 2,
-        canClaimStreak: true,
-        badges: const [],
-        activityCounts: const ActivityCounts(),
-      );
-
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            testGamificationProfileProvider.overrideWith((ref) => AsyncValue.data(profile)),
-          ],
-          child: const MaterialApp(home: TestableGamificationScreen(streakParams: {'isGuest': false, 'alreadyClaimed': false})),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.byKey(const Key('claimStreakButton')));
-      await tester.pumpAndSettle();
-
-      expect(find.text('3 Day Streak'), findsOneWidget);
-      expect(find.text('115'), findsOneWidget);
-    });
+        expect(find.text('3 Day Streak'), findsOneWidget);
+        expect(find.text('115'), findsOneWidget);
+      },
+    );
 
     // FE-GAM-011: Riverpod `claimStreakNotifierProvider` Duplicate Claim Error
-    testWidgets('FE-GAM-011: Duplicate claim displays snackbar with "Daily streak already claimed today"', (tester) async {
-      final profile = GamificationProfile(
-        isGuest: false,
-        impactScore: 100,
-        level: 2,
-        levelName: 'Active Neighbor',
-        nextLevelScore: 300,
-        streakDays: 2,
-        canClaimStreak: false,
-        badges: const [],
-        activityCounts: const ActivityCounts(),
-      );
+    testWidgets(
+      'FE-GAM-011: Duplicate claim displays snackbar with "Daily streak already claimed today"',
+      (tester) async {
+        final profile = GamificationProfile(
+          isGuest: false,
+          impactScore: 100,
+          level: 2,
+          levelName: 'Active Neighbor',
+          nextLevelScore: 300,
+          streakDays: 2,
+          canClaimStreak: false,
+          badges: const [],
+          activityCounts: const ActivityCounts(),
+        );
 
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            testGamificationProfileProvider.overrideWith((ref) => AsyncValue.data(profile)),
-          ],
-          child: const MaterialApp(home: TestableGamificationScreen(streakParams: {'isGuest': false, 'alreadyClaimed': true})),
-        ),
-      );
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              testGamificationProfileProvider.overrideWith(
+                (ref) => AsyncValue.data(profile),
+              ),
+            ],
+            child: const MaterialApp(
+              home: TestableGamificationScreen(
+                streakParams: {'isGuest': false, 'alreadyClaimed': true},
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
 
-      await tester.tap(find.byKey(const Key('claimStreakButton')));
-      await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const Key('claimStreakButton')));
+        await tester.pumpAndSettle();
 
-      expect(find.text('Daily streak already claimed today'), findsOneWidget);
-    });
+        expect(find.text('Daily streak already claimed today'), findsOneWidget);
+      },
+    );
 
     // FE-GAM-012: Offline Hive Cache Fallback Rendering
-    testWidgets('FE-GAM-012: Offline mode renders profile instantly from Hive cache', (tester) async {
-      final cacheData = {
-        'is_guest': false,
-        'impact_score': 150,
-        'level': 2,
-        'level_name': 'Active Neighbor',
-        'next_level_score': 300,
-        'streak_days': 4,
-        'can_claim_streak': true,
-      };
+    testWidgets(
+      'FE-GAM-012: Offline mode renders profile instantly from Hive cache',
+      (tester) async {
+        final cacheData = {
+          'is_guest': false,
+          'impact_score': 150,
+          'level': 2,
+          'level_name': 'Active Neighbor',
+          'next_level_score': 300,
+          'streak_days': 4,
+          'can_claim_streak': true,
+        };
 
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            testGamificationProfileProvider.overrideWith((ref) => const AsyncValue.loading()),
-          ],
-          child: MaterialApp(home: TestableGamificationScreen(offlineCacheData: cacheData)),
-        ),
-      );
-      await tester.pump(); // No pumpAndSettle needed, renders cached data immediately
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              testGamificationProfileProvider.overrideWith(
+                (ref) => const AsyncValue.loading(),
+              ),
+            ],
+            child: MaterialApp(
+              home: TestableGamificationScreen(offlineCacheData: cacheData),
+            ),
+          ),
+        );
+        await tester
+            .pump(); // No pumpAndSettle needed, renders cached data immediately
 
-      expect(find.text('150'), findsOneWidget);
-      expect(find.text('Active Neighbor'), findsOneWidget);
-      expect(find.text('4 Day Streak'), findsOneWidget);
-    });
+        expect(find.text('150'), findsOneWidget);
+        expect(find.text('Active Neighbor'), findsOneWidget);
+        expect(find.text('4 Day Streak'), findsOneWidget);
+      },
+    );
 
     // FE-GAM-013: Guest UI Interception Guard
-    testWidgets('FE-GAM-013: Tapping claimStreakButton as guest presents GuestGuard dialog without sending HTTP request', (tester) async {
-      final profile = GamificationProfile(
-        isGuest: true,
-        impactScore: 0,
-        level: 1,
-        levelName: 'Civic Rookie',
-        nextLevelScore: 100,
-        streakDays: 0,
-        canClaimStreak: false,
-        badges: const [],
-        activityCounts: const ActivityCounts(),
-      );
+    testWidgets(
+      'FE-GAM-013: Tapping claimStreakButton as guest presents GuestGuard dialog without sending HTTP request',
+      (tester) async {
+        final profile = GamificationProfile(
+          isGuest: true,
+          impactScore: 0,
+          level: 1,
+          levelName: 'Civic Rookie',
+          nextLevelScore: 100,
+          streakDays: 0,
+          canClaimStreak: false,
+          badges: const [],
+          activityCounts: const ActivityCounts(),
+        );
 
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            testGamificationProfileProvider.overrideWith((ref) => AsyncValue.data(profile)),
-          ],
-          child: const MaterialApp(home: TestableGamificationScreen(streakParams: {'isGuest': true})),
-        ),
-      );
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              testGamificationProfileProvider.overrideWith(
+                (ref) => AsyncValue.data(profile),
+              ),
+            ],
+            child: const MaterialApp(
+              home: TestableGamificationScreen(streakParams: {'isGuest': true}),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
 
-      await tester.tap(find.byKey(const Key('claimStreakButton')));
-      await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const Key('claimStreakButton')));
+        await tester.pumpAndSettle();
 
-      expect(find.text('GuestGuard'), findsOneWidget);
-      expect(find.text('Please sign in to claim daily streaks.'), findsOneWidget);
-    });
+        expect(find.text('GuestGuard'), findsOneWidget);
+        expect(
+          find.text('Please sign in to claim daily streaks.'),
+          findsOneWidget,
+        );
+      },
+    );
 
     // FE-GAM-014: Badge Locked vs Unlocked Visual Representation
-    testWidgets('FE-GAM-014: Unlocked badge renders unlocked state; locked badge renders lock icon', (tester) async {
-      final unlockedDate = DateTime.utc(2026, 8, 1);
-      final profile = GamificationProfile(
-        isGuest: false,
-        impactScore: 50,
-        level: 1,
-        levelName: 'Civic Rookie',
-        nextLevelScore: 100,
-        streakDays: 0,
-        canClaimStreak: false,
-        badges: [
-          BadgeItem(key: 'first_report', name: 'First Report', description: 'Create 1st issue', iconName: 'report', category: 'reporting', threshold: 1, isUnlocked: true, unlockedAt: unlockedDate),
-        ],
-        activityCounts: const ActivityCounts(issuesCreated: 1),
-      );
-
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            testGamificationProfileProvider.overrideWith((ref) => AsyncValue.data(profile)),
+    testWidgets(
+      'FE-GAM-014: Unlocked badge renders unlocked state; locked badge renders lock icon',
+      (tester) async {
+        final unlockedDate = DateTime.utc(2026, 8, 1);
+        final profile = GamificationProfile(
+          isGuest: false,
+          impactScore: 50,
+          level: 1,
+          levelName: 'Civic Rookie',
+          nextLevelScore: 100,
+          streakDays: 0,
+          canClaimStreak: false,
+          badges: [
+            BadgeItem(
+              key: 'first_report',
+              name: 'First Report',
+              description: 'Create 1st issue',
+              iconName: 'report',
+              category: 'reporting',
+              threshold: 1,
+              isUnlocked: true,
+              unlockedAt: unlockedDate,
+            ),
           ],
-          child: const MaterialApp(home: TestableGamificationScreen()),
-        ),
-      );
-      await tester.pumpAndSettle();
+          activityCounts: const ActivityCounts(issuesCreated: 1),
+        );
 
-      final firstReportCard = find.byKey(const Key('badgeCard_first_report'));
-      expect(firstReportCard, findsOneWidget);
-      expect(find.descendant(of: firstReportCard, matching: find.byIcon(Icons.stars)), findsOneWidget);
-      expect(find.text('2026-08-01'), findsOneWidget);
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              testGamificationProfileProvider.overrideWith(
+                (ref) => AsyncValue.data(profile),
+              ),
+            ],
+            child: const MaterialApp(home: TestableGamificationScreen()),
+          ),
+        );
+        await tester.pumpAndSettle();
 
-      final civicVoterCard = find.byKey(const Key('badgeCard_civic_voter'));
-      expect(civicVoterCard, findsOneWidget);
-      expect(find.descendant(of: civicVoterCard, matching: find.byIcon(Icons.lock)), findsOneWidget);
-    });
+        final firstReportCard = find.byKey(const Key('badgeCard_first_report'));
+        expect(firstReportCard, findsOneWidget);
+        expect(
+          find.descendant(
+            of: firstReportCard,
+            matching: find.byIcon(Icons.stars),
+          ),
+          findsOneWidget,
+        );
+        expect(find.text('2026-08-01'), findsOneWidget);
+
+        final civicVoterCard = find.byKey(const Key('badgeCard_civic_voter'));
+        expect(civicVoterCard, findsOneWidget);
+        expect(
+          find.descendant(
+            of: civicVoterCard,
+            matching: find.byIcon(Icons.lock),
+          ),
+          findsOneWidget,
+        );
+      },
+    );
 
     // FE-GAM-015: Level 5 ("City Hero") Progress Bar Handling
-    testWidgets('FE-GAM-015: Level 5 user with nextLevelScore == null renders 100% progress without error', (tester) async {
-      final profile = GamificationProfile(
-        isGuest: false,
-        impactScore: 1600,
-        level: 5,
-        levelName: 'City Hero',
-        nextLevelScore: null,
-        streakDays: 10,
-        canClaimStreak: false,
-        badges: const [],
-        activityCounts: const ActivityCounts(issuesCreated: 32),
-      );
+    testWidgets(
+      'FE-GAM-015: Level 5 user with nextLevelScore == null renders 100% progress without error',
+      (tester) async {
+        final profile = GamificationProfile(
+          isGuest: false,
+          impactScore: 1600,
+          level: 5,
+          levelName: 'City Hero',
+          nextLevelScore: null,
+          streakDays: 10,
+          canClaimStreak: false,
+          badges: const [],
+          activityCounts: const ActivityCounts(issuesCreated: 32),
+        );
 
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            testGamificationProfileProvider.overrideWith((ref) => AsyncValue.data(profile)),
-          ],
-          child: const MaterialApp(home: TestableGamificationScreen()),
-        ),
-      );
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              testGamificationProfileProvider.overrideWith(
+                (ref) => AsyncValue.data(profile),
+              ),
+            ],
+            child: const MaterialApp(home: TestableGamificationScreen()),
+          ),
+        );
+        await tester.pumpAndSettle();
 
-      expect(find.text('City Hero'), findsOneWidget);
-      final progressFinder = find.byKey(const Key('levelProgressBar'));
-      expect(progressFinder, findsOneWidget);
-      final progressWidget = tester.widget<LinearProgressIndicator>(progressFinder);
-      expect(progressWidget.value, 1.0);
-    });
-
+        expect(find.text('City Hero'), findsOneWidget);
+        final progressFinder = find.byKey(const Key('levelProgressBar'));
+        expect(progressFinder, findsOneWidget);
+        final progressWidget = tester.widget<LinearProgressIndicator>(
+          progressFinder,
+        );
+        expect(progressWidget.value, 1.0);
+      },
+    );
   });
 }

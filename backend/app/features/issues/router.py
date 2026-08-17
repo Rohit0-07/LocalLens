@@ -5,6 +5,7 @@ from fastapi import APIRouter, HTTPException, Query, status
 from app.api.deps import CurrentUser, OptionalUser, SessionDep, SettingsDep
 from app.core.exceptions import AppError
 from app.features.issues import service
+from app.features.issues.models import Issue
 from app.features.issues.schemas import (
     CommentCreate,
     CommentResponse,
@@ -153,6 +154,30 @@ async def get_single_issue(
         user_id=user.id if user else None,
         user_upvoted_ids=user_upvoted_ids,
     )
+
+
+@router.delete("/{issue_id}", response_model=dict[str, bool])
+async def delete_issue_endpoint(
+    issue_id: int,
+    session: SessionDep,
+    user: CurrentUser,
+) -> dict[str, bool]:
+    if getattr(user, "is_guest", False):
+        raise AppError(
+            "Sign in required to delete issues", status_code=403, code="guest_restricted"
+        )
+    issue = await session.get(Issue, issue_id)
+    if issue is None or getattr(issue, "is_hidden", False):
+        raise HTTPException(status_code=404, detail="Issue not found")
+    is_moderator = getattr(user, "is_admin", False) or getattr(
+        user, "role", ""
+    ) in ("admin", "moderator")
+    if issue.reporter_id != user.id and not is_moderator:
+        raise AppError(
+            "Not authorized to delete this issue", status_code=403, code="forbidden"
+        )
+    await service.delete_issue(session, issue_id, issue.reporter_id or user.id)
+    return {"success": True}
 
 
 @router.post("/{issue_id}/acknowledge", response_model=IssueOut)

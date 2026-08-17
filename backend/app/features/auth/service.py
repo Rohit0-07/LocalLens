@@ -167,9 +167,22 @@ async def update_profile(
     username: str | None = None,
     date_of_birth: date | None = None,
     photo_url: str | None = None,
+    bio: str | None = None,
 ) -> User:
     if display_name is not None:
-        user.display_name = display_name.strip() or None
+        new_name = display_name.strip() or None
+        current_name = user.display_name
+        if new_name != current_name:
+            if current_name:
+                if (user.display_name_changes_count or 0) >= 2:
+                    raise AppError(
+                        "Name change limit reached",
+                        code="name_change_limit",
+                        status_code=429,
+                    )
+                user.display_name_changes_count = (user.display_name_changes_count or 0) + 1
+                user.display_name_updated_at = _utc_now()
+            user.display_name = new_name
     if username is not None:
         username = username.strip()
         if username:
@@ -182,7 +195,37 @@ async def update_profile(
     if date_of_birth is not None:
         user.date_of_birth = date_of_birth
     if photo_url is not None:
-        user.photo_url = photo_url.strip() or None
+        new_url = photo_url.strip() or None
+        current_url = user.photo_url
+        if new_url != current_url:
+            now = _utc_now()
+            if current_url:
+                if user.photo_updated_at is not None and now - user.photo_updated_at < timedelta(
+                    hours=1
+                ):
+                    raise AppError(
+                        "Photo can be changed once per hour",
+                        code="photo_change_limited",
+                        status_code=429,
+                    )
+            user.photo_updated_at = now
+            user.photo_url = new_url
+    if bio is not None:
+        new_bio = bio.strip() or None
+        current_bio = user.bio
+        if new_bio != current_bio:
+            now = _utc_now()
+            if current_bio:
+                if user.bio_updated_at is not None and now - user.bio_updated_at < timedelta(
+                    days=7
+                ):
+                    raise AppError(
+                        "Bio can be changed once per week",
+                        code="bio_change_limited",
+                        status_code=429,
+                    )
+            user.bio_updated_at = now
+            user.bio = new_bio
     await session.commit()
     await session.refresh(user)
     return user
@@ -195,7 +238,11 @@ async def get_user_issues(
     limit: int = 50,
     offset: int = 0,
 ) -> list[Issue]:
-    stmt = select(Issue).options(selectinload(Issue.reporter)).where(Issue.reporter_id == user_id)
+    stmt = (
+        select(Issue)
+        .options(selectinload(Issue.reporter))
+        .where(Issue.reporter_id == user_id, Issue.is_hidden.is_(False))
+    )
     if status_filter:
         stmt = stmt.where(Issue.status == status_filter)
     stmt = stmt.order_by(Issue.created_at.desc(), Issue.id.desc()).limit(limit).offset(offset)

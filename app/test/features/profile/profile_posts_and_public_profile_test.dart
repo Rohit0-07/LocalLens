@@ -168,8 +168,11 @@ void main() {
 
     Widget createTestApp({
       required Widget child,
-      Session? session =
-          const Session(accessToken: 'token', userId: 42, isGuest: false),
+      Session? session = const Session(
+        accessToken: 'token',
+        userId: 42,
+        isGuest: false,
+      ),
       List<Override> extraOverrides = const [],
     }) {
       final profile = UserProfile(
@@ -219,14 +222,13 @@ void main() {
           userProfileProvider.overrideWith((ref) async => profile),
           ...extraOverrides,
         ],
-        child: MaterialApp.router(
-          routerConfig: router,
-        ),
+        child: MaterialApp.router(routerConfig: router),
       );
     }
 
-    testWidgets('ProfileScreen displays My Reported Issues section and cards',
-        (WidgetTester tester) async {
+    testWidgets('ProfileScreen displays My Reported Issues section and cards', (
+      WidgetTester tester,
+    ) async {
       tester.view.physicalSize = const Size(800, 2400);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
@@ -252,140 +254,156 @@ void main() {
       expect(find.text('RESOLVED'), findsOneWidget);
     });
 
-    testWidgets('Status filter toggles Active and Resolved issues in ProfileScreen',
-        (WidgetTester tester) async {
-      tester.view.physicalSize = const Size(800, 2400);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.resetPhysicalSize);
+    testWidgets(
+      'Status filter toggles Active and Resolved issues in ProfileScreen',
+      (WidgetTester tester) async {
+        tester.view.physicalSize = const Size(800, 2400);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
 
-      await tester.pumpWidget(createTestApp(child: const ProfileScreen()));
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(createTestApp(child: const ProfileScreen()));
+        await tester.pumpAndSettle();
 
-      // Tap Active filter
-      await tester.tap(find.byKey(const Key('myIssuesFilter_active')));
-      await tester.pumpAndSettle();
+        // Tap Active filter
+        await tester.tap(find.byKey(const Key('myIssuesFilter_active')));
+        await tester.pumpAndSettle();
 
-      // Active issues should be visible, resolved should be filtered out
-      expect(find.byKey(const Key('userIssueItem_101')), findsOneWidget);
-      expect(find.byKey(const Key('userIssueItem_102')), findsOneWidget);
-      expect(find.byKey(const Key('userIssueItem_103')), findsNothing);
+        // Active issues should be visible, resolved should be filtered out
+        expect(find.byKey(const Key('userIssueItem_101')), findsOneWidget);
+        expect(find.byKey(const Key('userIssueItem_102')), findsOneWidget);
+        expect(find.byKey(const Key('userIssueItem_103')), findsNothing);
 
-      // Tap Resolved filter
-      await tester.tap(find.byKey(const Key('myIssuesFilter_resolved')));
-      await tester.pumpAndSettle();
+        // Tap Resolved filter
+        await tester.tap(find.byKey(const Key('myIssuesFilter_resolved')));
+        await tester.pumpAndSettle();
 
-      // Resolved issue should be visible, active issues should be filtered out
-      expect(find.byKey(const Key('userIssueItem_103')), findsOneWidget);
-      expect(find.byKey(const Key('userIssueItem_101')), findsNothing);
+        // Resolved issue should be visible, active issues should be filtered out
+        expect(find.byKey(const Key('userIssueItem_103')), findsOneWidget);
+        expect(find.byKey(const Key('userIssueItem_101')), findsNothing);
 
-      // Tap All filter
-      await tester.tap(find.byKey(const Key('myIssuesFilter_all')));
-      await tester.pumpAndSettle();
+        // Tap All filter
+        await tester.tap(find.byKey(const Key('myIssuesFilter_all')));
+        await tester.pumpAndSettle();
 
-      expect(find.byKey(const Key('userIssueItem_101')), findsOneWidget);
-      expect(find.byKey(const Key('userIssueItem_103')), findsOneWidget);
-    });
-
-    testWidgets('Tapping user issue in ProfileScreen navigates to IssueDetailScreen',
-        (WidgetTester tester) async {
-      tester.view.physicalSize = const Size(800, 2400);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.resetPhysicalSize);
-
-      await tester.pumpWidget(createTestApp(child: const ProfileScreen()));
-      await tester.pumpAndSettle();
-
-      final issueCard = find.byKey(const Key('userIssueItem_101'));
-      expect(issueCard, findsOneWidget);
-
-      await tester.tap(issueCard);
-      await tester.pumpAndSettle();
-
-      expect(find.text('IssueDetail:101'), findsOneWidget);
-    });
-
-    testWidgets('Guest session in ProfileScreen shows sign-in CTA for issue history',
-        (WidgetTester tester) async {
-      tester.view.physicalSize = const Size(800, 2400);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.resetPhysicalSize);
-
-      const guestSession = Session(
-        accessToken: 'guest-token',
-        userId: 'guest_99',
-        isGuest: true,
-      );
-
-      await tester.pumpWidget(createTestApp(
-        child: const ProfileScreen(),
-        session: guestSession,
-      ));
-      await tester.pumpAndSettle();
-
-      expect(
-        find.text(
-            'Sign in to view and manage your reported issues history.'),
-        findsOneWidget,
-      );
-    });
+        expect(find.byKey(const Key('userIssueItem_101')), findsOneWidget);
+        expect(find.byKey(const Key('userIssueItem_103')), findsOneWidget);
+      },
+    );
 
     testWidgets(
-        'PublicProfileScreen renders hero card, role badge, impact stats, badges, and public issues',
-        (WidgetTester tester) async {
-      tester.view.physicalSize = const Size(800, 2400);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.resetPhysicalSize);
+      'Tapping user issue in ProfileScreen navigates to IssueDetailScreen',
+      (WidgetTester tester) async {
+        tester.view.physicalSize = const Size(800, 2400);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
 
-      await tester.pumpWidget(
-        createTestApp(child: const PublicProfileScreen(userId: 42)),
-      );
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(createTestApp(child: const ProfileScreen()));
+        await tester.pumpAndSettle();
 
-      // Display name, verified badge & role badge
-      expect(find.text('Aarav Sharma'), findsOneWidget);
-      expect(find.text('Ward Representative'), findsOneWidget);
-      expect(find.textContaining('Ward 45, Urban Central'), findsAtLeastNWidgets(1));
-      expect(find.textContaining('Member since'), findsOneWidget);
+        final issueCard = find.byKey(const Key('userIssueItem_101'));
+        expect(issueCard, findsOneWidget);
 
-      // Impact stats card
-      expect(find.byKey(const Key('publicImpactStatsCard')), findsOneWidget);
-      expect(find.text('340 pts'), findsOneWidget);
-      expect(find.text('Community Sentinel'), findsAtLeastNWidgets(1));
-      expect(find.text('Issues Reported'), findsOneWidget);
-      expect(find.text('Verified Solves'), findsOneWidget);
-      expect(find.text('Upvotes Recv.'), findsOneWidget);
+        await tester.tap(issueCard);
+        await tester.pumpAndSettle();
 
-      // Civic badges
-      expect(find.textContaining('Unlocked Civic Badges (2)'), findsOneWidget);
-      expect(find.text('First Alert'), findsOneWidget);
+        expect(find.text('IssueDetail:101'), findsOneWidget);
+      },
+    );
 
-      // Public reported issues list
-      expect(find.text('Public Reported Issues'), findsOneWidget);
-      expect(find.byKey(const Key('publicIssueItem_101')), findsOneWidget);
-      expect(find.byKey(const Key('publicIssueItem_102')), findsOneWidget);
+    testWidgets(
+      'Guest session in ProfileScreen shows sign-in CTA for issue history',
+      (WidgetTester tester) async {
+        tester.view.physicalSize = const Size(800, 2400);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
 
-      // Tap issue on public profile
-      await tester.tap(find.byKey(const Key('publicIssueItem_101')));
-      await tester.pumpAndSettle();
+        const guestSession = Session(
+          accessToken: 'guest-token',
+          userId: 'guest_99',
+          isGuest: true,
+        );
 
-      expect(find.text('IssueDetail:101'), findsOneWidget);
-    });
+        await tester.pumpWidget(
+          createTestApp(child: const ProfileScreen(), session: guestSession),
+        );
+        await tester.pumpAndSettle();
 
-    testWidgets('Tapping reporter in IssueCard navigates to PublicProfile',
-        (WidgetTester tester) async {
+        expect(
+          find.text('Sign in to view and manage your reported issues history.'),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets(
+      'PublicProfileScreen renders hero card, role badge, impact stats, badges, and public issues',
+      (WidgetTester tester) async {
+        tester.view.physicalSize = const Size(800, 2400);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
+
+        await tester.pumpWidget(
+          createTestApp(child: const PublicProfileScreen(userId: 42)),
+        );
+        await tester.pumpAndSettle();
+
+        // Display name, verified badge & role badge
+        expect(find.text('Aarav Sharma'), findsOneWidget);
+        expect(find.text('Ward Representative'), findsOneWidget);
+        expect(
+          find.textContaining('Ward 45, Urban Central'),
+          findsAtLeastNWidgets(1),
+        );
+        expect(find.textContaining('Member since'), findsOneWidget);
+
+        // Impact stats card
+        expect(find.byKey(const Key('publicImpactStatsCard')), findsOneWidget);
+        expect(find.text('340 pts'), findsOneWidget);
+        expect(find.text('Community Sentinel'), findsAtLeastNWidgets(1));
+        expect(find.text('Issues Reported'), findsOneWidget);
+        expect(find.text('Verified Solves'), findsOneWidget);
+        expect(find.text('Upvotes Recv.'), findsOneWidget);
+
+        // Civic badges
+        expect(
+          find.textContaining('Unlocked Civic Badges (2)'),
+          findsOneWidget,
+        );
+        expect(find.text('First Alert'), findsOneWidget);
+
+        // Public reported issues list
+        expect(find.text('Public Reported Issues'), findsOneWidget);
+        expect(find.byKey(const Key('publicIssueItem_101')), findsOneWidget);
+        expect(find.byKey(const Key('publicIssueItem_102')), findsOneWidget);
+
+        // Tap issue on public profile
+        await tester.tap(find.byKey(const Key('publicIssueItem_101')));
+        await tester.pumpAndSettle();
+
+        expect(find.text('IssueDetail:101'), findsOneWidget);
+      },
+    );
+
+    testWidgets('Tapping reporter in IssueCard navigates to PublicProfile', (
+      WidgetTester tester,
+    ) async {
       final issueWithReporter = testIssues.first;
 
       await tester.pumpWidget(
         createTestApp(
-          session: const Session(accessToken: 'token', userId: 999, isGuest: false),
-          child: Scaffold(
-            body: IssueCard(issue: issueWithReporter),
+          session: const Session(
+            accessToken: 'token',
+            userId: 999,
+            isGuest: false,
           ),
+          child: Scaffold(body: IssueCard(issue: issueWithReporter)),
         ),
       );
       await tester.pumpAndSettle();
 
-      final reporterTap = find.byKey(Key('issueCardReporter_${issueWithReporter.id}'));
+      final reporterTap = find.byKey(
+        Key('issueCardReporter_${issueWithReporter.id}'),
+      );
       expect(reporterTap, findsOneWidget);
 
       await tester.tap(reporterTap);
@@ -394,65 +412,74 @@ void main() {
       expect(find.text('PublicProfile:42'), findsOneWidget);
     });
 
-    testWidgets('Tapping reporter in IssueDetailScreen navigates to PublicProfile',
-        (WidgetTester tester) async {
-      tester.view.physicalSize = const Size(800, 2400);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.resetPhysicalSize);
+    testWidgets(
+      'Tapping reporter in IssueDetailScreen navigates to PublicProfile',
+      (WidgetTester tester) async {
+        tester.view.physicalSize = const Size(800, 2400);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
 
-      await tester.pumpWidget(
-        createTestApp(
-          session: const Session(accessToken: 'token', userId: 999, isGuest: false),
-          child: const IssueDetailScreen(issueId: 101),
-        ),
-      );
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(
+          createTestApp(
+            session: const Session(
+              accessToken: 'token',
+              userId: 999,
+              isGuest: false,
+            ),
+            child: const IssueDetailScreen(issueId: 101),
+          ),
+        );
+        await tester.pumpAndSettle();
 
-      final reporterTap = find.byKey(const Key('issueDetailReporter_101'));
-      expect(reporterTap, findsOneWidget);
+        final reporterTap = find.byKey(const Key('issueDetailReporter_101'));
+        expect(reporterTap, findsOneWidget);
 
-      await tester.tap(reporterTap);
-      await tester.pumpAndSettle();
+        await tester.tap(reporterTap);
+        await tester.pumpAndSettle();
 
-      expect(find.text('PublicProfile:42'), findsOneWidget);
-    });
+        expect(find.text('PublicProfile:42'), findsOneWidget);
+      },
+    );
 
-    testWidgets('Tapping comment author in CommentCard navigates to PublicProfile',
-        (WidgetTester tester) async {
-      final comment = Comment(
-        id: 501,
-        issueId: 101,
-        anonId: 'anon_0042',
-        content: 'Repair work started this morning.',
-        createdAt: DateTime.now().subtract(const Duration(minutes: 30)),
-        isAuthor: false,
-        userId: 42,
-      );
+    testWidgets(
+      'Tapping comment author in CommentCard navigates to PublicProfile',
+      (WidgetTester tester) async {
+        final comment = Comment(
+          id: 501,
+          issueId: 101,
+          anonId: 'anon_0042',
+          content: 'Repair work started this morning.',
+          createdAt: DateTime.now().subtract(const Duration(minutes: 30)),
+          isAuthor: false,
+          userId: 42,
+        );
 
-      await tester.pumpWidget(
-        createTestApp(
-          child: Scaffold(
-            body: CommentCard(
-              comment: comment,
-              onReply: (_) {},
-              onDelete: (_) {},
+        await tester.pumpWidget(
+          createTestApp(
+            child: Scaffold(
+              body: CommentCard(
+                comment: comment,
+                onReply: (_) {},
+                onDelete: (_) {},
+              ),
             ),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
+        await tester.pumpAndSettle();
 
-      final authorTap = find.byKey(const Key('commentAuthor_501'));
-      expect(authorTap, findsOneWidget);
+        final authorTap = find.byKey(const Key('commentAuthor_501'));
+        expect(authorTap, findsOneWidget);
 
-      await tester.tap(authorTap);
-      await tester.pumpAndSettle();
+        await tester.tap(authorTap);
+        await tester.pumpAndSettle();
 
-      expect(find.text('PublicProfile:42'), findsOneWidget);
-    });
+        expect(find.text('PublicProfile:42'), findsOneWidget);
+      },
+    );
 
-    testWidgets('Tapping author in LocalTalkCard navigates to PublicProfile',
-        (WidgetTester tester) async {
+    testWidgets('Tapping author in LocalTalkCard navigates to PublicProfile', (
+      WidgetTester tester,
+    ) async {
       final post = LocalTalkPost(
         id: 701,
         wardSlug: 'ward-45',
@@ -467,9 +494,7 @@ void main() {
 
       await tester.pumpWidget(
         createTestApp(
-          child: Scaffold(
-            body: LocalTalkCard(post: post),
-          ),
+          child: Scaffold(body: LocalTalkCard(post: post)),
         ),
       );
       await tester.pumpAndSettle();

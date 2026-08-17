@@ -24,7 +24,7 @@ setup:
 	cd $(APP_DIR) && flutter pub get
 
 backend:
-	cd $(BACKEND_DIR) && source .venv/bin/activate && $(PY) run uvicorn app.main:app --reload
+	cd $(BACKEND_DIR) && source .venv/bin/activate && $(PY) run alembic upgrade head && $(PY) run uvicorn app.main:app --reload
 
 app:
 	cd $(APP_DIR) && flutter run

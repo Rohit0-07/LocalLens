@@ -24,6 +24,7 @@ class UserSettings {
 
   // Account
   final String profileAlias;
+  final bool showDisplayName;
 
   const UserSettings({
     this.pushNotifications = true,
@@ -42,6 +43,7 @@ class UserSettings {
     this.syncWorkerIntervalMinutes = 15,
     this.offlineCacheSizeMb = 18.4,
     this.profileAlias = '',
+    this.showDisplayName = true,
   });
 
   UserSettings copyWith({
@@ -61,6 +63,7 @@ class UserSettings {
     int? syncWorkerIntervalMinutes,
     double? offlineCacheSizeMb,
     String? profileAlias,
+    bool? showDisplayName,
   }) {
     return UserSettings(
       pushNotifications: pushNotifications ?? this.pushNotifications,
@@ -85,6 +88,7 @@ class UserSettings {
           syncWorkerIntervalMinutes ?? this.syncWorkerIntervalMinutes,
       offlineCacheSizeMb: offlineCacheSizeMb ?? this.offlineCacheSizeMb,
       profileAlias: profileAlias ?? this.profileAlias,
+      showDisplayName: showDisplayName ?? this.showDisplayName,
     );
   }
 
@@ -105,6 +109,7 @@ class UserSettings {
         'syncWorkerIntervalMinutes': syncWorkerIntervalMinutes,
         'offlineCacheSizeMb': offlineCacheSizeMb,
         'profileAlias': profileAlias,
+        'showDisplayName': showDisplayName,
       };
 
   factory UserSettings.fromJson(Map<String, dynamic> json) {
@@ -129,6 +134,7 @@ class UserSettings {
       offlineCacheSizeMb:
           (json['offlineCacheSizeMb'] as num?)?.toDouble() ?? 18.4,
       profileAlias: json['profileAlias'] as String? ?? '',
+      showDisplayName: json['showDisplayName'] as bool? ?? true,
     );
   }
 }

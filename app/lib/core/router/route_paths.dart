@@ -8,6 +8,7 @@ abstract final class RoutePaths {
   static const signIn = '/sign-in';
   static const otp = '/otp';
   static const compose = '/compose';
+  static const drafts = '/drafts';
   static const notifications = '/notifications';
   static const repDashboard = '/rep-dashboard';
   static const issueDetail = '/issue/:id';
@@ -27,4 +28,3 @@ abstract final class RoutePaths {
   static String wardDetailFor(String slug) => '/ward/$slug';
   static String publicProfileFor(int id) => '/users/$id';
 }
-

@@ -41,6 +41,7 @@ class ProfileUpdate(BaseModel):
     username: str | None = Field(default=None, min_length=3, max_length=40, pattern=r"^[a-zA-Z0-9_.]+$")
     date_of_birth: date | None = None
     photo_url: str | None = Field(default=None, max_length=500)
+    bio: str | None = Field(default=None, max_length=200)
 
 
 class UserOut(BaseModel):
@@ -53,6 +54,10 @@ class UserOut(BaseModel):
     username: str | None = None
     date_of_birth: date | None = None
     photo_url: str | None = None
+    bio: str | None = None
+    display_name_changes_remaining: int = 2
+    bio_next_change_allowed_at: datetime | None = None
+    photo_next_change_allowed_at: datetime | None = None
     anonymous_identity: str
     anon_id: str | None = None
     role: str = "citizen"

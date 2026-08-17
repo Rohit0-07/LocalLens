@@ -114,6 +114,14 @@ async def get_current_user_profile(
         username=user.username,
         date_of_birth=user.date_of_birth,
         photo_url=user.photo_url,
+        bio=user.bio,
+        display_name_changes_remaining=max(0, 2 - (user.display_name_changes_count or 0)),
+        bio_next_change_allowed_at=(
+            user.bio_updated_at + timedelta(days=7) if user.bio_updated_at else None
+        ),
+        photo_next_change_allowed_at=(
+            user.photo_updated_at + timedelta(hours=1) if user.photo_updated_at else None
+        ),
         anonymous_identity=anon,
         anon_id=anon,
         role=user.role,
@@ -143,6 +151,7 @@ async def update_current_user_profile(
         username=payload.username,
         date_of_birth=payload.date_of_birth,
         photo_url=payload.photo_url,
+        bio=payload.bio,
     )
     stats = await service.get_user_stats(session, user.id)
     anon = derive_anonymous_identity(user.id, settings.jwt_secret)
@@ -154,6 +163,14 @@ async def update_current_user_profile(
         username=user.username,
         date_of_birth=user.date_of_birth,
         photo_url=user.photo_url,
+        bio=user.bio,
+        display_name_changes_remaining=max(0, 2 - (user.display_name_changes_count or 0)),
+        bio_next_change_allowed_at=(
+            user.bio_updated_at + timedelta(days=7) if user.bio_updated_at else None
+        ),
+        photo_next_change_allowed_at=(
+            user.photo_updated_at + timedelta(hours=1) if user.photo_updated_at else None
+        ),
         anonymous_identity=anon,
         anon_id=anon,
         role=user.role,

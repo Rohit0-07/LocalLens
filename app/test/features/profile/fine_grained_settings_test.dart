@@ -17,8 +17,10 @@ class FakeAuthRepositoryForSettings implements AuthRepository {
   Future<void> requestOtp(String phone) async {}
 
   @override
-  Future<Session> verifyOtp(
-      {required String phone, required String code}) async {
+  Future<Session> verifyOtp({
+    required String phone,
+    required String code,
+  }) async {
     return const Session(accessToken: 'token', userId: 1);
   }
 
@@ -26,21 +28,25 @@ class FakeAuthRepositoryForSettings implements AuthRepository {
   Future<void> requestEmailOtp(String email) async {}
 
   @override
-  Future<Session> verifyEmailOtp(
-      {required String email, required String code}) async {
+  Future<Session> verifyEmailOtp({
+    required String email,
+    required String code,
+  }) async {
     return const Session(accessToken: 'email-token', userId: 101);
   }
 
   @override
   Future<Session> loginAsGuest() async {
     return const Session(
-        accessToken: 'guest-token', userId: 'guest:1', isGuest: true);
+      accessToken: 'guest-token',
+      userId: 'guest:1',
+      isGuest: true,
+    );
   }
 
   @override
   dynamic noSuchMethod(Invocation invocation) {
-    if (invocation.memberName == #signOut ||
-        invocation.memberName == #logout) {
+    if (invocation.memberName == #signOut || invocation.memberName == #logout) {
       signedOut = true;
       return Future.value();
     }
@@ -83,7 +89,10 @@ void main() {
       final router = GoRouter(
         initialLocation: '/',
         routes: [
-          GoRoute(path: '/', builder: (context, state) => const SettingsScreen()),
+          GoRoute(
+            path: '/',
+            builder: (context, state) => const SettingsScreen(),
+          ),
           GoRoute(
             path: RoutePaths.anonymityGuide,
             builder: (context, state) => const AnonymityGuideScreen(),
@@ -97,14 +106,13 @@ void main() {
           localStoreProvider.overrideWithValue(fakeStore),
           ...extraOverrides,
         ],
-        child: MaterialApp.router(
-          routerConfig: router,
-        ),
+        child: MaterialApp.router(routerConfig: router),
       );
     }
 
-    testWidgets('Renders all setting sections and headers',
-        (WidgetTester tester) async {
+    testWidgets('Renders all setting sections and headers', (
+      WidgetTester tester,
+    ) async {
       tester.view.physicalSize = const Size(800, 2400);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
@@ -119,8 +127,9 @@ void main() {
       expect(find.text('Account'), findsOneWidget);
     });
 
-    testWidgets('Notification preferences toggles update settings state',
-        (WidgetTester tester) async {
+    testWidgets('Notification preferences toggles update settings state', (
+      WidgetTester tester,
+    ) async {
       tester.view.physicalSize = const Size(800, 2400);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
@@ -129,8 +138,9 @@ void main() {
       await tester.pumpAndSettle();
 
       // Push notifications toggle
-      final pushToggle =
-          find.byKey(const Key('settingsPushNotificationsToggle'));
+      final pushToggle = find.byKey(
+        const Key('settingsPushNotificationsToggle'),
+      );
       expect(pushToggle, findsOneWidget);
       await tester.tap(pushToggle);
       await tester.pumpAndSettle();
@@ -142,36 +152,41 @@ void main() {
       await tester.pumpAndSettle();
 
       // Status change alerts toggle
-      final statusToggle =
-          find.byKey(const Key('settingsStatusChangeAlertsToggle'));
+      final statusToggle = find.byKey(
+        const Key('settingsStatusChangeAlertsToggle'),
+      );
       expect(statusToggle, findsOneWidget);
       await tester.tap(statusToggle);
       await tester.pumpAndSettle();
 
       // Verification requests toggle
-      final verifyToggle =
-          find.byKey(const Key('settingsVerificationRequestsToggle'));
+      final verifyToggle = find.byKey(
+        const Key('settingsVerificationRequestsToggle'),
+      );
       expect(verifyToggle, findsOneWidget);
       await tester.tap(verifyToggle);
       await tester.pumpAndSettle();
 
       // Comment replies toggle
-      final commentsToggle =
-          find.byKey(const Key('settingsCommentRepliesToggle'));
+      final commentsToggle = find.byKey(
+        const Key('settingsCommentRepliesToggle'),
+      );
       expect(commentsToggle, findsOneWidget);
       await tester.tap(commentsToggle);
       await tester.pumpAndSettle();
 
       // Haptic feedback toggle
-      final hapticToggle =
-          find.byKey(const Key('settingsHapticFeedbackToggle'));
+      final hapticToggle = find.byKey(
+        const Key('settingsHapticFeedbackToggle'),
+      );
       expect(hapticToggle, findsOneWidget);
       await tester.tap(hapticToggle);
       await tester.pumpAndSettle();
     });
 
-    testWidgets('Privacy & Anonymity toggles update settings state',
-        (WidgetTester tester) async {
+    testWidgets('Privacy & Anonymity toggles update settings state', (
+      WidgetTester tester,
+    ) async {
       tester.view.physicalSize = const Size(800, 2400);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
@@ -179,20 +194,23 @@ void main() {
       await tester.pumpWidget(createSettingsApp());
       await tester.pumpAndSettle();
 
-      final anonToggle =
-          find.byKey(const Key('settingsDefaultAnonymousToggle'));
+      final anonToggle = find.byKey(
+        const Key('settingsDefaultAnonymousToggle'),
+      );
       expect(anonToggle, findsOneWidget);
       await tester.tap(anonToggle);
       await tester.pumpAndSettle();
 
-      final fuzzingToggle =
-          find.byKey(const Key('settingsLocationFuzzingToggle'));
+      final fuzzingToggle = find.byKey(
+        const Key('settingsLocationFuzzingToggle'),
+      );
       expect(fuzzingToggle, findsOneWidget);
       await tester.tap(fuzzingToggle);
       await tester.pumpAndSettle();
 
-      final shieldedToggle =
-          find.byKey(const Key('settingsShieldedModeToggle'));
+      final shieldedToggle = find.byKey(
+        const Key('settingsShieldedModeToggle'),
+      );
       expect(shieldedToggle, findsOneWidget);
       await tester.tap(shieldedToggle);
       await tester.pumpAndSettle();
@@ -203,8 +221,9 @@ void main() {
       await tester.pumpAndSettle();
     });
 
-    testWidgets('Appearance & Theme toggles work correctly',
-        (WidgetTester tester) async {
+    testWidgets('Appearance & Theme toggles work correctly', (
+      WidgetTester tester,
+    ) async {
       tester.view.physicalSize = const Size(800, 2400);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
@@ -226,15 +245,15 @@ void main() {
       await tester.tap(darkBtn);
       await tester.pumpAndSettle();
 
-      final highContrast =
-          find.byKey(const Key('settingsHighContrastToggle'));
+      final highContrast = find.byKey(const Key('settingsHighContrastToggle'));
       expect(highContrast, findsOneWidget);
       await tester.tap(highContrast);
       await tester.pumpAndSettle();
     });
 
-    testWidgets('Data & Storage: Wi-Fi only toggle and Clear Cache work',
-        (WidgetTester tester) async {
+    testWidgets('Data & Storage: Wi-Fi only toggle and Clear Cache work', (
+      WidgetTester tester,
+    ) async {
       tester.view.physicalSize = const Size(800, 2400);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
@@ -262,8 +281,9 @@ void main() {
       expect(find.text('Offline cache cleared successfully'), findsOneWidget);
     });
 
-    testWidgets('Account: Edit Profile Alias dialog saves alias',
-        (WidgetTester tester) async {
+    testWidgets('Account: Edit Profile Alias dialog saves alias', (
+      WidgetTester tester,
+    ) async {
       tester.view.physicalSize = const Size(800, 2400);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
@@ -288,8 +308,9 @@ void main() {
       expect(find.text('Urban Sentinel'), findsOneWidget);
     });
 
-    testWidgets('Account: Export data and Sign out work properly',
-        (WidgetTester tester) async {
+    testWidgets('Account: Export data and Sign out work properly', (
+      WidgetTester tester,
+    ) async {
       tester.view.physicalSize = const Size(800, 2400);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);

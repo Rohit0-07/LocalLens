@@ -80,6 +80,14 @@ make check          # backend ruff+mypy+pytest and app analyze+test
 Backend details: `backend/README.md`. App details: `app/README.md`.
 Design docs: `LocalLens_App_Info.md`, `LocalLens_Feature_Checklist.md`.
 
+## Troubleshooting
+
+- **`sqlite3.OperationalError: no such column: users.display_name`** (or any "no
+  such column" on `/api/v1/feed` or `/issues`): the local database is stale and
+  behind the latest Alembic migration. Fix by running `cd backend && uv run alembic
+  upgrade head` (or just restart with `make backend`, which now runs migrations
+  automatically before starting the server).
+
 ## Status
 
 - **Backend**: FastAPI (async SQLAlchemy 2 + Alembic), 262/262 pytest tests green, ruff + mypy strict clean. Features shipped: Auth (OTP + JWT + Guest + HMAC Anon-ID), Issues & Near-Duplicate Guard, Escalation Ladder & Dual-Verification Quorum Resolution with Auto-Win Post Generation, Camera & Media Upload Pipeline, Multi-Type Feed & Ward Talk Channels, Search & Advanced Filters, Map Pins Engine, Notifications, Representative Dashboard, Gamification Engine, and Admin Flagging/Moderation Queue.
