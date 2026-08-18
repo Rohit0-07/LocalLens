@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/l10n/app_strings.dart';
+import '../../../core/utils/string_formatters.dart';
 import '../../../../shared/widgets/empty_state.dart';
 import '../../../../shared/widgets/skeleton_list.dart';
 import '../../../../shared/widgets/status_badge.dart';
@@ -107,36 +108,122 @@ class RepDashboardScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 16),
 
-                // Metrics Row
-                Row(
-                  children: [
-                    Expanded(
-                      child: _MetricCard(
-                        key: const Key('metricTotalWardIssues'),
-                        label: 'Total Ward Issues',
-                        value: '${profile.totalWardIssues}',
-                        icon: Icons.list_alt,
-                      ),
+                // Metrics Wrap
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final cardWidth = (constraints.maxWidth - 8) / 2;
+                    return Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        SizedBox(
+                          width: cardWidth,
+                          child: _MetricCard(
+                            key: const Key('metricTotalWardIssues'),
+                            label: 'Total Ward Issues',
+                            value: '${profile.totalWardIssues}',
+                            icon: Icons.list_alt,
+                          ),
+                        ),
+                        SizedBox(
+                          width: cardWidth,
+                          child: _MetricCard(
+                            key: const Key('metricEscalatedWardIssues'),
+                            label: 'Escalated',
+                            value: '${profile.escalatedWardIssues}',
+                            icon: Icons.warning_amber_rounded,
+                          ),
+                        ),
+                        SizedBox(
+                          width: cardWidth,
+                          child: _MetricCard(
+                            key: const Key('metricRespondedWardIssues'),
+                            label: 'Responded',
+                            value: '${profile.respondedWardIssues}',
+                            icon: Icons.reply_rounded,
+                          ),
+                        ),
+                        SizedBox(
+                          width: cardWidth,
+                          child: _MetricCard(
+                            key: const Key('metricResolvedWardIssues'),
+                            label: 'Resolved',
+                            value: '${profile.resolvedWardIssues}',
+                            icon: Icons.check_circle_outline,
+                          ),
+                        ),
+                        SizedBox(
+                          width: cardWidth,
+                          child: _MetricCard(
+                            key: const Key('metricInProgressWardIssues'),
+                            label: 'In Progress',
+                            value: '${profile.inProgressWardIssues}',
+                            icon: Icons.build_circle_outlined,
+                          ),
+                        ),
+                        SizedBox(
+                          width: cardWidth,
+                          child: _MetricCard(
+                            key: const Key('metricAcknowledgedWardIssues'),
+                            label: 'Acknowledged',
+                            value: '${profile.acknowledgedWardIssues}',
+                            icon: Icons.thumb_up_outlined,
+                          ),
+                        ),
+                        SizedBox(
+                          width: cardWidth,
+                          child: _MetricCard(
+                            key: const Key('metricPendingResponseWardIssues'),
+                            label: 'Pending Response',
+                            value: '${profile.pendingResponseWardIssues}',
+                            icon: Icons.pending_actions,
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+                const SizedBox(height: 16),
+
+                // Performance Card
+                Card(
+                  key: const Key('repPerformanceCard'),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Performance',
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _MetricCard(
+                                key: const Key('repResponseRateValue'),
+                                label: 'Response Rate',
+                                value: '${profile.responseRatePct.toStringAsFixed(1)}%',
+                                icon: Icons.speed_rounded,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: _MetricCard(
+                                key: const Key('repAvgResponseTimeValue'),
+                                label: 'Avg Response Time',
+                                value: '${profile.avgResponseTimeHours.toStringAsFixed(1)}h',
+                                icon: Icons.timer_outlined,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: _MetricCard(
-                        key: const Key('metricEscalatedWardIssues'),
-                        label: 'Escalated',
-                        value: '${profile.escalatedWardIssues}',
-                        icon: Icons.warning_amber_rounded,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: _MetricCard(
-                        key: const Key('metricPendingResponseWardIssues'),
-                        label: 'Pending Response',
-                        value: '${profile.pendingResponseWardIssues}',
-                        icon: Icons.pending_actions,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
                 const SizedBox(height: 16),
 
@@ -230,10 +317,14 @@ class RepDashboardScreen extends ConsumerWidget {
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
-                                    Text(
-                                      '#${issue.category} • ${issue.ward}',
-                                      style: theme.textTheme.labelSmall?.copyWith(
-                                        color: colorScheme.onSurfaceVariant,
+                                    Expanded(
+                                      child: Text(
+                                        '${StringFormatters.formatCategory(issue.category)} • ${StringFormatters.formatWard(issue.ward)}',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: theme.textTheme.labelSmall?.copyWith(
+                                          color: colorScheme.onSurfaceVariant,
+                                        ),
                                       ),
                                     ),
                                     FilledButton.icon(

@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -9,9 +8,11 @@ import '../../geo/presentation/providers/geo_providers.dart';
 import '../data/hive_draft_store.dart';
 import '../data/media_service.dart';
 import '../data/offline_outbox_queue.dart';
+import '../domain/captured_media.dart';
 import '../domain/compose_draft.dart';
 import '../domain/draft_store.dart';
 import '../domain/near_duplicate_candidate.dart';
+import 'media_library_providers.dart';
 
 /// Resolves the coordinates to create an issue at, using the exact same
 /// coordinate source as the home feed (`feedCoordinatesProvider`). This
@@ -24,6 +25,24 @@ Future<({double lat, double lng})> _createCoords(Ref ref) async {
   } catch (_) {
     return (lat: defaultLatitude, lng: defaultLongitude);
   }
+}
+
+/// Resolves the issue coordinates for a publish: the first attached photo
+/// with GPS wins, then the draft's explicit location lock, then the feed
+/// reference point.
+Future<({double lat, double lng})> resolveComposeCoords(
+  Ref ref,
+  ComposeDraft draft,
+  List<CapturedMedia> media,
+) async {
+  final gpsMedia = media.where((m) => m.hasGps).firstOrNull;
+  if (gpsMedia != null) {
+    return (lat: gpsMedia.capturedLat!, lng: gpsMedia.capturedLng!);
+  }
+  if (draft.latitude != null && draft.longitude != null) {
+    return (lat: draft.latitude!, lng: draft.longitude!);
+  }
+  return _createCoords(ref);
 }
 
 final draftStoreProvider = Provider<DraftStore>(
@@ -41,16 +60,22 @@ final offlineOutboxProvider = Provider<OfflineOutboxQueue>((ref) {
   return OfflineOutboxQueue(
     ref.watch(localStoreProvider),
     ref.watch(feedRepositoryProvider),
+    ref.watch(mediaServiceProvider),
   );
 });
 
 final nearDuplicateCheckProvider =
     FutureProvider.family<
       List<NearDuplicateCandidate>,
-      ({double lat, double lng})
-    >((ref, pos) async {
+      ({double lat, double lng, String? category})
+    >((ref, params) async {
       final repo = ref.watch(feedRepositoryProvider);
-      return repo.checkNearDuplicates(latitude: pos.lat, longitude: pos.lng);
+      return repo.checkNearDuplicates(
+        latitude: params.lat,
+        longitude: params.lng,
+        category: params.category,
+        radiusKm: 0.030,
+      );
     });
 
 final composeControllerProvider =
@@ -75,7 +100,7 @@ class ComposeController extends Notifier<ComposeDraft> {
     // in widget state (and in saved drafts) and are re-attached on restore.
     await ref
         .read(draftStoreProvider)
-        .save(draft.copyWith(mediaBytes: const []));
+        .save(draft.copyWith(media: const []));
   }
 
   /// Pre-fills the controller with a draft opened from the Drafts page.
@@ -86,14 +111,16 @@ class ComposeController extends Notifier<ComposeDraft> {
   /// Persists the current composition as a saved draft. When the composition
   /// already belongs to a saved draft (opened from the Drafts page) the same
   /// item is updated in place rather than duplicated.
-  Future<ComposeDraft> saveAsDraft({List<String> mediaBytes = const []}) async {
+  Future<ComposeDraft> saveAsDraft({
+    List<CapturedMedia> media = const [],
+  }) async {
     final current = state;
     final now = DateTime.now();
     final draft = current.copyWith(
       id: current.id.isNotEmpty ? current.id : _generateDraftId(),
       createdAt: current.createdAt ?? now,
       updatedAt: now,
-      mediaBytes: mediaBytes,
+      media: media,
     );
     await ref.read(draftStoreProvider).saveItem(draft);
     state = draft;
@@ -114,40 +141,38 @@ class ComposeController extends Notifier<ComposeDraft> {
     state = const ComposeDraft();
   }
 
-  /// Uploads the attached media bytes (if any) and publishes the issue with
-  /// the resulting media URLs. Falls back to the offline outbox on failure.
+  /// Uploads the attached captured media (if any) and publishes the issue
+  /// with the resulting media URLs. Falls back to the offline outbox on
+  /// failure.
   Future<bool> submit({
-    List<Uint8List> mediaBytes = const [],
-    bool isInAppCamera = false,
+    List<CapturedMedia> media = const [],
   }) async {
     final current = state;
     final repo = ref.read(feedRepositoryProvider);
     final outbox = ref.read(offlineOutboxProvider);
 
-    // Use the same coordinate resolution as the home feed so the created
-    // issue is guaranteed to be visible in the feed's query radius. Prefer
-    // the draft's explicit location (locked by the user) when present.
-    var lat = current.latitude;
-    var lng = current.longitude;
-    if (lat == null || lng == null) {
-      final coords = await _createCoords(ref);
-      lat = coords.lat;
-      lng = coords.lng;
-    }
+    final coords = await resolveComposeCoords(ref, current, media);
+    final lat = coords.lat;
+    final lng = coords.lng;
 
     List<String> mediaUrls = const [];
     bool directSuccess = false;
     try {
-      if (mediaBytes.isNotEmpty) {
+      if (media.isNotEmpty) {
         final mediaService = ref.read(mediaServiceProvider);
+        final capturedMediaStore = ref.read(capturedMediaStoreProvider);
         final results = <String>[];
-        for (final bytes in mediaBytes) {
+        for (final m in media) {
           final result = await mediaService.uploadMedia(
-            bytes: bytes,
-            isInAppCamera: isInAppCamera,
+            bytes: base64Decode(m.bytesBase64),
+            isInAppCamera: true,
+            capturedLat: m.capturedLat,
+            capturedLng: m.capturedLng,
             isFuzzed: current.isFuzzed,
+            capturedAt: m.capturedAt,
           );
           results.add(result.url);
+          await capturedMediaStore.markUploaded(m.id, result.id);
         }
         mediaUrls = results;
       }
@@ -164,7 +189,9 @@ class ComposeController extends Notifier<ComposeDraft> {
       );
       directSuccess = true;
     } catch (_) {
-      await outbox.enqueue(current);
+      await outbox.enqueue(
+        current.copyWith(media: media, latitude: lat, longitude: lng),
+      );
       directSuccess = false;
     }
 

@@ -7,6 +7,7 @@ import '../../../core/router/route_paths.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/media_url.dart';
 import '../../../core/utils/relative_time.dart';
+import '../../../core/utils/string_formatters.dart';
 import '../../feed/domain/issue.dart';
 import '../presentation/reels_providers.dart';
 
@@ -208,7 +209,7 @@ class _ReelPage extends StatelessWidget {
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
-                        issue.category.toUpperCase(),
+                        StringFormatters.humanize(issue.category).toUpperCase(),
                         style: TextStyle(
                           color: AppColors.categoryColorFor(issue.category),
                           fontSize: 11,

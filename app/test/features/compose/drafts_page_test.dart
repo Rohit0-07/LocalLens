@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:local_lens/core/router/route_paths.dart';
+import 'package:local_lens/features/compose/domain/captured_media.dart';
 import 'package:local_lens/features/compose/domain/compose_draft.dart';
 import 'package:local_lens/features/compose/domain/draft_store.dart';
 import 'package:local_lens/features/compose/presentation/compose_providers.dart';
@@ -42,7 +43,7 @@ ComposeDraft _draft(String id, String title, {bool withMedia = false}) {
     category: 'road',
     createdAt: DateTime.now().subtract(const Duration(days: 1)),
     updatedAt: DateTime.now().subtract(const Duration(hours: 2)),
-    mediaBytes: withMedia ? ['aGVsbG8='] : const [],
+    media: withMedia ? [CapturedMedia(bytesBase64: 'aGVsbG8=')] : const [],
   );
 }
 

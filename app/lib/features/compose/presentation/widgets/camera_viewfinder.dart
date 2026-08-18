@@ -1,6 +1,5 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:camera/camera.dart';
 import '../../../../core/services/location_service.dart';
 
@@ -191,22 +190,6 @@ class _CameraViewfinderState extends State<CameraViewfinder> {
     }
   }
 
-  Future<void> _triggerGalleryPicker() async {
-    try {
-      final picker = ImagePicker();
-      final pickedFiles = await picker.pickMultiImage(limit: 4);
-      if (pickedFiles.isEmpty) return;
-      if (widget.onGalleryPickSelected == null) return;
-
-      final images = <Uint8List>[];
-      for (final file in pickedFiles) {
-        final bytes = await file.readAsBytes();
-        images.add(bytes);
-      }
-      if (images.isNotEmpty) widget.onGalleryPickSelected!(images);
-    } catch (_) {}
-  }
-
   @override
   Widget build(BuildContext context) {
     final flashIcon = switch (_flashMode) {
@@ -301,7 +284,7 @@ class _CameraViewfinderState extends State<CameraViewfinder> {
               ),
             ),
 
-            // Bottom Control Bar: Gallery, Shutter, Flip
+            // Bottom Control Bar: Shutter, Flip
             Positioned(
               bottom: 24,
               left: 24,
@@ -309,12 +292,6 @@ class _CameraViewfinderState extends State<CameraViewfinder> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  IconButton(
-                    key: const Key('galleryPickerButton'),
-                    icon: const Icon(Icons.photo_library, color: Colors.white, size: 28),
-                    onPressed: _triggerGalleryPicker,
-                    tooltip: 'Gallery Picker (Max 4)',
-                  ),
                   GestureDetector(
                     key: const Key('shutterButton'),
                     onTap: _triggerShutter,

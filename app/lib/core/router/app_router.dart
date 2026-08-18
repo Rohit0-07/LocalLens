@@ -10,6 +10,7 @@ import '../../features/auth/presentation/widgets/guest_guard.dart';
 import '../../features/compose/domain/compose_draft.dart';
 import '../../features/compose/presentation/compose_screen.dart';
 import '../../features/compose/presentation/drafts_screen.dart';
+import '../../features/compose/presentation/media_library_screen.dart';
 import '../../features/feed/presentation/feed_providers.dart';
 import '../../features/feed/presentation/feed_screen.dart';
 import '../../features/inbox/presentation/inbox_screen.dart';
@@ -39,7 +40,6 @@ final rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
 final _feedNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'feed');
 final _mapNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'map');
 final _reelsNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'reels');
-final _inboxNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'inbox');
 final _profileNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'profile');
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -71,15 +71,6 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: RoutePaths.reels,
             builder: (context, state) => const ReelsScreen(),
-          ),
-        ],
-      ),
-      StatefulShellBranch(
-        navigatorKey: _inboxNavigatorKey,
-        routes: [
-          GoRoute(
-            path: RoutePaths.inbox,
-            builder: (context, state) => const InboxScreen(),
           ),
         ],
       ),
@@ -170,6 +161,15 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const DraftsScreen(),
       ),
       GoRoute(
+        path: RoutePaths.capturedMedia,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => MediaLibraryScreen(
+          pickMode: state.extra is MediaLibraryScreenArgs
+              ? (state.extra as MediaLibraryScreenArgs).pickMode
+              : false,
+        ),
+      ),
+      GoRoute(
         path: RoutePaths.signIn,
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const SignInScreen(),
@@ -182,6 +182,11 @@ final routerProvider = Provider<GoRouter>((ref) {
               ? state.extra as OtpRouteArgs
               : null,
         ),
+      ),
+      GoRoute(
+        path: RoutePaths.inbox,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const InboxScreen(),
       ),
       GoRoute(
         path: RoutePaths.notifications,
@@ -477,52 +482,46 @@ class _SocialDock extends StatelessWidget {
                 icon: Icons.map_outlined,
                 selectedIcon: Icons.map,
               ),
-              tab(
-                index: 2,
-                label: 'Reels',
-                icon: Icons.movie_filter_outlined,
-                selectedIcon: Icons.movie_filter,
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4),
+              Expanded(
                 child: Semantics(
                   button: true,
                   label: context.tr('nav_create'),
-                  child: GestureDetector(
-                    key: const Key('createDockButton'),
-                    onTap: onCreate,
-                    child: Container(
-                      width: 50,
-                      height: 50,
-                      decoration: BoxDecoration(
-                        color: AppColors.brand,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.brand.withValues(alpha: 0.35),
-                            blurRadius: 10,
-                            offset: const Offset(0, 3),
-                          ),
-                        ],
-                      ),
-                      child: const Icon(
-                        Icons.add_rounded,
-                        color: Colors.white,
-                        size: 28,
+                  child: Center(
+                    child: GestureDetector(
+                      key: const Key('createDockButton'),
+                      onTap: onCreate,
+                      child: Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: AppColors.brand,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.brand.withValues(alpha: 0.35),
+                              blurRadius: 10,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.add_rounded,
+                          color: Colors.white,
+                          size: 28,
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
               tab(
-                index: 3,
-                label: context.tr('nav_inbox'),
-                icon: Icons.inbox_outlined,
-                selectedIcon: Icons.inbox,
-                badge: unreadCount,
+                index: 2,
+                label: 'Reels',
+                icon: Icons.movie_filter_outlined,
+                selectedIcon: Icons.movie_filter,
               ),
               tab(
-                index: 4,
+                index: 3,
                 label: context.tr('nav_profile'),
                 icon: Icons.person_outline,
                 selectedIcon: Icons.person,

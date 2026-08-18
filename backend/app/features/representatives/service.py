@@ -11,6 +11,8 @@ from app.features.representatives.models import OfficialResponse, Representative
 from app.features.representatives.schemas import (
     OfficialResponseCreate,
     OfficialResponseOut,
+    PublicRepresentativeProfileOut,
+    RepresentativeMetricsOut,
     RepresentativeProfileOut,
     WardIssuesResponse,
 )
@@ -24,9 +26,15 @@ async def get_representative_profile(
     return result.scalar_one_or_none()
 
 
-async def get_representative_profile_out(
+async def compute_rep_metrics(
     session: AsyncSession, profile: RepresentativeProfile
-) -> RepresentativeProfileOut:
+) -> RepresentativeMetricsOut:
+    """Compute the representative's ward performance metrics.
+
+    All queries are scoped to ``Issue.ward == profile.ward``. Response-time
+    arithmetic is done in Python so the results are portable across SQLite and
+    Postgres (no SQLite-only datetime functions).
+    """
     total_stmt = select(func.count(Issue.id)).where(Issue.ward == profile.ward)
     total_res = await session.execute(total_stmt)
     total_ward_issues = total_res.scalar() or 0
@@ -48,6 +56,87 @@ async def get_representative_profile_out(
 
     pending_response_ward_issues = max(0, total_ward_issues - responded_ward_issues)
 
+    # Resolved issues the rep personally responded to (rep-attributable).
+    resolved_stmt = (
+        select(func.count(func.distinct(Issue.id)))
+        .select_from(Issue)
+        .join(OfficialResponse, OfficialResponse.issue_id == Issue.id)
+        .where(
+            Issue.ward == profile.ward,
+            OfficialResponse.representative_id == profile.id,
+            Issue.status == "resolved",
+        )
+    )
+    resolved_res = await session.execute(resolved_stmt)
+    resolved_ward_issues = resolved_res.scalar() or 0
+
+    # Latest response per issue (newest first, deterministic id tiebreak),
+    # bucketed by its status_update.
+    latest_stmt = (
+        select(Issue.id, OfficialResponse.status_update)
+        .join(Issue, Issue.id == OfficialResponse.issue_id)
+        .where(Issue.ward == profile.ward, OfficialResponse.representative_id == profile.id)
+        .order_by(OfficialResponse.created_at.desc(), OfficialResponse.id.desc())
+    )
+    latest_res = await session.execute(latest_stmt)
+    seen_issue_ids: set[int] = set()
+    acknowledged_ward_issues = 0
+    in_progress_ward_issues = 0
+    for issue_id, status_update in latest_res.all():
+        if issue_id in seen_issue_ids:
+            continue
+        seen_issue_ids.add(issue_id)
+        if status_update == "acknowledged":
+            acknowledged_ward_issues += 1
+        elif status_update == "in_progress":
+            in_progress_ward_issues += 1
+
+    response_rate_pct = (
+        round(responded_ward_issues / total_ward_issues * 100.0, 2)
+        if total_ward_issues > 0
+        else 0.0
+    )
+
+    # Average time from issue creation to the rep's first response, in hours.
+    first_resp = (
+        select(OfficialResponse.issue_id, func.min(OfficialResponse.created_at))
+        .where(OfficialResponse.representative_id == profile.id)
+        .group_by(OfficialResponse.issue_id)
+        .subquery()
+    )
+    avg_stmt = (
+        select(Issue.created_at, first_resp.c[1])
+        .join(Issue, Issue.id == first_resp.c[0])
+        .where(Issue.ward == profile.ward)
+    )
+    avg_res = await session.execute(avg_stmt)
+    deltas_hours: list[float] = []
+    for issue_created_at, resp_created_at in avg_res.all():
+        if issue_created_at is None or resp_created_at is None:
+            continue
+        delta_hours = (resp_created_at - issue_created_at).total_seconds() / 3600.0
+        deltas_hours.append(max(0.0, delta_hours))
+    avg_response_time_hours = (
+        round(sum(deltas_hours) / len(deltas_hours), 1) if deltas_hours else 0.0
+    )
+
+    return RepresentativeMetricsOut(
+        total_ward_issues=total_ward_issues,
+        escalated_ward_issues=escalated_ward_issues,
+        responded_ward_issues=responded_ward_issues,
+        pending_response_ward_issues=pending_response_ward_issues,
+        resolved_ward_issues=resolved_ward_issues,
+        in_progress_ward_issues=in_progress_ward_issues,
+        acknowledged_ward_issues=acknowledged_ward_issues,
+        response_rate_pct=response_rate_pct,
+        avg_response_time_hours=avg_response_time_hours,
+    )
+
+
+async def get_representative_profile_out(
+    session: AsyncSession, profile: RepresentativeProfile
+) -> RepresentativeProfileOut:
+    metrics = await compute_rep_metrics(session, profile)
     return RepresentativeProfileOut(
         id=profile.id,
         user_id=profile.user_id,
@@ -55,10 +144,26 @@ async def get_representative_profile_out(
         title=profile.title,
         ward=profile.ward,
         verified_at=profile.verified_at,
-        total_ward_issues=total_ward_issues,
-        escalated_ward_issues=escalated_ward_issues,
-        responded_ward_issues=responded_ward_issues,
-        pending_response_ward_issues=pending_response_ward_issues,
+        **metrics.model_dump(),
+    )
+
+
+async def get_public_rep_by_user(
+    session: AsyncSession, user_id: int
+) -> PublicRepresentativeProfileOut:
+    stmt = select(RepresentativeProfile).where(RepresentativeProfile.user_id == user_id)
+    profile = (await session.execute(stmt)).scalar_one_or_none()
+    if profile is None:
+        raise AppError("Representative not found", status_code=404, code="rep_not_found")
+    metrics = await compute_rep_metrics(session, profile)
+    return PublicRepresentativeProfileOut(
+        id=profile.id,
+        user_id=profile.user_id,
+        official_name=profile.official_name,
+        title=profile.title,
+        ward=profile.ward,
+        verified_at=profile.verified_at,
+        **metrics.model_dump(),
     )
 
 

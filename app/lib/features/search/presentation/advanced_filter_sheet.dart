@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/l10n/app_strings.dart';
+import '../../../core/utils/string_formatters.dart';
+import '../../ward/presentation/providers/ward_providers.dart';
 import '../domain/search_filters.dart';
 
 Future<SearchFilters?> showAdvancedFilterSheet(
@@ -41,6 +43,9 @@ class _AdvancedFilterSheetState extends ConsumerState<AdvancedFilterSheet> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final sectionLabel = theme.textTheme.titleSmall;
+    final wardListAsync = ref.watch(wardListNotifierProvider);
+    final wards = wardListAsync.valueOrNull?.items ?? [];
+
     return SafeArea(
       child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
@@ -59,7 +64,7 @@ class _AdvancedFilterSheetState extends ConsumerState<AdvancedFilterSheet> {
                 for (final status in kSearchStatusOptions)
                   ChoiceChip(
                     key: Key('statusChip_$status'),
-                    label: Text(status),
+                    label: Text(StringFormatters.formatStatus(status)),
                     selected: _selection.status == status,
                     onSelected: (_) => setState(() {
                       _selection = _selection.copyWith(status: status);
@@ -77,7 +82,7 @@ class _AdvancedFilterSheetState extends ConsumerState<AdvancedFilterSheet> {
                 for (final category in kSearchCategoryOptions)
                   FilterChip(
                     key: Key('categoryChip_$category'),
-                    label: Text(category),
+                    label: Text(StringFormatters.formatCategory(category)),
                     selected: _selection.categories.contains(category),
                     onSelected: (_) => setState(() {
                       final selectedCategories =
@@ -95,6 +100,43 @@ class _AdvancedFilterSheetState extends ConsumerState<AdvancedFilterSheet> {
               ],
             ),
             const SizedBox(height: 16),
+
+            // ── Ward Selection ────────────────────────────────────
+            Text('Ward', style: sectionLabel),
+            const SizedBox(height: 8),
+            if (wards.isEmpty)
+              Text(
+                'No wards loaded',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              )
+            else
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  ChoiceChip(
+                    key: const Key('wardChip_any'),
+                    label: const Text('Any Ward'),
+                    selected: _selection.ward == null,
+                    onSelected: (_) => setState(() {
+                      _selection = _selection.copyWith(ward: null);
+                    }),
+                  ),
+                  for (final ward in wards)
+                    ChoiceChip(
+                      key: Key('wardChip_${ward.slug}'),
+                      label: Text(ward.name),
+                      selected: _selection.ward == ward.slug,
+                      onSelected: (_) => setState(() {
+                        _selection = _selection.copyWith(ward: ward.slug);
+                      }),
+                    ),
+                ],
+              ),
+            const SizedBox(height: 16),
+
             Text(context.tr('filter_distance'), style: sectionLabel),
             const SizedBox(height: 8),
             SegmentedButton<SearchDistanceOption>(
@@ -187,3 +229,4 @@ String _datePresetLabel(SearchDatePreset preset) {
       return 'Past 30 days';
   }
 }
+

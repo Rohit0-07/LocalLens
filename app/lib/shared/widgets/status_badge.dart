@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/l10n/app_strings.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/utils/string_formatters.dart';
 
 class StatusBadge extends StatelessWidget {
   const StatusBadge({super.key, required this.status});
@@ -20,7 +21,9 @@ class StatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = _colors[status] ?? Theme.of(context).colorScheme.outline;
-    final label = status.replaceAll('_', ' ').toUpperCase();
+    final label = StringFormatters.formatStatus(status).toUpperCase();
+    final trKey = 'status_$status';
+    final hasTr = context.tr(trKey) != trKey;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
@@ -28,9 +31,7 @@ class StatusBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
-        context.tr('status_$status') == 'status_$status'
-            ? label
-            : context.tr('status_$status').toUpperCase(),
+        hasTr ? context.tr(trKey).toUpperCase() : label,
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
           color: color,
           fontWeight: FontWeight.w700,

@@ -62,7 +62,8 @@ class _StubFeedRepository implements FeedRepository {
   Future<List<NearDuplicateCandidate>> checkNearDuplicates({
     required double latitude,
     required double longitude,
-    double radiusKm = 0.5,
+    String? category,
+    double radiusKm = 0.030,
   }) async =>
       [];
 

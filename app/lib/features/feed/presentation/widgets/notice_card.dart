@@ -19,11 +19,13 @@ class NoticeCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
 
     return Card(
       key: Key('noticeCard_${notice.id}'),
       margin: EdgeInsets.zero,
       elevation: 0,
+      color: isDark ? AppColors.darkCard : AppColors.lightSurface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
@@ -31,6 +33,7 @@ class NoticeCard extends StatelessWidget {
           width: 1,
         ),
       ),
+      clipBehavior: Clip.antiAlias,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -70,13 +73,13 @@ class NoticeCard extends StatelessWidget {
                     vertical: 3,
                   ),
                   decoration: BoxDecoration(
-                    color: AppColors.verified.withValues(alpha: 0.12),
+                    color: AppColors.verified.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.schedule, size: 12, color: AppColors.verified),
+                      Icon(Icons.schedule, size: 11, color: AppColors.verified),
                       const SizedBox(width: 4),
                       Text(
                         'Valid: ${_formatValidUntil(notice.validUntil)}',

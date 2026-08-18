@@ -1,6 +1,7 @@
+import re
 from datetime import UTC, datetime
 
-from sqlalchemy import Select, or_, select
+from sqlalchemy import Select, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -8,6 +9,7 @@ from app.core.exceptions import AppError
 from app.features.issues.geo import bbox_statement, haversine_km
 from app.features.issues.models import Issue
 from app.features.issues.service import evaluate_escalation
+from app.features.wards.models import Ward
 
 
 def _utc_now() -> datetime:
@@ -16,6 +18,19 @@ def _utc_now() -> datetime:
 
 def _escape_like(q: str) -> str:
     return q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+
+def _alnum_expr(column) -> object:
+    """Lowercases [column] and strips punctuation so slug/name/code variants
+    can be compared directly (e.g. 'ward-45-urban-central' == 'Ward 45, Urban Central')."""
+    cleaned = func.lower(column)
+    for ch in ",.-_' ":
+        cleaned = func.replace(cleaned, ch, "")
+    return cleaned
+
+
+def _alnum(value: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "", value.lower())
 
 
 def parse_iso_datetime(value: str) -> datetime:
@@ -47,6 +62,7 @@ async def search_issues(
     categories: list[str] | None,
     created_after: datetime | None,
     created_before: datetime | None,
+    ward: str | None,
     limit: int,
     offset: int,
 ) -> list[Issue]:
@@ -72,6 +88,26 @@ async def search_issues(
         statement = statement.where(Issue.category == category)
     if categories:
         statement = statement.where(Issue.category.in_(categories))
+    if ward is not None:
+        normalized_ward = _alnum(ward)
+        ward_match = or_(
+            Issue.ward == ward,
+            Issue.ward.ilike(f"%{_escape_like(ward)}%"),
+            _alnum_expr(Issue.ward) == normalized_ward,
+            _alnum_expr(Issue.ward).like(f"%{normalized_ward}%"),
+        )
+        ward_row = await session.scalar(
+            select(Ward).where(
+                or_(Ward.slug == ward, Ward.name == ward, Ward.code == ward)
+            )
+        )
+        if ward_row is not None:
+            for label in (ward_row.name, ward_row.code, ward_row.slug):
+                ward_match = or_(ward_match, Issue.ward == label)
+                ward_match = or_(
+                    ward_match, Issue.ward.ilike(f"%{_escape_like(label)}%")
+                )
+        statement = statement.where(ward_match)
     if created_after is not None:
         statement = statement.where(Issue.created_at >= created_after)
     if created_before is not None:

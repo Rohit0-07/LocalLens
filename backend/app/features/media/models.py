@@ -1,7 +1,7 @@
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import Boolean, DateTime, Float, String
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
@@ -21,6 +21,11 @@ class Media(Base):
     longitude: Mapped[float | None] = mapped_column(Float, nullable=True)
     is_fuzzed: Mapped[bool] = mapped_column(Boolean, default=False)
     is_in_app_camera: Mapped[bool] = mapped_column(Boolean, default=False)
+    issue_id: Mapped[int | None] = mapped_column(
+        ForeignKey("issues.id"), nullable=True, index=True
+    )
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    captured_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(UTC),

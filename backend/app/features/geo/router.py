@@ -4,7 +4,7 @@ from app.api.deps import SessionDep
 from app.core.exceptions import AppError
 from app.core.ratelimit import SlidingWindowRateLimiter
 from app.features.geo import service
-from app.features.geo.schemas import MapPinOut, ReverseGeocodeOut
+from app.features.geo.schemas import MapPinOut, ReverseGeocodeOut, WardBoundaryOut
 
 router = APIRouter(prefix="/geo", tags=["geo"])
 
@@ -55,3 +55,17 @@ async def get_map_pins_endpoint(
         category=category,
         status=status,
     )
+
+
+@router.get("/ward-boundaries", response_model=list[WardBoundaryOut])
+async def ward_boundaries_endpoint(
+    request: Request,
+    session: SessionDep,
+) -> list[WardBoundaryOut]:
+    """Return every ward with its boundary ring (derived fallback when malformed).
+
+    No auth required (mirrors ``/geo/reverse-geocode``), rate-limited,
+    read-only. Always 200; empty list when no wards exist.
+    """
+    _check_rate_limit(request)
+    return await service.list_ward_boundaries(session)

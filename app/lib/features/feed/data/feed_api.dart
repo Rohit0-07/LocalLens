@@ -95,15 +95,20 @@ class FeedApi implements FeedRepository {
   Future<List<NearDuplicateCandidate>> checkNearDuplicates({
     required double latitude,
     required double longitude,
-    double radiusKm = 0.5,
+    String? category,
+    double radiusKm = 0.030,
   }) async {
+    final query = <String, dynamic>{
+      'latitude': latitude,
+      'longitude': longitude,
+      'radius_km': radiusKm,
+    };
+    if (category != null && category.isNotEmpty) {
+      query['category'] = category;
+    }
     final data = await _client.getJson(
       '/issues/near-duplicate',
-      query: {
-        'latitude': latitude,
-        'longitude': longitude,
-        'radius_km': radiusKm,
-      },
+      query: query,
     );
     final items = data as List<dynamic>;
     return items

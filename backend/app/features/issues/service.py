@@ -1,7 +1,7 @@
 import json
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -191,6 +191,33 @@ def to_issue_out(
     )
 
 
+async def _link_media_to_issue(
+    session: AsyncSession,
+    issue: Issue,
+    media_urls: list[str],
+) -> None:
+    """Link uploaded Media rows to the created issue by URL match.
+
+    Media rows whose ``url`` or ``thumbnail_url`` matches one of the issue's
+    media URLs get ``issue_id`` set so the media library can enforce
+    delete-after-publish semantics. Lazy-imports ``Media`` to match the
+    existing style in this module.
+    """
+    urls = set(media_urls)
+    if not urls:
+        return
+    from app.features.media.models import Media
+
+    stmt = select(Media).where(or_(Media.url.in_(urls), Media.thumbnail_url.in_(urls)))
+    result = await session.execute(stmt)
+    media_rows = list(result.scalars().all())
+    for media in media_rows:
+        if media.issue_id is None:
+            media.issue_id = issue.id
+    if media_rows:
+        await session.commit()
+
+
 async def create_issue(
     session: AsyncSession, payload: IssueCreate, reporter_id: int | None = None
 ) -> Issue:
@@ -236,6 +263,7 @@ async def create_issue(
     issue = await session.scalar(
         select(Issue).options(selectinload(Issue.reporter)).where(Issue.id == issue.id)
     )
+    await _link_media_to_issue(session, issue, media_urls_list)
     return issue  # type: ignore[return-value]
 
 
@@ -316,16 +344,21 @@ async def detect_near_duplicates(
     *,
     latitude: float,
     longitude: float,
-    radius_km: float = 0.5,
+    category: str | None = None,
+    radius_km: float = 0.030,
     limit: int = 10,
 ) -> list[NearDuplicateOut]:
-    statement = await bbox_statement(latitude, longitude, radius_km)
-    statement = statement.order_by(Issue.created_at.desc()).limit(limit * 2)
+    statement = await bbox_statement(latitude, longitude, max(radius_km, 0.05))
+    statement = statement.order_by(Issue.created_at.desc()).limit(limit * 4)
     result = await session.execute(statement)
     candidates = list(result.scalars().all())
 
     duplicates: list[NearDuplicateOut] = []
     for issue in candidates:
+        if category and category.strip():
+            if issue.category.strip().lower() != category.strip().lower():
+                continue
+
         dist_km = haversine_km(latitude, longitude, issue.latitude, issue.longitude)
         if dist_km <= radius_km:
             duplicates.append(

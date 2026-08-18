@@ -35,6 +35,7 @@ class FakeSearchRepository implements SearchRepository {
     double? radiusKm,
     DateTime? createdAfter,
     DateTime? createdBefore,
+    String? ward,
   }) async {
     searchCount += 1;
     lastQuery = query;
@@ -174,7 +175,7 @@ void main() {
     await tester.enterText(find.byKey(const Key('searchField')), 'zzz');
     await pumpSearch(tester);
     expect(find.text('No issues found'), findsOneWidget);
-    expect(find.text('Try a different keyword.'), findsOneWidget);
+    expect(find.text('Try a different keyword or adjust your filters.'), findsOneWidget);
   });
 
   testWidgets('recent searches render and tapping one runs it', (tester) async {

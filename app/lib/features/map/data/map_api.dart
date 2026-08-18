@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:latlong2/latlong.dart';
 
 import '../../../core/network/api_client.dart';
 import '../../../core/network/network_providers.dart';
@@ -64,6 +65,46 @@ final mapApiProvider = Provider<MapApi>((ref) {
   return MapApi(ref.watch(apiClientProvider));
 });
 
+/// A ward's boundary ring as returned by `GET /geo/ward-boundaries`.
+///
+/// JSON keys: `ward_slug`, `name`, `code`, `boundary` (a list of `[lat, lng]`
+/// pairs forming the outer ring, ≥3 points, open or closed).
+class WardBoundary {
+  final String slug;
+  final String name;
+  final String code;
+  final List<LatLng> ring;
+
+  const WardBoundary({
+    required this.slug,
+    required this.name,
+    required this.code,
+    required this.ring,
+  });
+
+  factory WardBoundary.fromJson(Map<String, dynamic> json) {
+    final ring = <LatLng>[];
+    final raw = json['boundary'];
+    if (raw is List) {
+      for (final point in raw) {
+        if (point is List && point.length >= 2) {
+          final lat = point[0];
+          final lng = point[1];
+          if (lat is num && lng is num) {
+            ring.add(LatLng(lat.toDouble(), lng.toDouble()));
+          }
+        }
+      }
+    }
+    return WardBoundary(
+      slug: json['ward_slug'] as String? ?? '',
+      name: json['name'] as String? ?? '',
+      code: json['code'] as String? ?? '',
+      ring: ring,
+    );
+  }
+}
+
 class MapApi {
   final ApiClient _apiClient;
 
@@ -94,6 +135,21 @@ class MapApi {
     if (data is List) {
       return data
           .map((item) => MapPin.fromJson(item as Map<String, dynamic>))
+          .toList();
+    }
+    return [];
+  }
+
+  /// Fetches every ward's boundary ring from `GET /geo/ward-boundaries`.
+  ///
+  /// The endpoint is read-only, unauthenticated and always returns 200 (an
+  /// empty list when no wards exist). A malformed ring is replaced server-side
+  /// by a derived octagon, so every returned ring has ≥3 points.
+  Future<List<WardBoundary>> getWardBoundaries() async {
+    final data = await _apiClient.getJson('/geo/ward-boundaries');
+    if (data is List) {
+      return data
+          .map((item) => WardBoundary.fromJson(item as Map<String, dynamic>))
           .toList();
     }
     return [];

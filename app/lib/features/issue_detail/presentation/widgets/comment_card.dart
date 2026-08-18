@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/router/route_paths.dart';
 import '../../data/issue_detail_api.dart';
 
-/// Displays a comment and its nested replies with a clean threaded layout.
+/// Displays a comment and its nested replies with a clean, compact threaded layout.
 /// Replies deeper than [maxVisibleDepth] are collapsed behind a toggle so the
 /// list never breaks apart on long threads.
 class CommentCard extends StatefulWidget {
@@ -47,49 +47,49 @@ class _CommentCardState extends State<CommentCard> {
     final isNested = widget.depth > 0;
     final visibleCount = _visibleReplyCount;
 
-    return Padding(
+    return Container(
       key: Key('comment_item_${comment.id}'),
-      padding: EdgeInsets.only(
-        top: 8.0,
-        bottom: isNested ? 2.0 : 8.0,
+      margin: EdgeInsets.only(
+        left: isNested ? 14.0 : 0.0,
+        top: isNested ? 4.0 : 8.0,
+        bottom: isNested ? 4.0 : 8.0,
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (isNested)
-            Container(
-              width: 2.5,
-              margin: const EdgeInsets.only(top: 22, right: 10),
-              height: 1000,
-              color: colorScheme.primaryContainer.withValues(alpha: 0.7),
-            ),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _CommentBubble(
-                  comment: comment,
-                  onReply: () => widget.onReply(comment),
-                  onDelete: () => widget.onDelete(comment.id),
+      padding: isNested
+          ? const EdgeInsets.only(left: 10.0)
+          : const EdgeInsets.symmetric(horizontal: 4.0),
+      decoration: isNested
+          ? BoxDecoration(
+              border: Border(
+                left: BorderSide(
+                  color: colorScheme.outlineVariant.withValues(alpha: 0.6),
+                  width: 2.0,
                 ),
-                if (replies.isNotEmpty &&
-                    (visibleCount > 0 ||
-                        !_canNestMore && replies.isNotEmpty)) ...[
-                  const SizedBox(height: 4),
-                  if (_canNestMore)
-                    for (final reply in replies.take(visibleCount))
-                      CommentCard(
-                        comment: reply,
-                        onReply: widget.onReply,
-                        onDelete: widget.onDelete,
-                        depth: widget.depth + 1,
-                      )
-                  else
-                    _buildCollapsedReplies(context, replies, colorScheme),
-                ],
-              ],
-            ),
+              ),
+            )
+          : null,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _CommentBubble(
+            comment: comment,
+            onReply: () => widget.onReply(comment),
+            onDelete: () => widget.onDelete(comment.id),
           ),
+          if (replies.isNotEmpty &&
+              (visibleCount > 0 || !_canNestMore && replies.isNotEmpty)) ...[
+            const SizedBox(height: 2),
+            if (_canNestMore)
+              for (final reply in replies.take(visibleCount))
+                CommentCard(
+                  comment: reply,
+                  onReply: widget.onReply,
+                  onDelete: widget.onDelete,
+                  depth: widget.depth + 1,
+                )
+            else
+              _buildCollapsedReplies(context, replies, colorScheme),
+          ],
         ],
       ),
     );
@@ -106,13 +106,13 @@ class _CommentCardState extends State<CommentCard> {
       children: [
         if (!_expandedReplies)
           Padding(
-            padding: const EdgeInsets.only(left: 8),
+            padding: const EdgeInsets.only(left: 8, top: 4),
             child: InkWell(
               key: const Key('viewMoreRepliesButton'),
               onTap: () => setState(() => _expandedReplies = true),
               borderRadius: BorderRadius.circular(8),
               child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+                padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 6),
                 child: Text(
                   'View all ${replies.length} replies',
                   style: theme.textTheme.labelMedium?.copyWith(
@@ -157,9 +157,10 @@ class _CommentBubble extends StatelessWidget {
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: [
         Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Expanded(
               child: InkWell(
@@ -168,66 +169,72 @@ class _CommentBubble extends StatelessWidget {
                     ? () => context.push(
                           RoutePaths.publicProfileFor(comment.userId!),
                         )
-                    : null,
+                    : () {
+                        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'This comment was posted anonymously.',
+                            ),
+                            duration: Duration(seconds: 2),
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      },
                 borderRadius: BorderRadius.circular(8),
                 child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     CircleAvatar(
-                      radius: 15,
+                      radius: 13,
                       backgroundColor: colorScheme.primaryContainer,
                       child: Text(
                         initial,
-                        style: theme.textTheme.labelMedium?.copyWith(
+                        style: theme.textTheme.labelSmall?.copyWith(
                           color: colorScheme.onPrimaryContainer,
                           fontWeight: FontWeight.bold,
+                          fontSize: 11,
                         ),
                       ),
                     ),
                     const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Flexible(
-                                child: Text(
-                                  comment.anonId,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: theme.textTheme.labelLarge?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                              if (comment.isAuthor) ...[
-                                const SizedBox(width: 6),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 6, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: colorScheme.primaryContainer,
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: Text(
-                                    'You',
-                                    style: theme.textTheme.labelSmall?.copyWith(
-                                      color: colorScheme.onPrimaryContainer,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ],
+                    Flexible(
+                      child: Text(
+                        comment.anonId,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    if (comment.isAuthor) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 5,
+                          vertical: 1,
+                        ),
+                        decoration: BoxDecoration(
+                          color: colorScheme.primaryContainer,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          'You',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: colorScheme.onPrimaryContainer,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 10,
                           ),
-                          Text(
-                            formatCommentTime(comment.createdAt),
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                        ],
+                        ),
+                      ),
+                    ],
+                    const SizedBox(width: 6),
+                    Text(
+                      '• ${formatCommentTime(comment.createdAt)}',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                        fontSize: 11,
                       ),
                     ),
                   ],
@@ -238,40 +245,52 @@ class _CommentBubble extends StatelessWidget {
               IconButton(
                 key: Key('delete_button_${comment.id}'),
                 visualDensity: VisualDensity.compact,
-                iconSize: 18,
-                icon: Icon(Icons.delete_outline,
-                    size: 18, color: colorScheme.error),
+                iconSize: 16,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                icon: Icon(
+                  Icons.delete_outline,
+                  size: 16,
+                  color: colorScheme.error,
+                ),
                 onPressed: onDelete,
               ),
           ],
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 3),
         Padding(
-          padding: const EdgeInsets.only(left: 38),
+          padding: const EdgeInsets.only(left: 34),
           child: Text(
             comment.content,
-            style: theme.textTheme.bodyMedium,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontSize: 13.5,
+              height: 1.35,
+            ),
           ),
         ),
         Padding(
-          padding: const EdgeInsets.only(left: 34, top: 4),
+          padding: const EdgeInsets.only(left: 30, top: 2),
           child: InkWell(
             key: Key('reply_button_${comment.id}'),
             onTap: onReply,
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(6),
             child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+              padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 4),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.reply_outlined,
-                      size: 15, color: colorScheme.primary),
-                  const SizedBox(width: 4),
+                  Icon(
+                    Icons.reply_outlined,
+                    size: 14,
+                    color: colorScheme.primary,
+                  ),
+                  const SizedBox(width: 3),
                   Text(
                     'Reply',
-                    style: theme.textTheme.labelMedium?.copyWith(
+                    style: theme.textTheme.labelSmall?.copyWith(
                       color: colorScheme.primary,
                       fontWeight: FontWeight.w700,
+                      fontSize: 11,
                     ),
                   ),
                 ],
@@ -289,5 +308,6 @@ String formatCommentTime(DateTime dateTime) {
   if (diff.inSeconds < 60) return 'Just now';
   if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
   if (diff.inHours < 24) return '${diff.inHours}h ago';
-  return '${diff.inDays}d ago';
+  if (diff.inDays < 7) return '${diff.inDays}d ago';
+  return '${dateTime.day}/${dateTime.month}/${dateTime.year}';
 }

@@ -9,6 +9,7 @@ class SearchFilters {
     this.distanceOption = SearchDistanceOption.any,
     this.radiusKm = 5.0,
     this.datePreset = SearchDatePreset.anyTime,
+    this.ward,
   });
 
   static const Object _unset = Object();
@@ -18,12 +19,14 @@ class SearchFilters {
   final SearchDistanceOption distanceOption;
   final double radiusKm;
   final SearchDatePreset datePreset;
+  final String? ward;
 
   bool get isActive =>
       status != null ||
       categories.isNotEmpty ||
       distanceOption == SearchDistanceOption.within ||
-      datePreset != SearchDatePreset.anyTime;
+      datePreset != SearchDatePreset.anyTime ||
+      ward != null;
 
   SearchFilters copyWith({
     Object? status = _unset,
@@ -31,6 +34,7 @@ class SearchFilters {
     SearchDistanceOption? distanceOption,
     double? radiusKm,
     SearchDatePreset? datePreset,
+    Object? ward = _unset,
   }) {
     return SearchFilters(
       status: identical(status, _unset) ? this.status : status as String?,
@@ -38,6 +42,7 @@ class SearchFilters {
       distanceOption: distanceOption ?? this.distanceOption,
       radiusKm: radiusKm ?? this.radiusKm,
       datePreset: datePreset ?? this.datePreset,
+      ward: identical(ward, _unset) ? this.ward : ward as String?,
     );
   }
 
@@ -63,3 +68,4 @@ const kSearchCategoryOptions = <String>[
   'sewage',
   'other',
 ];
+

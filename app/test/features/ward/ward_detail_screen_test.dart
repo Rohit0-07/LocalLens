@@ -258,7 +258,7 @@ void main() {
       expect(find.text('Ward Representative'), findsOneWidget);
     });
 
-    testWidgets('FE-WARD-05: Recent Issues List Widget Rendering', (tester) async {
+    testWidgets('FE-WARD-05: Active Issues Tab Rendering', (tester) async {
       final container = ProviderContainer(
         overrides: [
           wardDetailNotifierProvider('ward-45-urban-central')
@@ -277,7 +277,8 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.byKey(const Key('wardRecentIssuesList')), findsOneWidget);
+      expect(find.text('Ward Issues'), findsOneWidget);
+      expect(find.widgetWithText(FilterChip, 'Active'), findsOneWidget);
       expect(find.text('Deep Pothole on Main St'), findsOneWidget);
       expect(find.text('Streetlight Flickering'), findsOneWidget);
     });

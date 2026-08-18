@@ -123,9 +123,7 @@ class IssueDetailScreen extends ConsumerWidget {
                     Expanded(
                       child: InkWell(
                         key: Key('issueDetailReporter_${issue.id}'),
-                        onTap: issue.reporterId != null
-                            ? () => openReporterProfile(context, ref, issue.reporterId)
-                            : null,
+                        onTap: () => openReporterProfile(context, ref, issue.reporterId),
                         borderRadius: BorderRadius.circular(8),
                         child: Row(
                           children: [

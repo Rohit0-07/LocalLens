@@ -17,6 +17,7 @@ import '../../../feed/domain/issue.dart';
 import '../../../feed/presentation/feed_providers.dart';
 import '../profile_providers.dart';
 import '../widgets/profile_avatar.dart';
+import '../widgets/profile_role_badge.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -219,6 +220,42 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                 ],
                               ],
                             ),
+                            if (!profile.isGuest) ...[
+                              const SizedBox(height: 6),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 4,
+                                crossAxisAlignment: WrapCrossAlignment.center,
+                                children: [
+                                  ProfileRoleBadge(
+                                    key: const Key('profileRoleBadge'),
+                                    role: profile.role,
+                                  ),
+                                  if (profile.ward != null &&
+                                      profile.ward!.isNotEmpty)
+                                    Chip(
+                                      key: const Key('profileWardChip'),
+                                      visualDensity: VisualDensity.compact,
+                                      avatar: const Icon(
+                                        Icons.location_on_outlined,
+                                        size: 14,
+                                      ),
+                                      label: Text(
+                                        profile.ward!,
+                                        style: theme.textTheme.labelSmall
+                                            ?.copyWith(
+                                              color:
+                                                  colorScheme.onSurfaceVariant,
+                                            ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      backgroundColor:
+                                          colorScheme.surfaceContainerHigh,
+                                      side: BorderSide.none,
+                                    ),
+                                ],
+                              ),
+                            ],
                             _buildBioSection(profile),
                             const SizedBox(height: 4),
                             Chip(
@@ -269,6 +306,74 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   ),
                   const SizedBox(height: 16),
 
+                  // ── Representative Dashboard Entry (rep only) ─────────
+                  if (!profile.isGuest && profile.isRepresentative) ...[
+                    Card(
+                      elevation: 0,
+                      clipBehavior: Clip.antiAlias,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        side: BorderSide(color: colorScheme.outlineVariant),
+                      ),
+                      child: InkWell(
+                        key: const Key('repDashboardEntryButton'),
+                        onTap: () => context.push(RoutePaths.repDashboard),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 12,
+                          ),
+                          child: Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 18,
+                                backgroundColor:
+                                    colorScheme.primaryContainer,
+                                child: Icon(
+                                  Icons.how_to_reg_rounded,
+                                  size: 20,
+                                  color: colorScheme.onPrimaryContainer,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Representative Dashboard',
+                                      style: theme.textTheme.titleSmall
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      profile.ward ?? 'Your ward',
+                                      style: theme.textTheme.bodySmall
+                                          ?.copyWith(
+                                            color:
+                                                colorScheme.onSurfaceVariant,
+                                          ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Icon(
+                                Icons.chevron_right,
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+
                   // ── Guest Banner ──────────────────────────────────────
                   if (profile.isGuest) ...[
                     Card(
@@ -307,6 +412,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
                   // ── User Activity Stats Card ──────────────────────────
                   Card(
+                    key: const Key('profileStatsCard'),
                     elevation: 0,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
@@ -343,9 +449,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   ),
                   const SizedBox(height: 12),
 
-                  // ── Offline Outbox Queue & Drafts Card ─────────────────
+                  // ── Your Activity (Drafts & Offline Outbox) ───────────
                   Text(
-                    'Offline Outbox & Drafts',
+                    'Your Activity',
                     style: theme.textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w800,
                       letterSpacing: 0.1,
@@ -355,100 +461,75 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   const SizedBox(height: 4),
                   Card(
                     elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      side: BorderSide(color: colorScheme.outlineVariant),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.outbox_rounded,
-                            color: colorScheme.primary,
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Pending Outbox Items: $pendingOutboxCount',
-                                  style: theme.textTheme.bodyMedium?.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  pendingOutboxCount > 0
-                                      ? context.tr('profile_outbox_queued')
-                                      : context.tr('profile_outbox_synced'),
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    color: colorScheme.onSurfaceVariant,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          FilledButton.tonal(
-                            key: const Key('viewOutboxButton'),
-                            onPressed: () => context.push(RoutePaths.outbox),
-                            child: Text(context.tr('profile_view')),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Card(
-                    elevation: 0,
                     clipBehavior: Clip.antiAlias,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                       side: BorderSide(color: colorScheme.outlineVariant),
                     ),
-                    child: InkWell(
-                      key: const Key('profileDraftsButton'),
-                      onTap: () => context.push(RoutePaths.drafts),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 12,
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.drafts_outlined,
-                              color: colorScheme.primary,
+                    child: Column(
+                      children: [
+                        ListTile(
+                          key: const Key('profileDraftsButton'),
+                          leading: Icon(
+                            Icons.drafts_outlined,
+                            color: colorScheme.primary,
+                          ),
+                          title: const Text('Drafts'),
+                          subtitle: Text(
+                            (draftsCount ?? 0) > 0
+                                ? '$draftsCount saved'
+                                : 'No drafts yet',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
                             ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                'Drafts',
-                                style: theme.textTheme.bodyMedium?.copyWith(
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          trailing: Icon(
+                            Icons.chevron_right,
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                          onTap: () => context.push(RoutePaths.drafts),
+                        ),
+                        Divider(
+                          height: 1,
+                          color: colorScheme.outlineVariant,
+                        ),
+                        ListTile(
+                          key: const Key('viewOutboxButton'),
+                          leading: Icon(
+                            Icons.outbox_rounded,
+                            color: colorScheme.primary,
+                          ),
+                          title: const Text('Offline Outbox'),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Pending Outbox Items: $pendingOutboxCount',
+                                style: theme.textTheme.bodySmall?.copyWith(
                                   fontWeight: FontWeight.w600,
                                 ),
                                 overflow: TextOverflow.ellipsis,
                               ),
-                            ),
-                            if (draftsCount != null)
+                              const SizedBox(height: 2),
                               Text(
-                                '$draftsCount saved',
+                                pendingOutboxCount > 0
+                                    ? context.tr('profile_outbox_queued')
+                                    : context.tr('profile_outbox_synced'),
                                 style: theme.textTheme.bodySmall?.copyWith(
                                   color: colorScheme.onSurfaceVariant,
                                 ),
+                                overflow: TextOverflow.ellipsis,
                               ),
-                            const SizedBox(width: 4),
-                            Icon(
-                              Icons.chevron_right,
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                          ],
+                            ],
+                          ),
+                          trailing: Icon(
+                            Icons.chevron_right,
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                          onTap: () => context.push(RoutePaths.outbox),
                         ),
-                      ),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 16),

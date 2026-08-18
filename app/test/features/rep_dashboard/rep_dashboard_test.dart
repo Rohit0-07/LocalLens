@@ -232,6 +232,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byKey(const Key('respondToIssueButton_101')), findsOneWidget);
+      await tester.ensureVisible(find.byKey(const Key('respondToIssueButton_101')));
       await tester.tap(find.byKey(const Key('respondToIssueButton_101')));
       await tester.pumpAndSettle();
 
@@ -252,6 +253,7 @@ void main() {
 
       expect(find.byKey(const Key('postOfficialResponseDialog')), findsNothing);
 
+      await tester.ensureVisible(find.byKey(const Key('respondToIssueButton_101')));
       await tester.tap(find.byKey(const Key('respondToIssueButton_101')));
       await tester.pumpAndSettle();
 

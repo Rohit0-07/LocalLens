@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/l10n/app_strings.dart';
+import '../../../core/utils/string_formatters.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/skeleton_list.dart';
 import '../../feed/domain/feed_item.dart';
@@ -14,6 +15,7 @@ import '../../feed/presentation/widgets/local_talk_card.dart';
 import '../../feed/presentation/widgets/notice_card.dart';
 import '../../feed/presentation/widgets/win_card.dart';
 import 'advanced_filter_sheet.dart';
+import '../domain/search_error_kind.dart';
 import 'search_filters_provider.dart';
 import 'search_providers.dart';
 
@@ -74,13 +76,18 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     );
     if (result != null) {
       ref.read(searchFiltersProvider.notifier).apply(result);
-      _runSearch(_lastQuery.isEmpty ? _controller.text.trim() : _lastQuery);
+      final query = _lastQuery.isEmpty ? _controller.text.trim() : _lastQuery;
+      if (query.isNotEmpty) {
+        _runSearch(query);
+      }
     }
   }
 
   void _clearFilters() {
     ref.read(searchFiltersProvider.notifier).reset();
-    _runSearch(_lastQuery);
+    if (_lastQuery.isNotEmpty) {
+      _runSearch(_lastQuery);
+    }
   }
 
   @override
@@ -88,7 +95,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     final query = ref.watch(searchQueryProvider);
     final recents = ref.watch(recentSearchesProvider);
     final results = ref.watch(searchResultsProvider);
-    final filtersActive = ref.watch(searchFiltersProvider).isActive;
+    final filters = ref.watch(searchFiltersProvider);
+    final filtersActive = filters.isActive;
 
     return Scaffold(
       appBar: AppBar(
@@ -102,6 +110,13 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             border: InputBorder.none,
           ),
           onChanged: _onQueryChanged,
+          onSubmitted: (text) {
+            final trimmed = text.trim();
+            if (trimmed.isNotEmpty) {
+              _lastQuery = trimmed;
+              _runSearch(trimmed);
+            }
+          },
         ),
         actions: [
           IconButton(
@@ -121,9 +136,43 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           const SizedBox(width: 8),
         ],
       ),
-      body: query.isEmpty
-          ? _buildPreloadedBody(recents)
-          : _buildResultsBody(results),
+      body: Column(
+        children: [
+          // ── Active Ward Filter Display ─────────────────────
+          if (filters.ward != null)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
+              child: Row(
+                children: [
+                  const Icon(Icons.location_city, size: 16),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Ward: ${StringFormatters.formatWard(filters.ward)}',
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const Spacer(),
+                  GestureDetector(
+                    onTap: () {
+                      ref.read(searchFiltersProvider.notifier).setWard(null);
+                      if (_lastQuery.isNotEmpty) _runSearch(_lastQuery);
+                    },
+                    child: const Icon(Icons.close, size: 16),
+                  ),
+                ],
+              ),
+            ),
+          // ── Body ──────────────────────────────────────────
+          Expanded(
+            child: query.isEmpty && !filtersActive
+                ? _buildPreloadedBody(recents)
+                : _buildResultsBody(results),
+          ),
+        ],
+      ),
     );
   }
 
@@ -239,18 +288,12 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     return results.when(
       loading: () =>
           const Padding(padding: EdgeInsets.all(16), child: SkeletonList()),
-      error: (_, _) => EmptyState(
-        icon: Icons.cloud_off_outlined,
-        title: 'Search unavailable',
-        message: 'We could not reach the server right now.',
-        actionLabel: 'Retry',
-        onAction: _retryLastQuery,
-      ),
+      error: (error, _) => _buildSearchErrorState(classifySearchError(error)),
       data: (issues) => issues.isEmpty
           ? const EmptyState(
               icon: Icons.search_off_outlined,
               title: 'No issues found',
-              message: 'Try a different keyword.',
+              message: 'Try a different keyword or adjust your filters.',
             )
           : ListView.separated(
               padding: const EdgeInsets.all(16),
@@ -259,5 +302,57 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               itemBuilder: (context, index) => IssueCard(issue: issues[index]),
             ),
     );
+  }
+
+  Widget _buildSearchErrorState(SearchErrorKind kind) {
+    return switch (kind) {
+      SearchErrorKind.network => EmptyState(
+        icon: Icons.cloud_off_outlined,
+        title: 'Search unavailable',
+        message:
+            'We could not reach the server. Check your connection and make '
+            'sure the app can reach the backend.',
+        actionLabel: 'Retry',
+        onAction: _retryLastQuery,
+      ),
+      SearchErrorKind.rateLimited => EmptyState(
+        icon: Icons.timer_outlined,
+        title: 'Too many searches',
+        message: 'You have made too many searches. Please wait a moment and '
+            'try again.',
+        actionLabel: 'Retry',
+        onAction: _retryLastQuery,
+      ),
+      SearchErrorKind.invalidQuery => EmptyState(
+        icon: Icons.search_off_outlined,
+        title: 'Adjust your search',
+        message: 'Your search could not be processed. Try different keywords '
+            'or filters.',
+        actionLabel: 'Retry',
+        onAction: _retryLastQuery,
+      ),
+      SearchErrorKind.server => EmptyState(
+        icon: Icons.error_outline,
+        title: 'Search failed',
+        message: 'The server ran into a problem. Please try again.',
+        actionLabel: 'Retry',
+        onAction: _retryLastQuery,
+      ),
+      SearchErrorKind.unauthorized => EmptyState(
+        icon: Icons.lock_outline,
+        title: 'Session expired',
+        message: 'Please sign in again to search.',
+        actionLabel: 'Retry',
+        onAction: _retryLastQuery,
+      ),
+      SearchErrorKind.unexpected => EmptyState(
+        icon: Icons.error_outline,
+        title: 'Something went wrong',
+        message:
+            'The server returned an unexpected response. Please try again.',
+        actionLabel: 'Retry',
+        onAction: _retryLastQuery,
+      ),
+    };
   }
 }

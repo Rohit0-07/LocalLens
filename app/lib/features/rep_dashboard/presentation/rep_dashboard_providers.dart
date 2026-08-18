@@ -4,6 +4,7 @@ import '../../../core/network/network_providers.dart';
 import '../../../core/storage/storage_providers.dart';
 import '../data/repositories/rep_dashboard_repository.dart';
 import '../domain/official_response.dart';
+import '../domain/public_representative_profile.dart';
 import '../domain/representative_profile.dart';
 import '../domain/ward_issues_response.dart';
 
@@ -16,6 +17,16 @@ final repDashboardRepositoryProvider = Provider<RepDashboardRepository>((ref) {
 final repProfileProvider = FutureProvider<RepresentativeProfile>((ref) async {
   final repository = ref.watch(repDashboardRepositoryProvider);
   return repository.fetchRepresentativeProfile();
+});
+
+/// Public rep performance profile keyed by user id.
+///
+/// Returns `null` for non-representatives (404) and for `userId <= 0`, so
+/// widgets can render header-only without crashing.
+final publicRepProfileProvider =
+    FutureProvider.family<PublicRepresentativeProfile?, int>((ref, userId) async {
+  if (userId <= 0) return null;
+  return ref.watch(repDashboardRepositoryProvider).fetchPublicRepByUser(userId);
 });
 
 final wardIssuesFilterProvider = StateProvider<String>((ref) => 'all');

@@ -20,17 +20,17 @@ class BadgeItem {
   });
 
   factory BadgeItem.fromJson(Map<String, dynamic> json) {
-    final keyVal = (json['key'] ?? json['badge_key'] ?? json['badge_id'] ?? json['id'] ?? '') as String;
+    final keyVal = (json['key'] ?? json['badge_key'] ?? json['badge_id'] ?? json['id'] ?? '').toString();
     final unlockedAtStr = json['unlocked_at'] as String?;
     final unlockedAt = unlockedAtStr != null ? DateTime.tryParse(unlockedAtStr) : null;
     final isUnlocked = json['is_unlocked'] as bool? ?? (unlockedAt != null);
 
     return BadgeItem(
       key: keyVal,
-      name: (json['name'] ?? keyVal) as String,
-      description: (json['description'] ?? '') as String,
-      iconName: (json['icon_name'] ?? 'lock') as String,
-      category: (json['category'] ?? 'general') as String,
+      name: (json['name'] ?? keyVal).toString(),
+      description: (json['description'] ?? '').toString(),
+      iconName: (json['icon_name'] ?? 'lock').toString(),
+      category: (json['category'] ?? 'general').toString(),
       threshold: (json['threshold'] as num?)?.toInt() ?? 1,
       isUnlocked: isUnlocked,
       unlockedAt: unlockedAt,

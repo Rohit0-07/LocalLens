@@ -1,20 +1,25 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:image_picker/image_picker.dart';
 
 import '../../../core/l10n/app_strings.dart';
 import '../../../core/router/route_paths.dart';
 import '../../../core/services/location_service.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/string_formatters.dart';
 import '../../feed/presentation/feed_providers.dart';
 import '../../geo/presentation/providers/geo_providers.dart';
 import '../../geo/presentation/widgets/ward_location_chip.dart';
+import '../../map/presentation/controllers/map_controller.dart';
 import 'compose_providers.dart';
+import '../domain/captured_media.dart';
 import '../domain/compose_draft.dart';
 import '../domain/near_duplicate_candidate.dart';
+import 'media_library_providers.dart';
+import 'media_library_screen.dart';
 import 'widgets/camera_viewfinder.dart';
 import 'widgets/media_watermark_badge.dart';
 
@@ -27,18 +32,6 @@ const _categories = [
   'sewage',
   'other',
 ];
-
-class _AttachedMedia {
-  final String id;
-  final Uint8List bytes;
-  final bool isVerified;
-
-  _AttachedMedia({
-    required this.id,
-    required this.bytes,
-    required this.isVerified,
-  });
-}
 
 class ComposeScreen extends ConsumerStatefulWidget {
   const ComposeScreen({super.key, this.draft});
@@ -53,7 +46,7 @@ class ComposeScreen extends ConsumerStatefulWidget {
 }
 
 class _ComposeScreenState extends ConsumerState<ComposeScreen> {
-  final List<_AttachedMedia> _attachedMediaList = [];
+  final List<CapturedMedia> _attachedMediaList = [];
 
   @override
   void initState() {
@@ -66,18 +59,9 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
       if (!mounted) return;
       ref.read(composeControllerProvider.notifier).loadDraft(draft);
     });
-    for (final base64 in draft.mediaBytes.take(4)) {
-      try {
-        final bytes = base64Decode(base64);
-        if (bytes.isEmpty) continue;
-        _attachedMediaList.add(
-          _AttachedMedia(
-            id: 'draft_${DateTime.now().microsecondsSinceEpoch}_${_attachedMediaList.length}',
-            bytes: bytes,
-            isVerified: false,
-          ),
-        );
-      } catch (_) {}
+    for (final media in draft.media.take(4)) {
+      if (media.bytesBase64.isEmpty) continue;
+      _attachedMediaList.add(media);
     }
   }
 
@@ -129,20 +113,19 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
             isGpsLocked: isGpsLocked,
             onPhotoCaptured: (bytes, lat, lng) {
               if (_attachedMediaList.length < 4) {
+                final media = CapturedMedia(
+                  id: 'cam_${DateTime.now().microsecondsSinceEpoch}',
+                  bytesBase64: base64Encode(bytes),
+                  capturedLat: lat,
+                  capturedLng: lng,
+                  capturedAt: DateTime.now(),
+                  isVerified: lat != null && lng != null,
+                );
+                unawaited(ref.read(capturedMediaStoreProvider).save(media));
                 setState(() {
-                  _attachedMediaList.add(
-                    _AttachedMedia(
-                      id: 'cam_${DateTime.now().microsecondsSinceEpoch}',
-                      bytes: bytes,
-                      isVerified: true,
-                    ),
-                  );
+                  _attachedMediaList.add(media);
                 });
               }
-              Navigator.pop(modalCtx);
-            },
-            onGalleryPickSelected: (images) {
-              _addGalleryImages(images);
               Navigator.pop(modalCtx);
             },
           ),
@@ -151,43 +134,28 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
     );
   }
 
-  Future<void> _addGalleryImages([List<Uint8List>? images]) async {
-    List<Uint8List> actualImages = images ?? [];
-
-    if (actualImages.isEmpty) {
-      try {
-        final picker = ImagePicker();
-        final picked = await picker.pickMultiImage(
-          limit: 4 - _attachedMediaList.length,
-        );
-        for (final file in picked) {
-          actualImages.add(await file.readAsBytes());
-        }
-      } catch (_) {}
-    }
-
+  Future<void> _openLibrary() async {
     final availableSlots = 4 - _attachedMediaList.length;
     if (availableSlots <= 0) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Maximum 4 images allowed.')),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Maximum 4 images allowed.')),
+      );
       return;
     }
-
-    if (actualImages.isEmpty) return;
-
-    setState(() {
-      for (final bytes in actualImages.take(availableSlots)) {
-        _attachedMediaList.add(
-          _AttachedMedia(
-            id: 'gallery_${DateTime.now().microsecondsSinceEpoch}_${_attachedMediaList.length}',
-            bytes: bytes,
-            isVerified: false,
-          ),
+    final picked =
+        await context.push<List<CapturedMedia>>(
+          RoutePaths.capturedMedia,
+          extra: const MediaLibraryScreenArgs(pickMode: true),
         );
-      }
+    if (picked == null || picked.isEmpty || !mounted) return;
+    final existing = _attachedMediaList.map((m) => m.id).toSet();
+    final fresh = picked
+        .where((m) => !existing.contains(m.id))
+        .take(availableSlots)
+        .toList();
+    if (fresh.isEmpty) return;
+    setState(() {
+      _attachedMediaList.addAll(fresh);
     });
   }
 
@@ -200,11 +168,7 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
   Future<void> _saveAsDraft() async {
     await ref
         .read(composeControllerProvider.notifier)
-        .saveAsDraft(
-          mediaBytes: _attachedMediaList
-              .map((m) => base64Encode(m.bytes))
-              .toList(),
-        );
+        .saveAsDraft(media: _attachedMediaList.toList());
     ref.invalidate(savedDraftsProvider);
     if (!mounted) return;
     ScaffoldMessenger.of(
@@ -261,6 +225,8 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
       final dups = await repo.checkNearDuplicates(
         latitude: current.latitude!,
         longitude: current.longitude!,
+        category: current.category,
+        radiusKm: 0.030,
       );
       if (context.mounted) await _showNearDuplicates(dups);
     } catch (_) {}
@@ -273,45 +239,49 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
       showDragHandle: true,
       builder: (ctx) => SafeArea(
         child: Container(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-          constraints: BoxConstraints(
-            maxHeight: MediaQuery.of(ctx).size.height * 0.75,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                dups.isEmpty
-                    ? context.tr('near_dup_none_title')
-                    : context.tr('near_dup_guard_title'),
-                style: Theme.of(
-                  ctx,
-                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+              Row(
+                children: [
+                  const Icon(
+                    Icons.warning_amber_rounded,
+                    color: AppColors.urgent,
+                    size: 28,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      context.tr('near_dup_title'),
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 8),
               Text(
-                dups.isEmpty
-                    ? context.tr('near_dup_none_body')
-                    : context
-                          .tr('near_dup_found_body')
-                          .replaceFirst('{count}', '${dups.length}'),
-                style: Theme.of(ctx).textTheme.bodyMedium,
+                context.tr('near_dup_warning'),
+                style: const TextStyle(color: Colors.grey),
               ),
-              const SizedBox(height: 12),
-              if (dups.isNotEmpty)
+              const SizedBox(height: 16),
+              if (dups.isEmpty)
+                Text(context.tr('near_dup_none'))
+              else
                 Flexible(
                   child: ListView.separated(
                     shrinkWrap: true,
                     itemCount: dups.length,
                     separatorBuilder: (_, _) => const Divider(),
-                    itemBuilder: (_, index) {
-                      final d = dups[index];
+                    itemBuilder: (ctx, idx) {
+                      final d = dups[idx];
                       return ListTile(
-                        dense: true,
-                        contentPadding: EdgeInsets.zero,
                         leading: const Icon(
-                          Icons.warning_amber_rounded,
+                          Icons.location_on,
                           color: AppColors.review,
                         ),
                         title: Text(
@@ -319,7 +289,7 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
                           style: const TextStyle(fontWeight: FontWeight.w600),
                         ),
                         subtitle: Text(
-                          '${d.distanceMeters.toStringAsFixed(0)}m away • #${d.category}',
+                          '${d.distanceMeters.toStringAsFixed(0)}m away • ${StringFormatters.formatCategory(d.category)}',
                         ),
                       );
                     },
@@ -349,6 +319,8 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
         final dups = await repo.checkNearDuplicates(
           latitude: current.latitude!,
           longitude: current.longitude!,
+          category: current.category,
+          radiusKm: 0.030,
         );
         if (dups.isNotEmpty && context.mounted) {
           final proceed = await _showNearDuplicates(dups);
@@ -359,10 +331,7 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
 
     final success = await ref
         .read(composeControllerProvider.notifier)
-        .submit(
-          mediaBytes: _attachedMediaList.map((m) => m.bytes).toList(),
-          isInAppCamera: _attachedMediaList.any((m) => m.id.startsWith('cam_')),
-        );
+        .submit(media: _attachedMediaList.toList());
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -376,6 +345,7 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
     ref.invalidate(savedDraftsProvider);
     context.go(RoutePaths.feed);
     ref.invalidate(multiTypeFeedProvider);
+    ref.invalidate(mapPinsNotifierProvider);
   }
 
   @override
@@ -467,33 +437,55 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      context.tr('compose_media'),
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            context.tr('compose_media'),
+                            style: Theme.of(context).textTheme.titleSmall
+                                ?.copyWith(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        Text(
+                          '${_attachedMediaList.length}/4',
+                          key: const Key('mediaCountLabel'),
+                          style: Theme.of(context).textTheme.labelMedium
+                              ?.copyWith(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
+                              ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 8),
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
                       children: [
-                        OutlinedButton.icon(
+                        FilledButton.icon(
                           key: const Key('openCameraButton'),
                           icon: const Icon(Icons.camera_alt_outlined),
                           label: Text(context.tr('compose_take_photo')),
                           onPressed: _openCameraModal,
                         ),
                         OutlinedButton.icon(
-                          key: const Key('openGalleryButton'),
+                          key: const Key('capturedLibraryButton'),
                           icon: const Icon(Icons.photo_library_outlined),
-                          label: Text(context.tr('compose_add_gallery')),
-                          onPressed: () => _addGalleryImages(),
+                          label: const Text('My captured photos'),
+                          onPressed: _openLibrary,
                         ),
                       ],
                     ),
                     if (_attachedMediaList.isNotEmpty) ...[
                       const SizedBox(height: 12),
+                      Text(
+                        'Captured photos',
+                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
                       SizedBox(
                         height: 160,
                         child: ListView.separated(
@@ -520,44 +512,33 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
                               child: Stack(
                                 children: [
                                   Positioned.fill(
-                                    child: media.bytes.length < 500
-                                        ? Container(
-                                            color: Theme.of(
-                                              context,
-                                            ).colorScheme.surfaceContainerHigh,
-                                            child: const Center(
-                                              child: Icon(
-                                                Icons.image,
-                                                size: 40,
-                                                color: Colors.grey,
-                                              ),
-                                            ),
-                                          )
-                                        : Image.memory(
-                                            media.bytes,
-                                            fit: BoxFit.cover,
-                                            errorBuilder: (ctx, err, st) =>
-                                                Container(
-                                                  color: Theme.of(context)
-                                                      .colorScheme
-                                                      .surfaceContainerHigh,
-                                                  child: const Center(
-                                                    child: Icon(
-                                                      Icons.image,
-                                                      size: 40,
-                                                      color: Colors.grey,
-                                                    ),
-                                                  ),
-                                                ),
-                                          ),
+                                    child: _MediaThumbnail(
+                                      bytesBase64: media.bytesBase64,
+                                    ),
                                   ),
                                   Positioned(
                                     bottom: 6,
                                     left: 4,
                                     right: 4,
-                                    child: MediaWatermarkBadge(
-                                      isVerified: media.isVerified,
-                                      isCompact: true,
+                                    child: Row(
+                                      children: [
+                                        Flexible(
+                                          child: MediaWatermarkBadge(
+                                            isVerified: media.isVerified,
+                                            isCompact: true,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Icon(
+                                          media.hasGps
+                                              ? Icons.gps_fixed
+                                              : Icons.gps_off,
+                                          size: 14,
+                                          color: media.hasGps
+                                              ? Colors.green
+                                              : Colors.grey,
+                                        ),
+                                      ],
                                     ),
                                   ),
                                   Positioned(
@@ -567,14 +548,17 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
                                       radius: 14,
                                       backgroundColor: Colors.black54,
                                       child: IconButton(
-                                        key: Key('removeMedia_${media.id}'),
+                                        key: Key(
+                                          'removeMedia_${media.id}',
+                                        ),
                                         padding: EdgeInsets.zero,
                                         iconSize: 16,
                                         icon: const Icon(
                                           Icons.close,
                                           color: Colors.white,
                                         ),
-                                        onPressed: () => _removeMedia(media.id),
+                                        onPressed: () =>
+                                            _removeMedia(media.id),
                                       ),
                                     ),
                                   ),
@@ -618,11 +602,9 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
                                     ?.copyWith(fontWeight: FontWeight.bold),
                               ),
                               const SizedBox(height: 2),
-                              Text(
-                                draft.latitude != null
-                                    ? context.tr('compose_location_set')
-                                    : context.tr('compose_no_location'),
-                                style: Theme.of(context).textTheme.bodySmall,
+                              _LocationSubtitle(
+                                draft: draft,
+                                attachedMedia: _attachedMediaList,
                               ),
                             ],
                           ),
@@ -696,6 +678,75 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
   }
 }
 
+/// Location subtitle: the draft lock when set, otherwise the first attached
+/// photo's captured GPS ("From captured photo"), otherwise "Location not set".
+class _LocationSubtitle extends StatelessWidget {
+  const _LocationSubtitle({required this.draft, required this.attachedMedia});
+
+  final ComposeDraft draft;
+  final List<CapturedMedia> attachedMedia;
+
+  @override
+  Widget build(BuildContext context) {
+    if (draft.latitude != null && draft.longitude != null) {
+      return Text(
+        '${draft.latitude!.toStringAsFixed(5)}, ${draft.longitude!.toStringAsFixed(5)}',
+        style: Theme.of(context).textTheme.bodySmall,
+      );
+    }
+    final gpsMedia = attachedMedia.where((m) => m.hasGps).firstOrNull;
+    if (gpsMedia != null) {
+      return Text(
+        'From captured photo • ${gpsMedia.capturedLat!.toStringAsFixed(5)}, ${gpsMedia.capturedLng!.toStringAsFixed(5)}',
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: Theme.of(context).colorScheme.primary,
+        ),
+      );
+    }
+    return Text(
+      'Location not set',
+      style: Theme.of(context).textTheme.bodySmall,
+    );
+  }
+}
+
+/// Decodes a base64 payload into a memory-backed image thumbnail, falling
+/// back to a placeholder icon for short/dummy captures or malformed payloads.
+class _MediaThumbnail extends StatelessWidget {
+  const _MediaThumbnail({required this.bytesBase64});
+
+  final String bytesBase64;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    Uint8List? bytes;
+    try {
+      final decoded = base64Decode(bytesBase64);
+      if (decoded.isNotEmpty) bytes = decoded;
+    } catch (_) {}
+
+    if (bytes == null || bytes.length < 500) {
+      return Container(
+        color: colorScheme.surfaceContainerHigh,
+        child: const Center(
+          child: Icon(Icons.image, size: 40, color: Colors.grey),
+        ),
+      );
+    }
+    return Image.memory(
+      bytes,
+      fit: BoxFit.cover,
+      errorBuilder: (ctx, err, st) => Container(
+        color: colorScheme.surfaceContainerHigh,
+        child: const Center(
+          child: Icon(Icons.image, size: 40, color: Colors.grey),
+        ),
+      ),
+    );
+  }
+}
+
 /// Category choice chip carrying the category's solid identity dot.
 class _CategoryChoiceChip extends StatelessWidget {
   const _CategoryChoiceChip({
@@ -718,7 +769,7 @@ class _CategoryChoiceChip extends StatelessWidget {
         height: 10,
         decoration: BoxDecoration(shape: BoxShape.circle, color: color),
       ),
-      label: Text(category),
+      label: Text(StringFormatters.formatCategory(category)),
       selected: selected,
       selectedColor: AppColors.brand.withValues(alpha: 0.14),
       side: BorderSide(

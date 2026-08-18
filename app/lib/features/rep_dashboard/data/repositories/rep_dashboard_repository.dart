@@ -1,8 +1,10 @@
 import 'dart:convert';
 
 import '../../../../core/network/api_client.dart';
+import '../../../../core/network/api_exceptions.dart';
 import '../../../../core/storage/local_store.dart';
 import '../../domain/official_response.dart';
+import '../../domain/public_representative_profile.dart';
 import '../../domain/representative_profile.dart';
 import '../../domain/ward_issues_response.dart';
 
@@ -70,5 +72,18 @@ class RepDashboardRepository {
     final json = await _apiClient.getJson('/issues/$issueId/official-responses');
     final list = json as List<dynamic>;
     return list.map((e) => OfficialResponse.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
+  /// Fetches the public rep performance profile for [userId].
+  ///
+  /// Returns `null` when the user is not a representative (HTTP 404).
+  Future<PublicRepresentativeProfile?> fetchPublicRepByUser(int userId) async {
+    try {
+      final json = await _apiClient.getJson('/representatives/by-user/$userId');
+      return PublicRepresentativeProfile.fromJson(json as Map<String, dynamic>);
+    } on ApiServerException catch (e) {
+      if (e.statusCode == 404) return null;
+      rethrow;
+    }
   }
 }

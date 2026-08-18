@@ -56,6 +56,13 @@ class ApiUnauthorizedException extends ApiServerException {
   });
 }
 
+/// The server responded successfully, but the body was not a list of
+/// parseable `Issue` objects (e.g. an error envelope behind a 200 proxy, a
+/// non-list body, or a malformed item).
+class ApiParseException extends ApiException {
+  ApiParseException(super.message);
+}
+
 ApiException mapDioException(DioException error) {
   if (error.type == DioExceptionType.badResponse) {
     if (error.response?.statusCode == 401) {

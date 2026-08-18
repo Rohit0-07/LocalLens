@@ -27,6 +27,7 @@ class LocalTalkCard extends StatelessWidget {
       key: Key('localTalkCard_${post.id}'),
       margin: EdgeInsets.zero,
       elevation: 0,
+      color: isDark ? AppColors.darkCard : AppColors.lightSurface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
@@ -34,6 +35,7 @@ class LocalTalkCard extends StatelessWidget {
           width: 1,
         ),
       ),
+      clipBehavior: Clip.antiAlias,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -123,7 +125,7 @@ class LocalTalkCard extends StatelessWidget {
                 heroTagPrefix: 'talk_${post.id}',
               ),
             ],
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
             Row(
               children: [
                 Container(

@@ -71,13 +71,15 @@ async def get_near_duplicates(
     session: SessionDep,
     latitude: Annotated[float, Query()],
     longitude: Annotated[float, Query()],
-    radius_km: Annotated[float, Query(ge=0.01, le=10)] = 0.5,
+    category: Annotated[str | None, Query()] = None,
+    radius_km: Annotated[float, Query(ge=0.001, le=10)] = 0.030,
     limit: Annotated[int, Query(ge=1, le=50)] = 10,
 ) -> list[NearDuplicateOut]:
     return await service.detect_near_duplicates(
         session,
         latitude=latitude,
         longitude=longitude,
+        category=category,
         radius_km=radius_km,
         limit=limit,
     )

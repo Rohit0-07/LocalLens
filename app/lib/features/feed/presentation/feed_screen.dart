@@ -5,13 +5,14 @@ import 'package:go_router/go_router.dart';
 import '../../../core/l10n/app_strings.dart';
 import '../../../core/router/route_paths.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../shared/widgets/empty_state.dart';
-import '../../../shared/widgets/skeleton_list.dart';
 import '../../geo/presentation/providers/geo_providers.dart';
 import '../../geo/presentation/widgets/ward_location_chip.dart';
 import '../../compose/presentation/compose_providers.dart';
+import '../../notifications/presentation/controllers/notifications_controller.dart';
 import '../domain/feed_item.dart';
 import 'feed_providers.dart';
+import 'widgets/feed_empty_state.dart';
+import 'widgets/feed_skeleton_list.dart';
 import 'widgets/issue_card.dart';
 import 'widgets/local_talk_card.dart';
 import 'widgets/notice_card.dart';
@@ -26,6 +27,7 @@ class FeedScreen extends ConsumerWidget {
     final feedAsync = ref.watch(multiTypeFeedProvider);
     final selectedFilter = ref.watch(feedFilterProvider);
     final pendingOutboxCount = ref.watch(offlineOutboxProvider).pendingCount;
+    final unreadNotificationCount = ref.watch(unreadNotificationCountProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -72,10 +74,21 @@ class FeedScreen extends ConsumerWidget {
             icon: const Icon(Icons.search),
             onPressed: () => context.push(RoutePaths.search),
           ),
+          IconButton(
+            key: const Key('feedNotificationButton'),
+            tooltip: context.tr('notifications_title'),
+            icon: Badge(
+              isLabelVisible: unreadNotificationCount > 0,
+              label: Text('$unreadNotificationCount'),
+              backgroundColor: AppColors.brand,
+              child: const Icon(Icons.notifications_outlined),
+            ),
+            onPressed: () => context.push(RoutePaths.notifications),
+          ),
           const SizedBox(width: 4),
         ],
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(90),
+          preferredSize: const Size.fromHeight(84),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -89,7 +102,7 @@ class FeedScreen extends ConsumerWidget {
                   ),
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 4),
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -148,11 +161,13 @@ class FeedScreen extends ConsumerWidget {
         ),
       ),
       body: feedAsync.when(
-        loading: () =>
-            const Padding(padding: EdgeInsets.all(16), child: SkeletonList()),
+        loading: () => const Padding(
+          padding: EdgeInsets.all(16),
+          child: FeedSkeletonList(key: Key('feedSkeleton'), itemCount: 4),
+        ),
         error: (error, _) => Padding(
           padding: const EdgeInsets.all(16),
-          child: EmptyState(
+          child: FeedEmptyState(
             icon: Icons.cloud_off_outlined,
             title: context.tr('feed_unavailable'),
             message: context.tr('feed_unavailable_msg'),
@@ -165,7 +180,8 @@ class FeedScreen extends ConsumerWidget {
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.all(16),
                 children: [
-                  EmptyState(
+                  FeedEmptyState(
+                    key: const Key('feedEmptyState'),
                     icon: Icons.check_circle_outline,
                     title: context.tr('feed_empty_title'),
                     message: context.tr('feed_empty_msg'),
@@ -178,9 +194,9 @@ class FeedScreen extends ConsumerWidget {
                     ref.read(multiTypeFeedProvider.notifier).refresh(),
                 child: ListView.separated(
                   physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
                   itemCount: items.length + 1,
-                  separatorBuilder: (_, _) => const SizedBox(height: 12),
+                  separatorBuilder: (_, _) => const SizedBox(height: 16),
                   itemBuilder: (context, index) {
                     if (index == items.length) {
                       return _buildEndOfFeedWidget(context);
@@ -265,7 +281,7 @@ class FeedScreen extends ConsumerWidget {
 
     return Padding(
       key: const Key('endOfFeedState'),
-      padding: const EdgeInsets.symmetric(vertical: 24),
+      padding: const EdgeInsets.symmetric(vertical: 32),
       child: Column(
         children: [
           Container(

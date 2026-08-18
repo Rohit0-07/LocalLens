@@ -43,6 +43,7 @@ from app.features.issues.models import (
 from app.features.media.models import Media
 from app.features.notifications.models import Notification
 from app.features.representatives.models import OfficialResponse, RepresentativeProfile
+from app.features.wards.models import Ward
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -64,11 +65,13 @@ _TABLES: list[Any] = [
     Issue,
     OtpCode,
     User,
+    Ward,
 ]
 
 #: record types consumed by the seeder, in foreign-key-safe load order
 _DATA_FILES = [
     "users",
+    "wards",
     "media",
     "issues",
     "representatives",
@@ -221,6 +224,26 @@ async def _seed_users(
             ward=row.get("ward", "Ward 45, Urban Central"),
             is_banned=row.get("is_banned", False),
             created_at=_parse_dt(row.get("created_at")),
+        )
+
+    _dedup(session, rows, existing, key, factory)
+    await session.commit()
+
+
+async def _seed_wards(
+    session: AsyncSession, rows: list[dict[str, Any]], existing: set[Any]
+) -> None:
+    def key(row: dict[str, Any]) -> Any:
+        return row["slug"]
+
+    def factory(row: dict[str, Any]) -> Ward:
+        return Ward(
+            name=row["name"],
+            slug=row["slug"],
+            code=row["code"],
+            center_latitude=row["center_latitude"],
+            center_longitude=row["center_longitude"],
+            boundary=json.dumps(row["boundary"]) if row.get("boundary") else None,
         )
 
     _dedup(session, rows, existing, key, factory)
@@ -551,6 +574,7 @@ async def _report(session: AsyncSession) -> None:
 
     counts = {
         "users": await count(User, User.id),
+        "wards": await count(Ward, Ward.id),
         "media": await count(Media, Media.id),
         "issues": await count(Issue, Issue.id),
         "representatives": await count(RepresentativeProfile, RepresentativeProfile.id),
@@ -583,6 +607,7 @@ async def _main(args: argparse.Namespace) -> None:
             else:
                 existing = {
                     "users": await _keys(session, User.id),
+                    "wards": await _keys(session, Ward.slug),
                     "media": await _keys(session, Media.id),
                     "issues": await _keys(session, Issue.id),
                     "representatives": await _keys(session, RepresentativeProfile.id),
@@ -609,6 +634,7 @@ async def _main(args: argparse.Namespace) -> None:
             secret = settings.jwt_secret
 
             await _seed_users(session, data["users"], existing.get("users", set()))
+            await _seed_wards(session, data["wards"], existing.get("wards", set()))
             await _seed_media(session, data["media"], existing.get("media", set()))
             await _seed_issues(session, data["issues"], existing.get("issues", set()))
             await _seed_representatives(

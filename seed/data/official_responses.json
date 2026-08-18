@@ -38,5 +38,13 @@
     "estimated_resolution_days": 2,
     "status_update": "in_progress",
     "created_at": "2026-08-08T17:00:00"
+  },
+  {
+    "issue_id": 7,
+    "representative_id": "rep_ward45_urban_central",
+    "message": "The water main rupture at Nagar Road crossing has been repaired. The leaking collar coupling was replaced with a reinforced ductile iron sleeve and the road surface was repaved. Supply has been restored to Sectors 3 and 4.",
+    "estimated_resolution_days": 5,
+    "status_update": "acknowledged",
+    "created_at": "2026-07-15T12:00:00"
   }
 ]

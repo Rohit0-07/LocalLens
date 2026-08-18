@@ -12,6 +12,7 @@ from app.features.issues.geo import haversine_km
 from app.features.issues.models import Issue
 from app.features.issues.service import to_issue_out
 from app.features.representatives.models import RepresentativeProfile
+from app.features.representatives.service import compute_rep_metrics
 from app.features.wards.models import LocalTalkPost, Notice, Ward
 from app.features.wards.schemas import (
     AssignedRepresentativeOut,
@@ -57,8 +58,13 @@ def calculate_resolution_rate(total_issues: int, resolved_issues: int) -> float:
 
 
 async def _get_ward_metrics(session: AsyncSession, ward: Ward) -> tuple[int, int, int, int, float]:
-
-    where_clause = (Issue.ward == ward.name) | (Issue.ward == ward.slug)
+    where_clause = (
+        (Issue.ward == ward.name)
+        | (Issue.ward == ward.slug)
+        | (Issue.ward == ward.code)
+        | (Issue.ward.ilike(f"%{ward.name}%"))
+        | (Issue.ward.ilike(f"%{ward.code}%"))
+    )
 
     total_issues = (
         await session.execute(select(func.count(Issue.id)).where(where_clause))
@@ -151,10 +157,15 @@ async def get_ward_detail(
     rep = (await session.execute(rep_stmt)).scalars().first()
     assigned_rep = None
     if rep:
+        rep_metrics = await compute_rep_metrics(session, rep)
         assigned_rep = AssignedRepresentativeOut(
+            id=rep.id,
+            user_id=rep.user_id,
+            ward=rep.ward,
             official_name=rep.official_name,
             title=rep.title,
             verified_at=rep.verified_at,
+            **rep_metrics.model_dump(),
         )
 
     # Recent issues (exclude shielded unresolved)

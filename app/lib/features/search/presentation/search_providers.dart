@@ -86,6 +86,7 @@ class SearchResultsNotifier extends AsyncNotifier<List<Issue>> {
             categories: filters.categories,
             radiusKm: radiusKm,
             createdAfter: createdAfter,
+            ward: filters.ward,
           );
       await ref.read(recentSearchesProvider.notifier).add(query);
       return results;

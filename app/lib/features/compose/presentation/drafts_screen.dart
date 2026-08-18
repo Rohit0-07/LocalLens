@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/router/route_paths.dart';
+import '../../../core/utils/string_formatters.dart';
 import '../domain/compose_draft.dart';
 import 'compose_providers.dart';
 
@@ -244,7 +245,7 @@ class _DraftCard extends StatelessWidget {
                 const SizedBox(width: 4),
               ],
               if (draft.hasMedia) ...[
-                _DraftThumbnail(base64: draft.mediaBytes.first),
+                _DraftThumbnail(base64: draft.media.first.bytesBase64),
                 const SizedBox(width: 12),
               ],
               Expanded(
@@ -273,7 +274,7 @@ class _DraftCard extends StatelessWidget {
                       spacing: 6,
                       runSpacing: 4,
                       children: [
-                        _MetaTag(text: '#${draft.category}'),
+                        _MetaTag(text: StringFormatters.formatCategory(draft.category)),
                         if (updatedAt != null)
                           _MetaTag(text: _relativeTime(updatedAt)),
                         if (draft.hasMedia)

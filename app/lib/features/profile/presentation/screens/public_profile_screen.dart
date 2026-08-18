@@ -6,8 +6,10 @@ import '../../../../core/l10n/app_strings.dart';
 import '../../../../core/router/route_paths.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/relative_time.dart';
+import '../../../../core/utils/string_formatters.dart';
 import '../../../../shared/widgets/status_badge.dart';
 import '../../../feed/domain/issue.dart';
+import '../../../rep_dashboard/presentation/rep_dashboard_providers.dart';
 import '../profile_providers.dart';
 
 class PublicProfileScreen extends ConsumerWidget {
@@ -44,6 +46,7 @@ class PublicProfileScreen extends ConsumerWidget {
 
     final profileAsync = ref.watch(publicProfileProvider(userId));
     final issuesAsync = ref.watch(publicUserIssuesProvider(userId));
+    final repProfileAsync = ref.watch(publicRepProfileProvider(userId));
 
     return Scaffold(
       appBar: AppBar(
@@ -301,6 +304,97 @@ class PublicProfileScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 16),
 
+                  // ── Representative Performance ────────────────────
+                  repProfileAsync.when(
+                    data: (repProfile) {
+                      if (repProfile == null) {
+                        return const SizedBox.shrink();
+                      }
+                      return Card(
+                        key: const Key('publicRepPerformanceCard'),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Representative Performance',
+                                style: theme.textTheme.titleSmall?.copyWith(
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 0.1,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const Divider(height: 24),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceAround,
+                                children: [
+                                  _MetricItem(
+                                    key: const Key('publicRepResolvedCount'),
+                                    label: 'Resolved',
+                                    value: '${repProfile.resolvedWardIssues}',
+                                    icon: Icons.check_circle_outline,
+                                  ),
+                                  _buildVerticalDivider(colorScheme),
+                                  _MetricItem(
+                                    key: const Key('publicRepPendingCount'),
+                                    label: 'Pending',
+                                    value:
+                                        '${repProfile.pendingResponseWardIssues}',
+                                    icon: Icons.pending_actions,
+                                  ),
+                                  _buildVerticalDivider(colorScheme),
+                                  _MetricItem(
+                                    key: const Key('publicRepInProgressCount'),
+                                    label: 'In Progress',
+                                    value:
+                                        '${repProfile.inProgressWardIssues}',
+                                    icon: Icons.build_circle_outlined,
+                                  ),
+                                ],
+                              ),
+                              const Divider(height: 24),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceAround,
+                                children: [
+                                  _MetricItem(
+                                    key: const Key(
+                                        'publicRepAcknowledgedCount'),
+                                    label: 'Acknowledged',
+                                    value:
+                                        '${repProfile.acknowledgedWardIssues}',
+                                    icon: Icons.thumb_up_outlined,
+                                  ),
+                                  _buildVerticalDivider(colorScheme),
+                                  _MetricItem(
+                                    key: const Key('publicRepResponseRate'),
+                                    label: 'Response Rate',
+                                    value:
+                                        '${repProfile.responseRatePct.toStringAsFixed(1)}%',
+                                    icon: Icons.speed_rounded,
+                                  ),
+                                  _buildVerticalDivider(colorScheme),
+                                  _MetricItem(
+                                    key: const Key('publicRepAvgResponseTime'),
+                                    label: 'Avg Response',
+                                    value:
+                                        '${repProfile.avgResponseTimeHours.toStringAsFixed(1)}h',
+                                    icon: Icons.timer_outlined,
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                    loading: () => const SizedBox.shrink(),
+                    error: (_, _) => const SizedBox.shrink(),
+                  ),
+                  const SizedBox(height: 16),
+
                   // ── Unlocked Civic Badges ─────────────────────────────
                   Text(
                     'Unlocked Civic Badges (${profile.badges.length})',
@@ -379,7 +473,7 @@ class PublicProfileScreen extends ConsumerWidget {
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
-                                  badge.category.toUpperCase(),
+                                  StringFormatters.humanize(badge.category).toUpperCase(),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
@@ -586,6 +680,7 @@ class _RoleBadge extends StatelessWidget {
 
 class _MetricItem extends StatelessWidget {
   const _MetricItem({
+    super.key,
     required this.label,
     required this.value,
     required this.icon,
@@ -680,7 +775,7 @@ class _PublicIssueTile extends StatelessWidget {
                         Icon(categoryIcon, size: 12, color: categoryColor),
                         const SizedBox(width: 4),
                         Text(
-                          issue.category.toUpperCase(),
+                          StringFormatters.humanize(issue.category).toUpperCase(),
                           style: TextStyle(
                             color: categoryColor,
                             fontSize: 10,

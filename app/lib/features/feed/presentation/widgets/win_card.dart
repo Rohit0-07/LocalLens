@@ -73,7 +73,7 @@ class _WinCardState extends State<WinCard> {
       ),
       clipBehavior: Clip.antiAlias,
       child: Container(
-        color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+        color: isDark ? AppColors.darkCard : AppColors.lightSurface,
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -141,7 +141,7 @@ class _WinCardState extends State<WinCard> {
                   ClipRRect(
                     borderRadius: BorderRadius.circular(14),
                     child: SizedBox(
-                      height: 220,
+                      height: 200,
                       width: double.infinity,
                       child: Stack(
                         children: [
@@ -215,13 +215,14 @@ class _WinCardState extends State<WinCard> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.swipe_rounded,
-                          size: 14, color: Colors.grey),
+                      Icon(Icons.swipe_rounded,
+                          size: 14, color: colorScheme.onSurfaceVariant),
                       const SizedBox(width: 4),
                       Text(
                         'Swipe to compare before & after',
                         style: theme.textTheme.labelSmall?.copyWith(
                           color: colorScheme.onSurfaceVariant,
+                          fontSize: 11,
                         ),
                       ),
                     ],

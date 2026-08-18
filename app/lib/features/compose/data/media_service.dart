@@ -79,6 +79,21 @@ class MediaUploadResult {
   }
 }
 
+class MediaDeleteException implements Exception {
+  const MediaDeleteException({
+    required this.statusCode,
+    required this.message,
+    this.code,
+  });
+
+  final int statusCode;
+  final String message;
+  final String? code;
+
+  @override
+  String toString() => 'MediaDeleteException($statusCode, $code): $message';
+}
+
 class MediaService {
   final Dio _dio;
   final String? Function()? accessTokenProvider;
@@ -98,13 +113,14 @@ class MediaService {
     double? capturedLat,
     double? capturedLng,
     bool isFuzzed = false,
+    DateTime? capturedAt,
   }) {
     return {
       'is_in_app_camera': isInAppCamera,
       'captured_lat': capturedLat,
       'captured_lng': capturedLng,
       'is_fuzzed': isFuzzed,
-      'timestamp': DateTime.now().toIso8601String(),
+      'captured_at': (capturedAt ?? DateTime.now()).toUtc().toIso8601String(),
     };
   }
 
@@ -115,18 +131,20 @@ class MediaService {
     double? capturedLat,
     double? capturedLng,
     bool isFuzzed = false,
+    DateTime? capturedAt,
     String? filename,
   }) async {
     final compressedBytes = compressImage(bytes);
     final base64Payload = base64Encode(compressedBytes);
 
-    final payload = {
-      'base64_payload': base64Payload,
-      'is_in_app_camera': isInAppCamera,
-      'captured_lat': capturedLat,
-      'captured_lng': capturedLng,
-      'is_fuzzed': isFuzzed,
-    };
+    final payload = packageExifMetadata(
+      isInAppCamera: isInAppCamera,
+      capturedLat: capturedLat,
+      capturedLng: capturedLng,
+      isFuzzed: isFuzzed,
+      capturedAt: capturedAt,
+    );
+    payload['base64_payload'] = base64Payload;
 
     final token = accessTokenProvider?.call();
     final response = await _dio.post(
@@ -146,6 +164,41 @@ class MediaService {
       );
     } else {
       throw Exception('Failed to upload media: ${response.statusMessage}');
+    }
+  }
+
+  /// Soft-deletes a server Media row via DELETE /api/v1/media/{id}.
+  /// Throws [MediaDeleteException] on any non-2xx response.
+  Future<void> deleteMedia(String id) async {
+    final token = accessTokenProvider?.call();
+    final response = await _dio.delete(
+      '/media/$id',
+      options: Options(
+        headers: {
+          'Accept': 'application/json',
+          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+        },
+      ),
+    );
+
+    final statusCode = response.statusCode ?? 0;
+    if (statusCode < 200 || statusCode >= 300) {
+      String? code;
+      String message = 'Failed to delete media: ${response.statusMessage}';
+      try {
+        final body = response.data is String
+            ? jsonDecode(response.data)
+            : response.data;
+        if (body is Map) {
+          code = body['code'] as String?;
+          message = (body['detail'] as String?) ?? message;
+        }
+      } catch (_) {}
+      throw MediaDeleteException(
+        statusCode: statusCode,
+        message: message,
+        code: code,
+      );
     }
   }
 }

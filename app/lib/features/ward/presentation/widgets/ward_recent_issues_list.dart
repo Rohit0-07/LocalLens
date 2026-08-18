@@ -4,9 +4,22 @@ import '../../../feed/domain/issue.dart';
 import '../../../feed/presentation/widgets/issue_card.dart';
 
 class WardRecentIssuesList extends StatelessWidget {
-  const WardRecentIssuesList({super.key, required this.issues});
+  const WardRecentIssuesList({
+    super.key,
+    required this.issues,
+    this.showHeader = true,
+    this.emptyMessage,
+  });
 
   final List<Issue> issues;
+
+  /// Whether to render the "recent issues" header. The ward detail page
+  /// renders its own search + filter header and passes `false`.
+  final bool showHeader;
+
+  /// Optional override for the empty-state message (shown when [issues] is
+  /// empty and [showHeader] is still rendering its own content).
+  final String? emptyMessage;
 
   @override
   Widget build(BuildContext context) {
@@ -15,18 +28,20 @@ class WardRecentIssuesList extends StatelessWidget {
       key: const Key('wardRecentIssuesList'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          context.tr('ward_recent_issues_header'),
-          style: theme.textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.bold,
+        if (showHeader) ...[
+          Text(
+            context.tr('ward_recent_issues_header'),
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
           ),
-        ),
-        const SizedBox(height: 12),
+          const SizedBox(height: 12),
+        ],
         if (issues.isEmpty)
           Card(
             child: Padding(
               padding: const EdgeInsets.all(16),
-              child: Text(context.tr('ward_no_recent_issues')),
+              child: Text(emptyMessage ?? context.tr('ward_no_recent_issues')),
             ),
           )
         else

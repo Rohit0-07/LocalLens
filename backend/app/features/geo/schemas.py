@@ -37,3 +37,13 @@ class MapPinOut(BaseModel):
     is_shielded: bool
     upvotes_count: int
     created_at: datetime
+
+
+class WardBoundaryOut(BaseModel):
+    model_config = ConfigDict(from_attributes=False)
+
+    ward_slug: str
+    name: str
+    code: str
+    #: Outer ring as ``[[lat, lng], ...]`` (≥3 points, open or closed).
+    boundary: list[list[float]]

@@ -1,9 +1,16 @@
-from sqlalchemy import select
+import json
+import math
+
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import AppError
 from app.core.logging import get_logger
-from app.features.geo.schemas import MapPinOut, ReverseGeocodeOut, ReverseGeocodeWardOut
+from app.features.geo.schemas import (
+    MapPinOut,
+    ReverseGeocodeOut,
+    ReverseGeocodeWardOut,
+    WardBoundaryOut,
+)
 from app.features.issues.geo import haversine_km
 from app.features.issues.models import Issue
 from app.features.wards.models import Ward
@@ -50,10 +57,10 @@ async def get_map_pins(
     )
 
     if category and category.strip() and category.lower() != "all":
-        stmt = stmt.where(Issue.category == category)
+        stmt = stmt.where(func.lower(func.trim(Issue.category)) == category.strip().lower())
 
     if status and status.strip() and status.lower() != "all":
-        stmt = stmt.where(Issue.status == status)
+        stmt = stmt.where(func.lower(func.trim(Issue.status)) == status.strip().lower())
 
     stmt = stmt.order_by(Issue.created_at.desc())
     result = await session.execute(stmt)
@@ -146,3 +153,82 @@ async def reverse_geocode(
         distance_km=0.0,
         found=False,
     )
+
+
+def derived_boundary_ring(lat: float, lng: float) -> list[list[float]]:
+    """Deterministic 8-point octagon ring around ``(lat, lng)``.
+
+    Radius is 0.02° in latitude and ``0.02 / cos(lat)`` in longitude so the
+    ring stays ~2.2 km wide regardless of latitude — the same algorithm as the
+    frontend ``derivedWardRing`` helper. Points are ordered clockwise starting
+    at due north.
+    """
+    radius_lat = 0.02
+    radius_lng = 0.02 / math.cos(math.radians(lat))
+    return [
+        [
+            round(lat + radius_lat * math.cos(math.radians(angle)), 6),
+            round(lng + radius_lng * math.sin(math.radians(angle)), 6),
+        ]
+        for angle in (0, 45, 90, 135, 180, 225, 270, 315)
+    ]
+
+
+def parse_ward_boundary(raw: str | None) -> list[list[float]] | None:
+    """Parse a ward boundary ring from its JSON-encoded text column.
+
+    Returns ``None`` when the value is missing, empty, not JSON, not a list,
+    has fewer than 3 points, or contains any point that is not a ``[lat, lng]``
+    pair within valid coordinate ranges. Callers fall back to
+    :func:`derived_boundary_ring` in that case so the map always shows a
+    meaningful polygon.
+    """
+    if not raw:
+        return None
+    try:
+        data = json.loads(raw)
+    except (TypeError, ValueError):
+        return None
+    if not isinstance(data, list) or len(data) < 3:
+        return None
+
+    ring: list[list[float]] = []
+    for point in data:
+        if not isinstance(point, (list, tuple)) or len(point) != 2:
+            return None
+        lat, lng = point
+        if isinstance(lat, bool) or isinstance(lng, bool):
+            return None
+        if not isinstance(lat, (int, float)) or not isinstance(lng, (int, float)):
+            return None
+        if not (-90.0 <= lat <= 90.0) or not (-180.0 <= lng <= 180.0):
+            return None
+        ring.append([float(lat), float(lng)])
+    return ring
+
+
+async def list_ward_boundaries(session: AsyncSession) -> list[WardBoundaryOut]:
+    """Return every ward with its boundary ring (derived fallback when malformed).
+
+    Read-only: one SELECT, no writes. Always returns 200 with an empty list
+    when the ``wards`` table is empty. A malformed/``NULL`` boundary degrades
+    to the deterministic derived octagon so the map never 5xxes and always
+    draws a meaningful polygon.
+    """
+    stmt = select(Ward).order_by(Ward.id)
+    rows = (await session.execute(stmt)).scalars().all()
+
+    result: list[WardBoundaryOut] = []
+    for ward in rows:
+        ring = parse_ward_boundary(ward.boundary)
+        if ring is None:
+            ring = derived_boundary_ring(ward.center_latitude, ward.center_longitude)
+        result.append(
+            WardBoundaryOut(
+                ward_slug=ward.slug,
+                name=ward.name,
+                code=ward.code,
+                boundary=ring,
+            )
+        )
+    return result

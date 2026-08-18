@@ -10,5 +10,6 @@ abstract interface class SearchRepository {
     double? radiusKm,
     DateTime? createdAfter,
     DateTime? createdBefore,
+    String? ward,
   });
 }

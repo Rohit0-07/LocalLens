@@ -9,6 +9,7 @@ abstract final class RoutePaths {
   static const otp = '/otp';
   static const compose = '/compose';
   static const drafts = '/drafts';
+  static const capturedMedia = '/captured-media';
   static const notifications = '/notifications';
   static const repDashboard = '/rep-dashboard';
   static const issueDetail = '/issue/:id';

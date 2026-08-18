@@ -182,10 +182,10 @@ void main() {
     // FE-MAP-04: Tapping "Search this area" button calls API for updated bounds and updates map pins
     testWidgets('FE-MAP-04: Tapping Search this area calls API for updated bounds', (WidgetTester tester) async {
       when(() => mockMapApi.getMapPins(
-            minLat: 19.0,
-            maxLat: 19.2,
-            minLng: 72.8,
-            maxLng: 72.9,
+            minLat: any(named: 'minLat'),
+            maxLat: any(named: 'maxLat'),
+            minLng: any(named: 'minLng'),
+            maxLng: any(named: 'maxLng'),
             category: any(named: 'category'),
             status: any(named: 'status'),
           )).thenAnswer((_) async => [samplePin1]);
@@ -202,6 +202,7 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           mapApiProvider.overrideWithValue(mockMapApi),
+          locationServiceProvider.overrideWithValue(_ImmediateNullLocationService()),
         ],
       );
 

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/l10n/app_strings.dart';
 import '../../../../core/router/route_paths.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/utils/string_formatters.dart';
 import '../../data/map_api.dart';
 
 class MapPinPreviewSheet extends StatelessWidget {
@@ -19,25 +20,18 @@ class MapPinPreviewSheet extends StatelessWidget {
       case 'resolved':
         return AppColors.resolved;
       case 'in_progress':
+      case 'under_review':
         return AppColors.verified;
+      case 'escalating':
+      case 'escalated':
+        return AppColors.urgent;
       case 'unacknowledged':
       default:
         return colorScheme.onSurfaceVariant;
     }
   }
 
-  String _formatStatus(String status) {
-    switch (status.toLowerCase()) {
-      case 'in_progress':
-        return 'In Progress';
-      case 'unacknowledged':
-        return 'Unacknowledged';
-      case 'resolved':
-        return 'Resolved';
-      default:
-        return status;
-    }
-  }
+  String _formatStatus(String status) => StringFormatters.formatStatus(status);
 
   @override
   Widget build(BuildContext context) {
@@ -94,7 +88,7 @@ class MapPinPreviewSheet extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  pin.category.toUpperCase(),
+                  StringFormatters.humanize(pin.category).toUpperCase(),
                   style: theme.textTheme.labelSmall?.copyWith(
                     color: _categoryColor(pin.category),
                     fontWeight: FontWeight.bold,

@@ -1,5 +1,7 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import 'captured_media.dart';
+
 part 'compose_draft.freezed.dart';
 part 'compose_draft.g.dart';
 
@@ -17,7 +19,7 @@ abstract class ComposeDraft with _$ComposeDraft {
     double? longitude,
     DateTime? createdAt,
     DateTime? updatedAt,
-    @Default(<String>[]) List<String> mediaBytes,
+    @Default(<CapturedMedia>[]) List<CapturedMedia> media,
   }) = _ComposeDraft;
 
   const ComposeDraft._();
@@ -27,7 +29,7 @@ abstract class ComposeDraft with _$ComposeDraft {
 
   bool get hasContent => title.isNotEmpty || description.isNotEmpty;
 
-  bool get hasMedia => mediaBytes.isNotEmpty;
+  bool get hasMedia => media.isNotEmpty;
 
-  int get mediaCount => mediaBytes.length;
+  int get mediaCount => media.length;
 }

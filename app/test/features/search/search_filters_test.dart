@@ -62,6 +62,7 @@ class FakeSearchRepository implements SearchRepository {
     double? radiusKm,
     DateTime? createdAfter,
     DateTime? createdBefore,
+    String? ward,
   }) async {
     searchCount += 1;
     lastQuery = query;

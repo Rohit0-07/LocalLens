@@ -1,6 +1,6 @@
 import datetime
 
-from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, func
+from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
@@ -15,6 +15,10 @@ class Ward(Base):
     code: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
     center_latitude: Mapped[float] = mapped_column(Float, nullable=False)
     center_longitude: Mapped[float] = mapped_column(Float, nullable=False)
+    #: GeoJSON outer ring ``[[lat, lng], ...]`` JSON-encoded as text (≥3 points,
+    #: no holes). Nullable so legacy raw-SQL test helpers that create the table
+    #: without this column keep working.
+    boundary: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime.datetime] = mapped_column(
         DateTime, server_default=func.now(), nullable=False
     )

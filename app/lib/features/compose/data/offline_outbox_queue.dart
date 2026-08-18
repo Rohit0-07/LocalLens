@@ -1,13 +1,19 @@
 import 'dart:convert';
+import 'dart:typed_data';
+
 import '../../../core/storage/local_store.dart';
 import '../../feed/domain/feed_repository.dart';
+import '../../feed/presentation/feed_providers.dart';
+import '../domain/captured_media.dart';
 import '../domain/compose_draft.dart';
+import 'media_service.dart';
 
 class OfflineOutboxQueue {
-  OfflineOutboxQueue(this._localStore, this._feedRepository);
+  OfflineOutboxQueue(this._localStore, this._feedRepository, this._mediaService);
 
   final LocalStore _localStore;
   final FeedRepository _feedRepository;
+  final MediaService _mediaService;
 
   static const String _outboxKey = 'locallens_outbox_queue_v1';
 
@@ -48,6 +54,15 @@ class OfflineOutboxQueue {
     await _localStore.setString(_outboxKey, raw);
   }
 
+  /// Resolves the issue coordinates for an outbox draft: explicit draft lock
+  /// first, then the first attached photo's GPS, then the feed reference point.
+  ({double lat, double lng}) _resolveCoords(ComposeDraft draft) {
+    final gpsMedia = draft.media.where((m) => m.hasGps).firstOrNull;
+    final lat = draft.latitude ?? gpsMedia?.capturedLat ?? defaultLatitude;
+    final lng = draft.longitude ?? gpsMedia?.capturedLng ?? defaultLongitude;
+    return (lat: lat, lng: lng);
+  }
+
   Future<int> flush() async {
     final queue = getPendingQueue();
     if (queue.isEmpty) return 0;
@@ -57,15 +72,22 @@ class OfflineOutboxQueue {
 
     for (final draft in queue) {
       try {
+        final coords = _resolveCoords(draft);
+        final mediaUrls = <String>[];
+        for (final media in draft.media) {
+          final result = await _uploadMedia(media, draft.isFuzzed);
+          mediaUrls.add(result.url);
+        }
         await _feedRepository.createIssue(
           title: draft.title,
           description: draft.description,
           category: draft.category,
-          latitude: draft.latitude ?? 19.1136,
-          longitude: draft.longitude ?? 72.8697,
+          latitude: coords.lat,
+          longitude: coords.lng,
           isAnonymous: draft.isAnonymous,
           isFuzzed: draft.isFuzzed,
           isShielded: draft.isShielded,
+          mediaUrls: mediaUrls,
         );
         successCount++;
       } catch (_) {
@@ -75,5 +97,25 @@ class OfflineOutboxQueue {
 
     await _saveQueue(remaining);
     return successCount;
+  }
+
+  Future<MediaUploadResult> _uploadMedia(
+    CapturedMedia media,
+    bool isFuzzed,
+  ) async {
+    Uint8List bytes;
+    try {
+      bytes = base64Decode(media.bytesBase64);
+    } catch (_) {
+      bytes = Uint8List(0);
+    }
+    return _mediaService.uploadMedia(
+      bytes: bytes,
+      isInAppCamera: true,
+      capturedLat: media.capturedLat,
+      capturedLng: media.capturedLng,
+      isFuzzed: isFuzzed,
+      capturedAt: media.capturedAt,
+    );
   }
 }

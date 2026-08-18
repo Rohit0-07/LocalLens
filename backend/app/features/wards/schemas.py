@@ -3,11 +3,15 @@ import datetime
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.features.issues.schemas import IssueOut
+from app.features.representatives.schemas import RepresentativeMetricsOut
 
 
-class AssignedRepresentativeOut(BaseModel):
+class AssignedRepresentativeOut(RepresentativeMetricsOut):
     model_config = ConfigDict(from_attributes=True)
 
+    id: str = Field(default="", description="Representative profile ID")
+    user_id: int = Field(default=0, description="User account ID of the representative")
+    ward: str = Field(default="", description="Assigned ward of the representative")
     official_name: str = Field(..., description="Official name of the representative")
     title: str = Field(..., description="Designated title, e.g. Ward Representative")
     verified_at: datetime.datetime | None = Field(None, description="Verification timestamp")

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:local_lens/core/storage/local_store.dart';
+import 'package:local_lens/features/compose/data/media_service.dart';
 import 'package:local_lens/features/compose/data/offline_outbox_queue.dart';
 import 'package:local_lens/features/compose/domain/compose_draft.dart';
 import 'package:local_lens/features/compose/presentation/compose_screen.dart';
@@ -60,7 +61,7 @@ void main() {
     test('OfflineOutboxQueue enqueues and flushes pending drafts', () async {
       final fakeRepo = FakeFeedRepository();
       final store = MemoryLocalStore();
-      final outbox = OfflineOutboxQueue(store, fakeRepo);
+      final outbox = OfflineOutboxQueue(store, fakeRepo, MediaService());
 
       const draft = ComposeDraft(
         title: 'Broken streetlight at corner',

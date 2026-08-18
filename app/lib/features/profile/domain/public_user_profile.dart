@@ -14,6 +14,12 @@ class PublicUserProfile {
   final int verifiedResolutions;
   final int upvotesReceived;
   final List<BadgeItem> badges;
+  final int resolvedWardIssues;
+  final int pendingWardIssues;
+  final int inProgressWardIssues;
+  final int acknowledgedWardIssues;
+  final double responseRatePct;
+  final double avgResponseTimeHours;
 
   const PublicUserProfile({
     required this.userId,
@@ -29,6 +35,12 @@ class PublicUserProfile {
     this.verifiedResolutions = 0,
     this.upvotesReceived = 0,
     this.badges = const [],
+    this.resolvedWardIssues = 0,
+    this.pendingWardIssues = 0,
+    this.inProgressWardIssues = 0,
+    this.acknowledgedWardIssues = 0,
+    this.responseRatePct = 0.0,
+    this.avgResponseTimeHours = 0.0,
   });
 
   static String levelForPoints(int points) {
@@ -52,7 +64,10 @@ class PublicUserProfile {
         : DateTime(2026, 1, 1);
     final impactPoints =
         (json['impact_points'] ?? json['impact_score'] ?? json['points'] as num?)?.toInt() ?? 0;
-    final level = (json['level_name'] ?? json['level'] as String?) ?? levelForPoints(impactPoints);
+    final dynamic rawLevel = json['level_name'] ?? json['level'];
+    final String level = (rawLevel is String && rawLevel.isNotEmpty)
+        ? rawLevel
+        : levelForPoints(impactPoints);
     final issuesReported =
         (json['issues_reported'] ?? json['issues_count'] as num?)?.toInt() ?? 0;
     final verifiedResolutions =
@@ -62,7 +77,7 @@ class PublicUserProfile {
 
     final badgesRaw = json['badges'] as List<dynamic>?;
     final badges = badgesRaw != null
-        ? badgesRaw.map((b) => BadgeItem.fromJson(b as Map<String, dynamic>)).toList()
+        ? badgesRaw.map((b) => BadgeItem.fromJson((b as Map<dynamic, dynamic>).cast<String, dynamic>())).toList()
         : <BadgeItem>[];
 
     return PublicUserProfile(
@@ -79,6 +94,13 @@ class PublicUserProfile {
       verifiedResolutions: verifiedResolutions,
       upvotesReceived: upvotesReceived,
       badges: badges,
+      resolvedWardIssues: (json['resolved_ward_issues'] as num?)?.toInt() ?? 0,
+      pendingWardIssues:
+          (json['pending_response_ward_issues'] as num?)?.toInt() ?? 0,
+      inProgressWardIssues: (json['in_progress_ward_issues'] as num?)?.toInt() ?? 0,
+      acknowledgedWardIssues: (json['acknowledged_ward_issues'] as num?)?.toInt() ?? 0,
+      responseRatePct: (json['response_rate_pct'] as num?)?.toDouble() ?? 0.0,
+      avgResponseTimeHours: (json['avg_response_time_hours'] as num?)?.toDouble() ?? 0.0,
     );
   }
 
@@ -97,5 +119,11 @@ class PublicUserProfile {
         'verified_resolutions': verifiedResolutions,
         'upvotes_received': upvotesReceived,
         'badges': badges.map((b) => b.toJson()).toList(),
+        'resolved_ward_issues': resolvedWardIssues,
+        'pending_response_ward_issues': pendingWardIssues,
+        'in_progress_ward_issues': inProgressWardIssues,
+        'acknowledged_ward_issues': acknowledgedWardIssues,
+        'response_rate_pct': responseRatePct,
+        'avg_response_time_hours': avgResponseTimeHours,
       };
 }

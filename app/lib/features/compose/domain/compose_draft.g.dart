@@ -23,11 +23,11 @@ _ComposeDraft _$ComposeDraftFromJson(Map<String, dynamic> json) =>
       updatedAt: json['updatedAt'] == null
           ? null
           : DateTime.parse(json['updatedAt'] as String),
-      mediaBytes:
-          (json['mediaBytes'] as List<dynamic>?)
-              ?.map((e) => e as String)
+      media:
+          (json['media'] as List<dynamic>?)
+              ?.map((e) => CapturedMedia.fromJson(e as Map<String, dynamic>))
               .toList() ??
-          const <String>[],
+          const <CapturedMedia>[],
     );
 
 Map<String, dynamic> _$ComposeDraftToJson(_ComposeDraft instance) =>
@@ -43,5 +43,5 @@ Map<String, dynamic> _$ComposeDraftToJson(_ComposeDraft instance) =>
       'longitude': instance.longitude,
       'createdAt': instance.createdAt?.toIso8601String(),
       'updatedAt': instance.updatedAt?.toIso8601String(),
-      'mediaBytes': instance.mediaBytes,
+      'media': instance.media,
     };

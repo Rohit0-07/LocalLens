@@ -5,7 +5,21 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from app.features.issues.schemas import IssueOut
 
 
-class RepresentativeProfileOut(BaseModel):
+class RepresentativeMetricsOut(BaseModel):
+    """Flat, all-defaulted metrics block embeddable in any rep-facing schema."""
+
+    total_ward_issues: int = 0
+    escalated_ward_issues: int = 0
+    responded_ward_issues: int = 0
+    pending_response_ward_issues: int = 0
+    resolved_ward_issues: int = 0
+    in_progress_ward_issues: int = 0
+    acknowledged_ward_issues: int = 0
+    response_rate_pct: float = 0.0
+    avg_response_time_hours: float = 0.0
+
+
+class RepresentativeProfileOut(RepresentativeMetricsOut):
     model_config = ConfigDict(from_attributes=True)
 
     id: str
@@ -14,10 +28,17 @@ class RepresentativeProfileOut(BaseModel):
     title: str
     ward: str
     verified_at: datetime
-    total_ward_issues: int
-    escalated_ward_issues: int
-    responded_ward_issues: int
-    pending_response_ward_issues: int
+
+
+class PublicRepresentativeProfileOut(RepresentativeMetricsOut):
+    """Public rep performance profile; readable without authentication."""
+
+    id: str
+    user_id: int
+    official_name: str
+    title: str
+    ward: str
+    verified_at: datetime | None = None
 
 
 class OfficialResponseCreate(BaseModel):

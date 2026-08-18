@@ -81,6 +81,48 @@ async def test_ward_match(client, create_user_headers):
     assert response.json()[0]["ward"] == "Ward 45, Urban Central"
 
 
+async def test_ward_filter(client, create_user_headers, app):
+    async with app.state.database.session_factory() as session:
+        from app.features.wards.models import Ward
+
+        session.add(
+            Ward(
+                name="Ward 45, Urban Central",
+                slug="ward-45-urban-central",
+                code="W-45",
+                center_latitude=19.1136,
+                center_longitude=72.8697,
+            )
+        )
+        await session.commit()
+
+    headers = await create_user_headers("+919000000010")
+    await _create_issue(client, headers, title="Sewage overflow near temple")
+    await _create_issue(client, headers, title="Streetlight flicker on boulevard")
+
+    for ward_param in (
+        "Ward 45, Urban Central",
+        "ward-45-urban-central",
+        "W-45",
+        "ward 45",
+    ):
+        response = await _search(client, q="other", ward=ward_param, headers=headers)
+        assert response.status_code == 200, response.text
+        titles = _titles(response)
+        assert "Sewage overflow near temple" in titles
+        assert "Streetlight flicker on boulevard" in titles
+
+    response = await _search(client, q="other", ward="ward-99-nonexistent", headers=headers)
+    assert response.status_code == 200
+    assert _titles(response) == []
+
+    response = await _search(
+        client, q="sewage", ward="ward-45-urban-central", headers=headers
+    )
+    assert response.status_code == 200
+    assert _titles(response) == ["Sewage overflow near temple"]
+
+
 async def test_unicode_description_match(client, create_user_headers):
     headers = await create_user_headers("+919000000004")
     await _create_issue(

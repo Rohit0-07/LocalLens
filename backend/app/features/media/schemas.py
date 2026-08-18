@@ -9,6 +9,7 @@ class MediaUploadRequest(BaseModel):
     captured_lat: float | None = None
     captured_lng: float | None = None
     is_fuzzed: bool = False
+    captured_at: datetime | None = None
 
 
 class MediaUploadOut(BaseModel):
@@ -21,6 +22,13 @@ class MediaUploadOut(BaseModel):
     latitude: float | None = None
     longitude: float | None = None
     is_fuzzed: bool = False
+    issue_id: int | None = None
+    deleted_at: datetime | None = None
+    captured_at: datetime | None = None
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class MediaDeleteOut(BaseModel):
+    success: bool

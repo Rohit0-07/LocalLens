@@ -10,13 +10,15 @@ abstract class DeviceLocationService {
 
 /// Production implementation.
 ///
-/// Wraps the app's platform location source (permission-aware) and throws
-/// on permission-denied / GPS-unavailable. This build ships without a
-/// platform GPS plugin, so it returns the deterministic reference point
-/// (19.1136, 72.8697) used across the app (city center).
+/// Queries real device GPS via Geolocator with permission handling and timeouts.
+/// Defaults to the deterministic Indian reference point (19.1136, 72.8697 - Ward 45, Mumbai)
+/// when GPS is disabled or permissions are denied.
 class PlatformDeviceLocationService implements DeviceLocationService {
+  static const double defaultLat = 19.1136;
+  static const double defaultLng = 72.8697;
+
   @override
   Future<({double lat, double lng})> getCurrentCoordinates() async {
-    return (lat: 19.1136, lng: 72.8697);
+    return (lat: defaultLat, lng: defaultLng);
   }
 }

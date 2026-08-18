@@ -37,6 +37,10 @@ class SearchFiltersNotifier extends Notifier<SearchFilters> {
     state = state.copyWith(datePreset: preset);
   }
 
+  void setWard(String? ward) {
+    state = state.copyWith(ward: ward);
+  }
+
   void reset() {
     state = const SearchFilters();
   }
@@ -45,3 +49,4 @@ class SearchFiltersNotifier extends Notifier<SearchFilters> {
     state = filters;
   }
 }
+

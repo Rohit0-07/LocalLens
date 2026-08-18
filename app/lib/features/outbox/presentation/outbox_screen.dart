@@ -5,6 +5,7 @@ import '../../../core/l10n/app_strings.dart';
 import '../../compose/domain/compose_draft.dart';
 import '../../compose/presentation/compose_providers.dart';
 import '../../feed/presentation/feed_providers.dart';
+import '../../map/presentation/controllers/map_controller.dart';
 
 class OutboxScreen extends ConsumerStatefulWidget {
   const OutboxScreen({super.key});
@@ -28,6 +29,7 @@ class _OutboxScreenState extends ConsumerState<OutboxScreen> {
       if (!mounted) return;
       setState(() => _syncedAnything = synced > 0);
       if (synced > 0) ref.invalidate(multiTypeFeedProvider);
+      if (synced > 0) ref.invalidate(mapPinsNotifierProvider);
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

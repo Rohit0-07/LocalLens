@@ -44,6 +44,7 @@ async def search_issues_endpoint(
     status: Annotated[str | None, Query()] = None,
     category: Annotated[str | None, Query()] = None,
     categories: Annotated[list[str] | None, Query()] = None,
+    ward: Annotated[str | None, Query()] = None,
     created_after: Annotated[str | None, Query()] = None,
     created_before: Annotated[str | None, Query()] = None,
     limit: Annotated[int, Query(ge=1, le=50)] = 20,
@@ -76,6 +77,10 @@ async def search_issues_endpoint(
             status_code=422,
             code="invalid_category",
         )
+    if ward is not None and len(ward) > 64:
+        raise AppError(
+            "ward must be at most 64 characters", status_code=422, code="invalid_ward"
+        )
     parsed_created_after = (
         service.parse_iso_datetime(created_after) if created_after is not None else None
     )
@@ -102,6 +107,7 @@ async def search_issues_endpoint(
         status=status,
         category=category,
         categories=categories,
+        ward=ward,
         created_after=parsed_created_after,
         created_before=parsed_created_before,
         limit=limit,

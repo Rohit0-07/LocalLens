@@ -51,8 +51,14 @@ class SettingsScreen extends ConsumerWidget {
                       'Receive real-time alerts on your device',
                     ),
                     value: settings.pushNotifications,
-                    onChanged: (val) =>
-                        settingsNotifier.setPushNotifications(val),
+                    onChanged: (val) {
+                      settingsNotifier.setPushNotifications(val);
+                      _showToggleFeedback(
+                        context,
+                        'Push notifications',
+                        val,
+                      );
+                    },
                   ),
                   const Divider(height: 1),
                   SwitchListTile.adaptive(
@@ -62,8 +68,10 @@ class SettingsScreen extends ConsumerWidget {
                       'Summary of local issues and wins in your ward',
                     ),
                     value: settings.dailyWardDigest,
-                    onChanged: (val) =>
-                        settingsNotifier.setDailyWardDigest(val),
+                    onChanged: (val) {
+                      settingsNotifier.setDailyWardDigest(val);
+                      _showToggleFeedback(context, 'Daily ward digest', val);
+                    },
                   ),
                   const Divider(height: 1),
                   SwitchListTile.adaptive(
@@ -73,8 +81,14 @@ class SettingsScreen extends ConsumerWidget {
                       'Alerts when your reported issues are updated',
                     ),
                     value: settings.statusChangeAlerts,
-                    onChanged: (val) =>
-                        settingsNotifier.setStatusChangeAlerts(val),
+                    onChanged: (val) {
+                      settingsNotifier.setStatusChangeAlerts(val);
+                      _showToggleFeedback(
+                        context,
+                        'Status change alerts',
+                        val,
+                      );
+                    },
                   ),
                   const Divider(height: 1),
                   SwitchListTile.adaptive(
@@ -84,8 +98,14 @@ class SettingsScreen extends ConsumerWidget {
                       'Notify when community verification voting starts near you',
                     ),
                     value: settings.communityVerificationRequests,
-                    onChanged: (val) =>
-                        settingsNotifier.setCommunityVerificationRequests(val),
+                    onChanged: (val) {
+                      settingsNotifier.setCommunityVerificationRequests(val);
+                      _showToggleFeedback(
+                        context,
+                        'Verification requests',
+                        val,
+                      );
+                    },
                   ),
                   const Divider(height: 1),
                   SwitchListTile.adaptive(
@@ -95,7 +115,14 @@ class SettingsScreen extends ConsumerWidget {
                       'Alerts when someone replies to your discussions',
                     ),
                     value: settings.commentReplies,
-                    onChanged: (val) => settingsNotifier.setCommentReplies(val),
+                    onChanged: (val) {
+                      settingsNotifier.setCommentReplies(val);
+                      _showToggleFeedback(
+                        context,
+                        'Comment replies',
+                        val,
+                      );
+                    },
                   ),
                   const Divider(height: 1),
                   SwitchListTile.adaptive(
@@ -105,7 +132,10 @@ class SettingsScreen extends ConsumerWidget {
                       'Tactile response on upvotes and voting actions',
                     ),
                     value: settings.hapticFeedback,
-                    onChanged: (val) => settingsNotifier.setHapticFeedback(val),
+                    onChanged: (val) {
+                      settingsNotifier.setHapticFeedback(val);
+                      _showToggleFeedback(context, 'Haptic feedback', val);
+                    },
                   ),
                 ],
               ),
@@ -132,8 +162,14 @@ class SettingsScreen extends ConsumerWidget {
                       'Always mask identity on new civic reports',
                     ),
                     value: settings.defaultPostAnonymously,
-                    onChanged: (val) =>
-                        settingsNotifier.setDefaultPostAnonymously(val),
+                    onChanged: (val) {
+                      settingsNotifier.setDefaultPostAnonymously(val);
+                      _showToggleFeedback(
+                        context,
+                        'Post anonymously',
+                        val,
+                      );
+                    },
                   ),
                   const Divider(height: 1),
                   SwitchListTile.adaptive(
@@ -143,8 +179,10 @@ class SettingsScreen extends ConsumerWidget {
                       'Coarsen coordinates by ~100m for home privacy',
                     ),
                     value: settings.locationFuzzingByDefault,
-                    onChanged: (val) =>
-                        settingsNotifier.setLocationFuzzingByDefault(val),
+                    onChanged: (val) {
+                      settingsNotifier.setLocationFuzzingByDefault(val);
+                      _showToggleFeedback(context, 'Location fuzzing', val);
+                    },
                   ),
                   const Divider(height: 1),
                   SwitchListTile.adaptive(
@@ -154,8 +192,10 @@ class SettingsScreen extends ConsumerWidget {
                       'Route sensitive submissions through proxy relays',
                     ),
                     value: settings.shieldedModeByDefault,
-                    onChanged: (val) =>
-                        settingsNotifier.setShieldedModeByDefault(val),
+                    onChanged: (val) {
+                      settingsNotifier.setShieldedModeByDefault(val);
+                      _showToggleFeedback(context, 'Shielded mode', val);
+                    },
                   ),
                   const Divider(height: 1),
                   SwitchListTile.adaptive(
@@ -165,8 +205,10 @@ class SettingsScreen extends ConsumerWidget {
                       'Automatically strip GPS & camera metadata from uploads',
                     ),
                     value: settings.photoExifScrubber,
-                    onChanged: (val) =>
-                        settingsNotifier.setPhotoExifScrubber(val),
+                    onChanged: (val) {
+                      settingsNotifier.setPhotoExifScrubber(val);
+                      _showToggleFeedback(context, 'EXIF scrubber', val);
+                    },
                   ),
                   const Divider(height: 1),
                   ListTile(
@@ -284,8 +326,10 @@ class SettingsScreen extends ConsumerWidget {
                         'Enhance contrast for maximum legibility in sunlight',
                       ),
                       value: settings.highContrastMode,
-                      onChanged: (val) =>
-                          settingsNotifier.setHighContrastMode(val),
+                      onChanged: (val) {
+                        settingsNotifier.setHighContrastMode(val);
+                        _showToggleFeedback(context, 'High contrast mode', val);
+                      },
                     ),
                   ],
                 ),
@@ -313,8 +357,14 @@ class SettingsScreen extends ConsumerWidget {
                       'Do not auto-download high-res proofs on cellular data',
                     ),
                     value: settings.wifiOnlyMediaDownload,
-                    onChanged: (val) =>
-                        settingsNotifier.setWifiOnlyMediaDownload(val),
+                    onChanged: (val) {
+                      settingsNotifier.setWifiOnlyMediaDownload(val);
+                      _showToggleFeedback(
+                        context,
+                        'Wi-Fi only media',
+                        val,
+                      );
+                    },
                   ),
                   const Divider(height: 1),
                   ListTile(
@@ -391,6 +441,19 @@ class SettingsScreen extends ConsumerWidget {
                     onTap: () => context.push(RoutePaths.gamification),
                   ),
                   const Divider(height: 1),
+                  SwitchListTile.adaptive(
+                    key: const Key('settingsShowDisplayNameToggle'),
+                    title: const Text('Show Display Name'),
+                    subtitle: const Text(
+                      'Reveal your display name instead of your Anon ID',
+                    ),
+                    value: settings.showDisplayName,
+                    onChanged: (val) {
+                      settingsNotifier.setShowDisplayName(val);
+                      _showToggleFeedback(context, 'Display name', val);
+                    },
+                  ),
+                  const Divider(height: 1),
                   ListTile(
                     key: const Key('settingsEditAliasTile'),
                     leading: const Icon(Icons.badge_outlined),
@@ -442,11 +505,68 @@ class SettingsScreen extends ConsumerWidget {
                 ],
               ),
             ),
+            const SizedBox(height: 20),
+
+            // ── Reset to Defaults ─────────────────────────────────
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                key: const Key('settingsResetDefaultsButton'),
+                icon: const Icon(Icons.restore),
+                label: const Text('Reset All Settings to Defaults'),
+                onPressed: () async {
+                  final confirmed = await showDialog<bool>(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      title: const Text('Reset Settings?'),
+                      content: const Text(
+                        'This will restore all settings to their default values. This action cannot be undone.',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(ctx).pop(false),
+                          child: const Text('Cancel'),
+                        ),
+                        FilledButton(
+                          onPressed: () => Navigator.of(ctx).pop(true),
+                          child: const Text('Reset'),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (confirmed == true && context.mounted) {
+                    settingsNotifier.resetToDefaults();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('All settings restored to defaults'),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  }
+                },
+              ),
+            ),
             const SizedBox(height: 24),
           ],
         ),
       ),
     );
+  }
+
+  static void _showToggleFeedback(
+    BuildContext context,
+    String label,
+    bool val,
+  ) {
+    final messenger = ScaffoldMessenger.of(context);
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text('$label ${val ? 'enabled' : 'disabled'}'),
+          duration: const Duration(seconds: 1),
+        ),
+      );
   }
 
   static void _showEditAliasDialog(

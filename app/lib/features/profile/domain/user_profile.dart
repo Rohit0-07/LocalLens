@@ -17,6 +17,13 @@ class UserProfile {
   final int upvotesCount;
   final int quorumVotesCount;
 
+  /// Raw role from `/auth/me`: 'citizen' | 'guest' | 'representative' |
+  /// 'ward_official' | ...
+  final String role;
+
+  /// Ward label e.g. 'Ward 45, Urban Central'.
+  final String? ward;
+
   const UserProfile({
     required this.id,
     this.phone,
@@ -35,7 +42,14 @@ class UserProfile {
     this.issuesCount = 0,
     this.upvotesCount = 0,
     this.quorumVotesCount = 0,
+    this.role = 'citizen',
+    this.ward,
   });
+
+  /// True when the account carries a representative role. `UserProfile.role`
+  /// is the agreed signal for rep status on the own profile surface.
+  bool get isRepresentative =>
+      role.toLowerCase().contains('representative');
 
   factory UserProfile.fromJson(Map<String, dynamic> json) {
     final anon = (json['anon_id'] ?? json['anonymous_identity'] ?? '') as String;
@@ -60,6 +74,8 @@ class UserProfile {
       issuesCount: (json['issues_count'] as num?)?.toInt() ?? 0,
       upvotesCount: (json['upvotes_count'] as num?)?.toInt() ?? 0,
       quorumVotesCount: (json['quorum_votes_count'] as num?)?.toInt() ?? 0,
+      role: (json['role'] as String?) ?? 'citizen',
+      ward: json['ward'] as String?,
     );
   }
 

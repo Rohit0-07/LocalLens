@@ -26,6 +26,7 @@ final userProfileProvider = FutureProvider<UserProfile>((ref) async {
       anonymousIdentity: 'guest_anon',
       anonId: 'guest_anon',
       isGuest: true,
+      role: 'guest',
     );
   }
 
@@ -42,6 +43,8 @@ final userProfileProvider = FutureProvider<UserProfile>((ref) async {
       issuesCount: session.isGuest ? 0 : 3,
       upvotesCount: session.isGuest ? 0 : 12,
       quorumVotesCount: session.isGuest ? 0 : 5,
+      role: session.isGuest ? 'guest' : 'citizen',
+      ward: session.isGuest ? null : 'Ward 45, Urban Central',
     );
   }
 
@@ -308,4 +311,6 @@ class UserSettingsNotifier extends StateNotifier<UserSettings> {
       _save(state.copyWith(showDisplayName: val));
   Future<void> clearOfflineCache() =>
       _save(state.copyWith(offlineCacheSizeMb: 0.0));
+
+  Future<void> resetToDefaults() => _save(const UserSettings());
 }

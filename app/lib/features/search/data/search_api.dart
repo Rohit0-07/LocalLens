@@ -1,4 +1,5 @@
 import '../../../core/network/api_client.dart';
+import '../../../core/network/api_exceptions.dart';
 import '../../feed/domain/issue.dart';
 import '../domain/search_repository.dart';
 
@@ -17,6 +18,7 @@ class SearchApi implements SearchRepository {
     double? radiusKm,
     DateTime? createdAfter,
     DateTime? createdBefore,
+    String? ward,
   }) async {
     final data = await _client.getJson(
       '/search',
@@ -31,12 +33,19 @@ class SearchApi implements SearchRepository {
           'created_after': createdAfter.toUtc().toIso8601String(),
         if (createdBefore != null)
           'created_before': createdBefore.toUtc().toIso8601String(),
+        'ward': ?ward,
         'limit': 20,
       },
     );
-    final items = data as List<dynamic>;
-    return items
-        .map((item) => Issue.fromJson(item as Map<String, Object?>))
-        .toList(growable: false);
+    if (data is! List) {
+      throw ApiParseException('Search response was not a list: ${data.runtimeType}');
+    }
+    try {
+      return data
+          .map((item) => Issue.fromJson(item as Map<String, Object?>))
+          .toList(growable: false);
+    } on Object catch (e) {
+      throw ApiParseException('Search response item could not be parsed: $e');
+    }
   }
 }
