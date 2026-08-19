@@ -11,6 +11,9 @@ import 'package:local_lens/features/search/domain/search_repository.dart';
 import 'package:local_lens/features/search/presentation/search_filters_provider.dart';
 import 'package:local_lens/features/search/presentation/search_providers.dart';
 import 'package:local_lens/features/search/presentation/search_screen.dart';
+import 'package:local_lens/features/ward/domain/ward_list_response.dart';
+import 'package:local_lens/features/ward/domain/ward_summary_out.dart';
+import 'package:local_lens/features/ward/presentation/ward_providers.dart';
 
 import '../../helpers.dart';
 
@@ -122,6 +125,40 @@ void useTallSurface(WidgetTester tester) {
   addTearDown(tester.view.reset);
 }
 
+/// Two-ward list fed to the filter sheet via `wardListNotifierProvider`
+/// (F-E: the sheet's ward chips come from the ward list provider).
+final WardListResponse _twoWards = WardListResponse(
+  items: [
+    WardSummaryOut(
+      slug: 'ward-45-urban-central',
+      name: 'Ward 45, Urban Central',
+      code: 'W-45',
+      centerLatitude: 19.1136,
+      centerLongitude: 72.8697,
+      totalIssues: 15,
+      activeIssues: 8,
+      escalatedIssues: 3,
+      resolvedIssues: 4,
+      resolutionRatePct: 26.67,
+    ),
+    WardSummaryOut(
+      slug: 'ward-12-old-town',
+      name: 'Ward 12, Old Town',
+      code: 'W-12',
+      centerLatitude: 18.99,
+      centerLongitude: 72.84,
+      totalIssues: 9,
+      activeIssues: 5,
+      escalatedIssues: 1,
+      resolvedIssues: 3,
+      resolutionRatePct: 33.33,
+    ),
+  ],
+  total: 2,
+  limit: 20,
+  offset: 0,
+);
+
 Future<
   ({
     ProviderContainer container,
@@ -137,6 +174,7 @@ buildHarness() async {
       searchRepositoryProvider.overrideWithValue(repo),
       recentSearchStoreProvider.overrideWithValue(store),
       feedRepositoryProvider.overrideWithValue(FakeFeedRepository()),
+      wardListNotifierProvider.overrideWith((ref) async => _twoWards),
     ],
   );
   addTearDown(container.dispose);
@@ -308,6 +346,9 @@ void main() {
     await tester.tap(find.byKey(const Key('distanceWithin')));
     await tester.tap(find.byKey(const Key('dateChip_past7Days')));
     await tester.pump();
+    // F-E sheet robustness: make sure the apply button is on-screen before
+    // tapping it (the sheet can overflow on small surfaces).
+    await tester.ensureVisible(find.byKey(const Key('applyFiltersButton')));
     await tester.tap(find.byKey(const Key('applyFiltersButton')));
     await tester.pumpAndSettle();
 
@@ -446,5 +487,47 @@ void main() {
       defaults.copyWith(datePreset: SearchDatePreset.past30Days).isActive,
       isTrue,
     );
+  });
+
+  testWidgets('ward chip applies the slug and Any Ward resets it to null', (
+    tester,
+  ) async {
+    // F-E: the filter sheet lists wards from wardListNotifierProvider; picking
+    // one and applying it lands in searchFiltersProvider.ward; 'Any Ward'
+    // clears it back to null.
+    useTallSurface(tester);
+    final harness = await buildHarness();
+    await openSheet(tester, harness.container);
+
+    expect(
+      find.byKey(const Key('wardChip_ward-45-urban-central')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('wardChip_ward-12-old-town')), findsOneWidget);
+
+    await tester.ensureVisible(
+      find.byKey(const Key('wardChip_ward-45-urban-central')),
+    );
+    await tester.tap(find.byKey(const Key('wardChip_ward-45-urban-central')));
+    await tester.pump();
+
+    await tester.ensureVisible(find.byKey(const Key('applyFiltersButton')));
+    await tester.tap(find.byKey(const Key('applyFiltersButton')));
+    await tester.pumpAndSettle();
+
+    expect(
+      harness.container.read(searchFiltersProvider).ward,
+      'ward-45-urban-central',
+    );
+
+    // Reopen the sheet and reset the ward via 'Any Ward'.
+    await openSheet(tester, harness.container);
+    await tester.tap(find.text('Any Ward'));
+    await tester.pump();
+    await tester.ensureVisible(find.byKey(const Key('applyFiltersButton')));
+    await tester.tap(find.byKey(const Key('applyFiltersButton')));
+    await tester.pumpAndSettle();
+
+    expect(harness.container.read(searchFiltersProvider).ward, isNull);
   });
 }

@@ -81,4 +81,27 @@ void main() {
     expect(query.containsKey('created_after'), isFalse);
     expect(query.containsKey('created_before'), isFalse);
   });
+
+  test('SearchApi maps ward onto the query', () async {
+    // F-E: the active ward slug is encoded as the `ward` query param.
+    final client = _FakeApiClient(<Object?>[_issueJson(1, 'alpha')]);
+    final api = SearchApi(client);
+
+    await api.search(query: 'x', ward: 'ward-45-urban-central');
+
+    final query = client.lastQuery!;
+    expect(query['q'], 'x');
+    expect(query['ward'], 'ward-45-urban-central');
+  });
+
+  test('SearchApi omits ward when none is active', () async {
+    // F-E: no ward selected means no `ward` key on the request at all.
+    final client = _FakeApiClient(<Object?>[_issueJson(1, 'alpha')]);
+    final api = SearchApi(client);
+
+    await api.search(query: 'x');
+
+    final query = client.lastQuery!;
+    expect(query.containsKey('ward'), isFalse);
+  });
 }

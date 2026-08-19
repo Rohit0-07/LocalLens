@@ -30,6 +30,11 @@
 	<string>Needed for location</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Needed for photos</string>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>UIApplicationSceneManifest</key>

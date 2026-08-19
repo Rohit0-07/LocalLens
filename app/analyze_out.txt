@@ -1,0 +1,18 @@
+﻿Analyzing app...                                                
+
+   info - The local variable '_container' starts with an underscore. Try renaming the variable to not start with an underscore - test\features\compose\captured_media_auto_save_test.dart:141:21 - no_leading_underscores_for_local_identifiers
+warning - Unused import: 'package:local_lens/features/compose/presentation/compose_providers.dart'. Try removing the import directive - test\features\compose\captured_media_library_test.dart:8:8 - unused_import
+   info - The local variable '_container' starts with an underscore. Try renaming the variable to not start with an underscore - test\features\compose\compose_publish_metadata_test.dart:237:21 - no_leading_underscores_for_local_identifiers
+   info - The local variable '_draft' starts with an underscore. Try renaming the variable to not start with an underscore - test\features\compose\compose_publish_metadata_test.dart:255:16 - no_leading_underscores_for_local_identifiers
+warning - Unused import: 'package:local_lens/features/compose/presentation/compose_providers.dart'. Try removing the import directive - test\features\compose\gallery_disabled_test.dart:6:8 - unused_import
+   info - Don't invoke 'print' in production code. Try using a logging framework - tool\live_auth_smoke.dart:13:3 - avoid_print
+   info - Don't invoke 'print' in production code. Try using a logging framework - tool\live_auth_smoke.dart:17:3 - avoid_print
+   info - Don't invoke 'print' in production code. Try using a logging framework - tool\live_auth_smoke.dart:21:3 - avoid_print
+
+flutter : 8 issues found. (ran in 5.7s)
+At line:1 char:1
++ flutter analyze 2>&1 | Out-File -Encoding utf8 analyze_out.txt; Get-C ...
++ ~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (8 issues found. (ran in 5.7s):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 

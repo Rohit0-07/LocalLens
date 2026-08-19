@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -61,7 +63,8 @@ void main() {
     test('OfflineOutboxQueue enqueues and flushes pending drafts', () async {
       final fakeRepo = FakeFeedRepository();
       final store = MemoryLocalStore();
-      final outbox = OfflineOutboxQueue(store, fakeRepo, MediaService());
+      final fakeMediaService = FakeMediaService();
+      final outbox = OfflineOutboxQueue(store, fakeRepo, fakeMediaService);
 
       const draft = ComposeDraft(
         title: 'Broken streetlight at corner',
@@ -134,4 +137,42 @@ void main() {
       expect(find.byKey(const Key('check_near_duplicates_button')), findsOneWidget);
     });
   });
+}
+
+/// FakeMediaService recording uploadMedia/deleteMedia calls (contract: add a
+/// FakeMediaService recording uploadMedia/deleteMedia calls).
+class FakeMediaService extends MediaService {
+  final List<String> deleteCalls = [];
+
+  @override
+  Future<MediaUploadResult> uploadMedia({
+    required Uint8List bytes,
+    required bool isInAppCamera,
+    double? capturedLat,
+    double? capturedLng,
+    DateTime? capturedAt,
+    bool isFuzzed = false,
+    String? filename,
+  }) async {
+    return MediaUploadResult(
+      id: 'media_outbox_1',
+      url: '/api/v1/media/files/media_outbox_1.jpg',
+      thumbnailUrl: '/api/v1/media/files/thumb_media_outbox_1.jpg',
+      isVerified: isInAppCamera && capturedLat != null && capturedLng != null,
+      watermarkLabel: 'LocalLens Verified',
+      derivedHash: 'hash_outbox_1',
+      latitude: capturedLat,
+      longitude: capturedLng,
+      isFuzzed: isFuzzed,
+      createdAt: DateTime.now(),
+    );
+  }
+
+  @override
+  Future<void> deleteMedia(String mediaId) async {
+    deleteCalls.add(mediaId);
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

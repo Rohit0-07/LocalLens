@@ -1,7 +1,7 @@
 """add ward boundary column
 
 Revision ID: c4d5e6f70819
-Revises: b2c3d4e5f607
+Revises: 0f3a7b9c1d2e
 Create Date: 2026-08-18 00:00:00.000000
 
 """
@@ -13,7 +13,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision: str = 'c4d5e6f70819'
-down_revision: Union[str, Sequence[str], None] = 'b2c3d4e5f607'
+down_revision: Union[str, Sequence[str], None] = '0f3a7b9c1d2e'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

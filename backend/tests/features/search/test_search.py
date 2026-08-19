@@ -507,3 +507,14 @@ async def test_two_guest_tokens_pool_on_anon_key(client, create_user_headers):
 async def test_missing_q_422(client):
     response = await client.get("/api/v1/search")
     assert response.status_code == 422
+
+
+async def test_ward_length_bounds(client, create_user_headers):
+    # F-E: ward param is bounded at 64 chars — 65 chars must be rejected with
+    # the typed `invalid_ward` code, 64 chars must be accepted.
+    headers = await create_user_headers("+919000000029")
+    response = await _search(client, q="k", ward="w" * 65, headers=headers)
+    assert response.status_code == 422
+    assert response.json()["code"] == "invalid_ward"
+    response = await _search(client, q="k", ward="w" * 64, headers=headers)
+    assert response.status_code == 200

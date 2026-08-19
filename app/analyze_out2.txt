@@ -1,0 +1,13 @@
+﻿Analyzing app...                                                
+
+   info - Don't invoke 'print' in production code. Try using a logging framework - tool\live_auth_smoke.dart:13:3 - avoid_print
+   info - Don't invoke 'print' in production code. Try using a logging framework - tool\live_auth_smoke.dart:17:3 - avoid_print
+   info - Don't invoke 'print' in production code. Try using a logging framework - tool\live_auth_smoke.dart:21:3 - avoid_print
+
+flutter : 3 issues found. (ran in 6.3s)
+At line:1 char:1
++ flutter analyze 2>&1 | Out-File -Encoding utf8 analyze_out2.txt; Get- ...
++ ~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (3 issues found. (ran in 6.3s):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 

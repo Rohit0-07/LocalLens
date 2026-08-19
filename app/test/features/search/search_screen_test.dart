@@ -4,11 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:local_lens/core/router/route_paths.dart';
+import 'package:local_lens/core/network/api_exceptions.dart';
 import 'package:local_lens/features/feed/domain/issue.dart';
 import 'package:local_lens/features/feed/presentation/feed_providers.dart';
 import 'package:local_lens/features/feed/presentation/feed_screen.dart';
 import 'package:local_lens/features/search/data/recent_search_store.dart';
 import 'package:local_lens/features/search/domain/search_repository.dart';
+import 'package:local_lens/features/search/presentation/search_filters_provider.dart';
 import 'package:local_lens/features/search/presentation/search_providers.dart';
 import 'package:local_lens/features/search/presentation/search_screen.dart';
 import 'package:local_lens/shared/widgets/skeleton_list.dart';
@@ -23,6 +25,7 @@ class FakeSearchRepository implements SearchRepository {
   Object? error;
   int searchCount = 0;
   String? lastQuery;
+  String? lastWard;
   final List<String> queries = [];
 
   @override
@@ -39,6 +42,7 @@ class FakeSearchRepository implements SearchRepository {
   }) async {
     searchCount += 1;
     lastQuery = query;
+    lastWard = ward;
     queries.add(query);
     if (error != null) throw error!;
     if (completer != null) return completer!.future;
@@ -213,7 +217,7 @@ void main() {
     tester,
   ) async {
     final harness = await buildHarness();
-    harness.repo.error = StateError('offline');
+    harness.repo.error = ApiNetworkException('offline');
     harness.repo.result = <Issue>[
       buildIssue(id: 1, title: 'Recovered pothole'),
     ];
@@ -349,5 +353,109 @@ void main() {
     await pumpSearch(tester);
     expect(find.text('Held pothole'), findsOneWidget);
     expect(find.byType(SkeletonList), findsNothing);
+  });
+
+  testWidgets('filters active with an empty query never fire a search', (
+    tester,
+  ) async {
+    // F-E: applying a filter alone (no query text) must not hit the API;
+    // the results area shows the empty-search state instead of the feed.
+    final harness = await buildHarness();
+    harness.container.read(searchFiltersProvider.notifier).setStatus('resolved');
+    await tester.pumpWidget(wrap(harness.container));
+    await pumpSearch(tester);
+    expect(harness.repo.searchCount, 0);
+    expect(find.text('No issues found'), findsOneWidget);
+  });
+
+  testWidgets('server error shows Search failed and Retry re-runs', (
+    tester,
+  ) async {
+    // F-E: a 500-class server failure is typed distinctly from a network
+    // failure — 'Search failed' (not 'Search unavailable') and Retry re-runs.
+    final harness = await buildHarness();
+    harness.repo.error = ApiServerException(
+      statusCode: 500,
+      code: 'internal',
+      message: 'x',
+    );
+    harness.repo.result = <Issue>[
+      buildIssue(id: 1, title: 'Recovered server pothole'),
+    ];
+    await tester.pumpWidget(wrap(harness.container));
+    await tester.enterText(find.byKey(const Key('searchField')), 'pothole');
+    await pumpSearch(tester);
+    expect(find.text('Search failed'), findsOneWidget);
+
+    harness.repo.error = null;
+    await tester.tap(find.text('Retry'));
+    await pumpSearch(tester);
+    expect(find.text('Recovered server pothole'), findsOneWidget);
+    expect(harness.repo.searchCount, 2);
+  });
+
+  testWidgets('rate limit error shows Too many searches', (tester) async {
+    // F-E: 429 maps to a distinct 'Too many searches' message.
+    final harness = await buildHarness();
+    harness.repo.error = ApiServerException(
+      statusCode: 429,
+      code: 'rate_limited',
+      message: 'x',
+    );
+    await tester.pumpWidget(wrap(harness.container));
+    await tester.enterText(find.byKey(const Key('searchField')), 'pothole');
+    await pumpSearch(tester);
+    expect(find.text('Too many searches'), findsOneWidget);
+  });
+
+  testWidgets('invalid query error shows Adjust your search', (tester) async {
+    // F-E: 422 (e.g. query_too_long) maps to 'Adjust your search'.
+    final harness = await buildHarness();
+    harness.repo.error = ApiServerException(
+      statusCode: 422,
+      code: 'query_too_long',
+      message: 'x',
+    );
+    await tester.pumpWidget(wrap(harness.container));
+    await tester.enterText(find.byKey(const Key('searchField')), 'pothole');
+    await pumpSearch(tester);
+    expect(find.text('Adjust your search'), findsOneWidget);
+  });
+
+  testWidgets('parse failure shows Something went wrong', (tester) async {
+    // F-E: an ApiParseException is unexpected from the user's perspective and
+    // must land on the generic failure message.
+    final harness = await buildHarness();
+    harness.repo.error = ApiParseException('x');
+    await tester.pumpWidget(wrap(harness.container));
+    await tester.enterText(find.byKey(const Key('searchField')), 'pothole');
+    await pumpSearch(tester);
+    expect(find.text('Something went wrong'), findsOneWidget);
+  });
+
+  testWidgets('unexpected error shows Something went wrong', (tester) async {
+    // F-E: any non-typed error (here a StateError) falls back to the generic
+    // failure message rather than crashing the screen.
+    final harness = await buildHarness();
+    harness.repo.error = StateError('boom');
+    await tester.pumpWidget(wrap(harness.container));
+    await tester.enterText(find.byKey(const Key('searchField')), 'pothole');
+    await pumpSearch(tester);
+    expect(find.text('Something went wrong'), findsOneWidget);
+  });
+
+  testWidgets('ward filter flows to the repository', (tester) async {
+    // F-E: the active ward slug selected via the filters provider is passed
+    // through to the repository's `ward` argument.
+    final harness = await buildHarness();
+    harness
+        .container
+        .read(searchFiltersProvider.notifier)
+        .setWard('ward-45-urban-central');
+    await tester.pumpWidget(wrap(harness.container));
+    await tester.enterText(find.byKey(const Key('searchField')), 'pothole');
+    await pumpSearch(tester);
+    expect(harness.repo.lastQuery, 'pothole');
+    expect(harness.repo.lastWard, 'ward-45-urban-central');
   });
 }

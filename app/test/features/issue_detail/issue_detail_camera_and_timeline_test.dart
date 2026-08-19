@@ -99,6 +99,7 @@ class FakeMediaService extends MediaService {
     double? capturedLat,
     double? capturedLng,
     bool isFuzzed = false,
+    DateTime? capturedAt,
     String? filename,
   }) async {
     uploadCalled = true;
