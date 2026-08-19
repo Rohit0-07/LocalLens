@@ -122,7 +122,7 @@ final myIssuesProvider = FutureProvider<List<Issue>>((ref) async {
     return mockIssues;
   }
 
-  final statusParam = filter == 'all' ? null : filter;
+  final statusParam = (filter == 'all' || filter == 'active') ? null : filter;
   final issues = await feedRepo.fetchUserIssues(status: statusParam);
   if (filter == 'active') {
     return issues.where((i) => i.status != 'resolved').toList();

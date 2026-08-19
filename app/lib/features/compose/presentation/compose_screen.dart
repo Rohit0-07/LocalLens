@@ -343,9 +343,11 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
       ),
     );
     ref.invalidate(savedDraftsProvider);
-    context.go(RoutePaths.feed);
     ref.invalidate(multiTypeFeedProvider);
     ref.invalidate(mapPinsNotifierProvider);
+    // Navigate only after invalidation so the feed rebuilds in the background
+    // and the new issue is present the moment the feed screen shows.
+    context.go(RoutePaths.feed);
   }
 
   @override

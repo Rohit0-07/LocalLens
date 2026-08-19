@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/network/network_providers.dart';
 import '../../../../core/storage/local_store.dart';
 
 class FlagOut {
@@ -62,15 +63,20 @@ class FlagIssueNotifier extends FamilyAsyncNotifier<FlagOut?, int> {
     if (isGuestUser) {
       return false;
     }
-    await LocalStore.instance.addFlaggedIssueId(issueId);
-    state = AsyncData(FlagOut(
-      id: 1,
-      issueId: issueId,
-      category: category,
-      details: details,
-      createdAt: DateTime.now().toIso8601String(),
-    ));
-    return true;
+    try {
+      final client = ref.read(apiClientProvider);
+      final data = await client.postJson(
+        '/issues/$issueId/flag',
+        body: {'category': category, 'details': details},
+      );
+      final flag = FlagOut.fromJson((data as Map).cast<String, dynamic>());
+      await LocalStore.instance.addFlaggedIssueId(issueId);
+      state = AsyncData(flag);
+      return true;
+    } catch (_) {
+      state = AsyncError('Failed to flag issue', StackTrace.current);
+      return false;
+    }
   }
 }
 

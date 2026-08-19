@@ -166,12 +166,9 @@ class _CameraViewfinderState extends State<CameraViewfinder> {
 
   Future<void> _triggerShutter() async {
     if (_controller == null || !_controller!.value.isInitialized) {
-      if (widget.onPhotoCaptured != null) {
-        final dummyBytes = Uint8List.fromList(List.generate(100, (i) => (i * 7) % 256));
-        final lat = _isGpsLocked ? _currentLat : null;
-        final lng = _isGpsLocked ? _currentLng : null;
-        widget.onPhotoCaptured!(dummyBytes, lat, lng);
-      }
+      // Never fabricate a dummy capture; kick initialization so the next tap
+      // has a real, initialized camera.
+      _initializeCamera();
       return;
     }
     if (_controller!.value.isTakingPicture) return;

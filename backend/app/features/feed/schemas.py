@@ -3,11 +3,13 @@ from typing import Any, Literal
 
 from pydantic import BaseModel
 
+from app.core.fields import UTCDateTime
+
 
 class FeedItemOut(BaseModel):
     item_type: Literal["issue", "win", "notice", "local_talk"]
     id: str | int
-    created_at: datetime
+    created_at: UTCDateTime
     data: dict[str, Any]
 
 

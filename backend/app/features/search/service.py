@@ -126,6 +126,8 @@ async def search_issues(
     for issue in issues:
         if evaluate_escalation(issue, now):
             modified = True
+        if issue.is_hidden:
+            continue
         if issue.is_shielded and issue.status != "resolved":
             continue
         if latitude is not None and longitude is not None:

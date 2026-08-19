@@ -44,7 +44,8 @@ class ReelsController extends AsyncNotifier<ReelsState> {
 
   Future<({double lat, double lng})> _coords() async {
     try {
-      return await ref.watch(feedCoordinatesProvider.future);
+      // read() — not watch() — so fetch/loadMore can run outside build().
+      return await ref.read(feedCoordinatesProvider.future);
     } catch (_) {
       return (lat: defaultLatitude, lng: defaultLongitude);
     }
@@ -67,10 +68,14 @@ class ReelsController extends AsyncNotifier<ReelsState> {
     final mediaItems =
         items.where((i) => i.issue?.mediaUrls.isNotEmpty ?? false).toList();
     final last = mediaItems.isNotEmpty ? mediaItems.last : (items.isNotEmpty ? items.last : null);
+    final nextCursor = last?.issue?.createdAt.toUtc().toIso8601String();
+    // Guard against cursor stalls: if the page advanced nowhere (empty page or
+    // a last item sharing the incoming cursor), stop instead of looping/sticking.
+    final advanced = nextCursor != null && nextCursor != cursor;
     return ReelsState(
-      items: mediaItems,
-      cursor: last?.issue?.createdAt.toUtc().toIso8601String(),
-      hasMore: items.length >= 10,
+      items: advanced ? mediaItems : const [],
+      cursor: advanced ? nextCursor : cursor,
+      hasMore: advanced && items.length >= 10,
     );
   }
 

@@ -32,30 +32,38 @@ class FeedScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         titleSpacing: 16,
-        title: Row(
-          children: [
-            Container(
-              width: 28,
-              height: 28,
-              margin: const EdgeInsets.only(right: 10),
-              decoration: BoxDecoration(
-                color: AppColors.brand,
-                borderRadius: BorderRadius.circular(8),
+        title: InkWell(
+          key: const Key('feedTitleTap'),
+          borderRadius: BorderRadius.circular(8),
+          onTap: () {
+            ref.invalidate(feedCoordinatesProvider);
+            ref.read(multiTypeFeedProvider.notifier).refresh();
+          },
+          child: Row(
+            children: [
+              Container(
+                width: 28,
+                height: 28,
+                margin: const EdgeInsets.only(right: 10),
+                decoration: BoxDecoration(
+                  color: AppColors.brand,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.lens_rounded,
+                  size: 16,
+                  color: Colors.white,
+                ),
               ),
-              child: const Icon(
-                Icons.lens_rounded,
-                size: 16,
-                color: Colors.white,
+              Text(
+                context.tr('feed_title'),
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.5,
+                ),
               ),
-            ),
-            Text(
-              context.tr('feed_title'),
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w800,
-                letterSpacing: -0.5,
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
         actions: [
           if (pendingOutboxCount > 0)

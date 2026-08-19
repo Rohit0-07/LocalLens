@@ -182,10 +182,38 @@ async def delete_issue_endpoint(
     return {"success": True}
 
 
+def _is_authorized_for_issue(user: CurrentUser, issue: Issue) -> bool:
+    """Whether a user may act on an issue (acknowledge / resolve).
+
+    Allowed for the issue reporter, admins, moderators, and ward
+    representatives. Guests are always denied.
+    """
+    if getattr(user, "is_guest", False):
+        return False
+    if issue.reporter_id is not None and user.id == issue.reporter_id:
+        return True
+    if getattr(user, "is_admin", False) or getattr(user, "role", "") in (
+        "admin",
+        "moderator",
+        "representative",
+    ):
+        return True
+    return getattr(user, "is_representative", False)
+
+
 @router.post("/{issue_id}/acknowledge", response_model=IssueOut)
 async def acknowledge_issue(
     issue_id: int, session: SessionDep, user: CurrentUser, settings: SettingsDep
 ) -> IssueOut:
+    issue = await session.get(Issue, issue_id)
+    if issue is None or getattr(issue, "is_hidden", False):
+        raise HTTPException(status_code=404, detail="Issue not found")
+    if not _is_authorized_for_issue(user, issue):
+        raise AppError(
+            "Not authorized to acknowledge this issue",
+            status_code=403,
+            code="forbidden",
+        )
     issue = await service.acknowledge_issue(session, issue_id)
     return service.to_issue_out(issue, settings.jwt_secret)
 
@@ -198,6 +226,15 @@ async def submit_resolution(
     user: CurrentUser,
     settings: SettingsDep,
 ) -> IssueOut:
+    issue = await session.get(Issue, issue_id)
+    if issue is None or getattr(issue, "is_hidden", False):
+        raise HTTPException(status_code=404, detail="Issue not found")
+    if not _is_authorized_for_issue(user, issue):
+        raise AppError(
+            "Not authorized to resolve this issue",
+            status_code=403,
+            code="forbidden",
+        )
     issue = await service.submit_resolution(
         session, issue_id, proof_url=payload.resolution_proof, notes=payload.notes
     )

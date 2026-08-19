@@ -264,7 +264,7 @@ class NotificationsScreen extends ConsumerWidget {
               if (item.referenceId != null && item.referenceId!.isNotEmpty) {
                 final issueId = int.tryParse(item.referenceId!);
                 if (issueId != null && issueId > 0) {
-                  context.push('/issues/$issueId');
+                  context.push(RoutePaths.issueDetailFor(issueId));
                 }
               }
             },

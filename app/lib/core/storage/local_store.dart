@@ -80,14 +80,11 @@ class LocalStore {
     try {
       final decoded = jsonDecode(raw);
       if (decoded is! List) return [];
-      final items = decoded
+      return decoded
           .whereType<Map>()
           .map((e) => e['data'])
           .whereType<String>()
-          .toList()
-          .reversed
           .toList();
-      return items;
     } catch (_) {
       return [];
     }

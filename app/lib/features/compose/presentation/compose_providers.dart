@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -82,6 +83,8 @@ final composeControllerProvider =
     NotifierProvider<ComposeController, ComposeDraft>(ComposeController.new);
 
 class ComposeController extends Notifier<ComposeDraft> {
+  Timer? _autosaveTimer;
+
   @override
   ComposeDraft build() {
     final store = ref.watch(localStoreProvider);
@@ -96,15 +99,18 @@ class ComposeController extends Notifier<ComposeDraft> {
 
   Future<void> update(ComposeDraft draft) async {
     state = draft;
-    // The single autosave draft never carries media bytes: attachments live
-    // in widget state (and in saved drafts) and are re-attached on restore.
-    await ref
-        .read(draftStoreProvider)
-        .save(draft.copyWith(media: const []));
+    // Debounce the autosave write so fast typing doesn't clobber the draft
+    // store on every keystroke. Media is persisted too, so a restart restores
+    // attachments instead of dropping them.
+    _autosaveTimer?.cancel();
+    _autosaveTimer = Timer(const Duration(milliseconds: 500), () {
+      ref.read(draftStoreProvider).save(state);
+    });
   }
 
   /// Pre-fills the controller with a draft opened from the Drafts page.
   void loadDraft(ComposeDraft draft) {
+    _autosaveTimer?.cancel();
     state = draft;
   }
 
@@ -114,6 +120,7 @@ class ComposeController extends Notifier<ComposeDraft> {
   Future<ComposeDraft> saveAsDraft({
     List<CapturedMedia> media = const [],
   }) async {
+    _autosaveTimer?.cancel();
     final current = state;
     final now = DateTime.now();
     final draft = current.copyWith(
@@ -133,6 +140,7 @@ class ComposeController extends Notifier<ComposeDraft> {
 
   /// Discards the current draft without publishing it.
   Future<void> discard() async {
+    _autosaveTimer?.cancel();
     final current = state;
     if (current.id.isNotEmpty) {
       await ref.read(draftStoreProvider).deleteItem(current.id);
@@ -147,6 +155,7 @@ class ComposeController extends Notifier<ComposeDraft> {
   Future<bool> submit({
     List<CapturedMedia> media = const [],
   }) async {
+    _autosaveTimer?.cancel();
     final current = state;
     final repo = ref.read(feedRepositoryProvider);
     final outbox = ref.read(offlineOutboxProvider);
@@ -156,14 +165,17 @@ class ComposeController extends Notifier<ComposeDraft> {
     final lng = coords.lng;
 
     List<String> mediaUrls = const [];
+    List<String> uploadedMediaIds = const [];
+    MediaService? mediaService;
     bool directSuccess = false;
     try {
       if (media.isNotEmpty) {
-        final mediaService = ref.read(mediaServiceProvider);
+        final svc = ref.read(mediaServiceProvider);
+        mediaService = svc;
         final capturedMediaStore = ref.read(capturedMediaStoreProvider);
         final results = <String>[];
         for (final m in media) {
-          final result = await mediaService.uploadMedia(
+          final result = await svc.uploadMedia(
             bytes: base64Decode(m.bytesBase64),
             isInAppCamera: true,
             capturedLat: m.capturedLat,
@@ -172,6 +184,7 @@ class ComposeController extends Notifier<ComposeDraft> {
             capturedAt: m.capturedAt,
           );
           results.add(result.url);
+          uploadedMediaIds = [...uploadedMediaIds, result.id];
           await capturedMediaStore.markUploaded(m.id, result.id);
         }
         mediaUrls = results;
@@ -189,6 +202,13 @@ class ComposeController extends Notifier<ComposeDraft> {
       );
       directSuccess = true;
     } catch (_) {
+      // Roll back media that were uploaded but never linked to an issue, so
+      // the outbox retry doesn't duplicate them server-side.
+      for (final mediaId in uploadedMediaIds) {
+        try {
+          await mediaService?.deleteMedia(mediaId);
+        } catch (_) {}
+      }
       await outbox.enqueue(
         current.copyWith(media: media, latitude: lat, longitude: lng),
       );

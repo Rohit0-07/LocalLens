@@ -152,9 +152,39 @@ class _CommentsSectionState extends ConsumerState<CommentsSection> {
             .deleteComment(commentId);
       }
       setState(() {
-        _comments.removeWhere((c) => c.id == commentId);
+        _removeCommentDeep(_comments, commentId);
       });
     });
+  }
+
+  /// Removes a comment (and its entire reply subtree) at any nesting depth, so
+  /// deleting a nested reply doesn't leave ghost children behind.
+  void _removeCommentDeep(List<Comment> list, dynamic commentId) {
+    final result = <Comment>[];
+    for (final c in list) {
+      if (c.id == commentId) continue;
+      if (c.replies.isNotEmpty) {
+        result.add(c.copyWith(replies: _prunedReplies(c, commentId)));
+      } else {
+        result.add(c);
+      }
+    }
+    list
+      ..clear()
+      ..addAll(result);
+  }
+
+  List<Comment> _prunedReplies(Comment comment, dynamic commentId) {
+    final result = <Comment>[];
+    for (final reply in comment.replies) {
+      if (reply.id == commentId) continue;
+      if (reply.replies.isNotEmpty) {
+        result.add(reply.copyWith(replies: _prunedReplies(reply, commentId)));
+      } else {
+        result.add(reply);
+      }
+    }
+    return result;
   }
 
   void _startReply(Comment target) {

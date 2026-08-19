@@ -221,7 +221,7 @@ async def _link_media_to_issue(
 async def create_issue(
     session: AsyncSession, payload: IssueCreate, reporter_id: int | None = None
 ) -> Issue:
-    effective_reporter_id = payload.reporter_id if payload.reporter_id is not None else reporter_id
+    effective_reporter_id = reporter_id
     is_fuzzed = payload.is_fuzzed or payload.fuzz_location
     if is_fuzzed:
         lat = round(payload.latitude, 2)
@@ -276,12 +276,15 @@ async def list_issues_near(
     status_filter: str | None,
     limit: int,
     offset: int,
+    created_before: datetime | None = None,
 ) -> list[Issue]:
     statement = await bbox_statement(latitude, longitude, radius_km)
     statement = statement.where(Issue.is_hidden.is_(False))
     if status_filter:
         statement = statement.where(Issue.status == status_filter)
-    statement = statement.order_by(Issue.created_at.desc()).limit(limit).offset(offset)
+    if created_before is not None:
+        statement = statement.where(Issue.created_at < created_before)
+    statement = statement.order_by(Issue.created_at.desc()).limit(limit * 6).offset(offset)
     result = await session.execute(statement)
     issues = list(result.scalars().all())
 
@@ -302,7 +305,7 @@ async def list_issues_near(
     if modified:
         await session.commit()
 
-    return filtered_issues
+    return filtered_issues[offset : offset + limit]
 
 
 async def get_issue(session: AsyncSession, issue_id: int) -> Issue | None:
@@ -570,16 +573,20 @@ async def list_wins_near(
     radius_km: float = 5.0,
     limit: int = 20,
     offset: int = 0,
+    created_before: datetime | None = None,
 ) -> list[Win]:
-    statement = select(Win).order_by(Win.created_at.desc()).limit(limit * 2)
-    result = await session.execute(statement)
+    stmt = select(Win)
+    if created_before is not None:
+        stmt = stmt.where(Win.created_at < created_before)
+    stmt = stmt.order_by(Win.created_at.desc()).limit(limit * 6)
+    result = await session.execute(stmt)
     wins = list(result.scalars().all())
 
     filtered_wins: list[Win] = []
     for w in wins:
         if haversine_km(latitude, longitude, w.latitude, w.longitude) <= radius_km:
             filtered_wins.append(w)
-            if len(filtered_wins) >= limit:
+            if len(filtered_wins) >= limit + offset:
                 break
     return filtered_wins[offset : offset + limit]
 

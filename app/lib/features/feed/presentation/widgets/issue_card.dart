@@ -481,8 +481,8 @@ class IssueCard extends ConsumerWidget {
                             .read(multiTypeFeedProvider.notifier)
                             .toggleUpvote(
                               activeIssue.id,
-                              defaultLatitude,
-                              defaultLongitude,
+                              activeIssue.latitude,
+                              activeIssue.longitude,
                               currentlyUpvoted: activeIssue.hasUpvoted,
                             );
                       } catch (err) {

@@ -1,10 +1,26 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.issues import service as issues_service
 from app.features.wards import service as wards_service
+
+
+def _parse_cursor(cursor: str | None) -> datetime | None:
+    """Parses an ISO-8601 cursor into a naive-UTC datetime, or None."""
+    if not cursor:
+        return None
+    value = cursor
+    if value.endswith("Z"):
+        value = f"{value[:-1]}+00:00"
+    try:
+        parsed = datetime.fromisoformat(value)
+    except ValueError:
+        return None
+    if parsed.tzinfo is not None:
+        parsed = parsed.astimezone(UTC).replace(tzinfo=None)
+    return parsed
 
 
 async def get_multi_type_feed(
@@ -19,6 +35,11 @@ async def get_multi_type_feed(
     jwt_secret: str = "secret",
     user_id: int | None = None,
 ) -> list[dict[str, Any]]:
+    cursor_dt = _parse_cursor(cursor)
+    # Fetch a superset per type so cursor pages advance past earlier per-type
+    # windows instead of silently dropping items on later pages.
+    per_type_limit = max(limit * 5, 40)
+
     items: list[dict[str, Any]] = []
 
     # 1. Fetch Issues if type in ("all", "issue")
@@ -29,11 +50,12 @@ async def get_multi_type_feed(
             longitude=longitude,
             radius_km=radius_km,
             status_filter=None,
-            limit=limit,
+            limit=per_type_limit,
             offset=0,
+            created_before=cursor_dt,
         )
         user_upvoted_ids = set()
-        if user_id is not None:
+        if user_id is not None and issues:
             user_upvoted_ids = await issues_service.get_user_upvoted_issue_ids(
                 session, user_id, [i.id for i in issues]
             )
@@ -55,8 +77,9 @@ async def get_multi_type_feed(
             latitude=latitude,
             longitude=longitude,
             radius_km=radius_km,
-            limit=limit,
+            limit=per_type_limit,
             offset=0,
+            created_before=cursor_dt,
         )
         for win in wins:
             win_out: Any = issues_service.to_win_out(win)
@@ -71,8 +94,9 @@ async def get_multi_type_feed(
             latitude=latitude,
             longitude=longitude,
             radius_km=radius_km,
-            limit=limit,
+            limit=per_type_limit,
             offset=0,
+            created_before=cursor_dt,
         )
         for notice in notices:
             notice_out: Any = wards_service.to_notice_out(notice)
@@ -87,8 +111,9 @@ async def get_multi_type_feed(
             latitude=latitude,
             longitude=longitude,
             radius_km=radius_km,
-            limit=limit,
+            limit=per_type_limit,
             offset=0,
+            created_before=cursor_dt,
         )
         for post in talk_posts:
             post_out: Any = wards_service.to_local_talk_post_out(post)
@@ -105,8 +130,11 @@ async def get_multi_type_feed(
 
     items.sort(key=get_sort_key, reverse=True)
 
-    # Apply cursor pagination if cursor is provided
-    if cursor:
-        items = [i for i in items if get_sort_key(i) < cursor]
+    # Apply cursor pagination as a safety net (per-type queries already
+    # advanced past the cursor). Compare against the normalized, tz-free
+    # cursor so '...000Z' doesn't survive string comparison.
+    if cursor_dt is not None:
+        cursor_key = cursor_dt.isoformat()
+        items = [i for i in items if get_sort_key(i) < cursor_key]
 
     return items[:limit]

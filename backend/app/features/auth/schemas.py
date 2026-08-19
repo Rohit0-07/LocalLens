@@ -2,6 +2,7 @@ from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.core.fields import UTCDateTime
 from app.features.gamification.schemas import UserBadgeOut
 from app.features.issues.schemas import IssueOut
 
@@ -56,14 +57,14 @@ class UserOut(BaseModel):
     photo_url: str | None = None
     bio: str | None = None
     display_name_changes_remaining: int = 2
-    bio_next_change_allowed_at: datetime | None = None
-    photo_next_change_allowed_at: datetime | None = None
+    bio_next_change_allowed_at: UTCDateTime | None = None
+    photo_next_change_allowed_at: UTCDateTime | None = None
     anonymous_identity: str
     anon_id: str | None = None
     role: str = "citizen"
     is_verified: bool = True
     ward: str | None = "Ward 45, Urban Central"
-    created_at: datetime | None = None
+    created_at: UTCDateTime | None = None
     is_guest: bool = False
     issues_count: int = 0
     upvotes_count: int = 0
@@ -80,12 +81,13 @@ class PublicUserProfileOut(BaseModel):
     role: str = "citizen"
     is_verified: bool = True
     ward: str | None = "Ward 45, Urban Central"
-    created_at: datetime
+    created_at: UTCDateTime
     issues_count: int = 0
     resolutions_count: int = 0
     upvotes_count: int = 0
     quorum_votes_count: int = 0
     level: int = 1
+    level_name: str = "Civic Rookie"
     impact_score: int = 0
     badges: list[UserBadgeOut] = Field(default_factory=list)
     public_issues: list[IssueOut] = Field(default_factory=list)

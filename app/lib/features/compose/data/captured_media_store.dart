@@ -12,6 +12,17 @@ class CapturedMediaStore {
 
   static const String _libraryKey = 'locallens_captured_media_v1';
 
+  /// Serializes read-modify-write operations so concurrent saves/deletes do
+  /// not clobber each other (each mutation re-reads the latest snapshot).
+  Future<void> _serialized(Future<void> Function() action) {
+    final previous = _tail;
+    final next = previous.then((_) => action());
+    _tail = next.catchError((Object _) {});
+    return next;
+  }
+
+  Future<void> _tail = Future.value();
+
   /// Loads every captured photo, newest first. Malformed entries are skipped.
   List<CapturedMedia> loadAll() {
     final raw = _store.getString(_libraryKey);
@@ -43,19 +54,19 @@ class CapturedMediaStore {
 
   /// Upserts a captured photo by id, de-duping by base64 payload so the same
   /// capture never appears twice.
-  Future<void> save(CapturedMedia media) async {
-    final items = loadAll();
-    final byId = items.indexWhere((m) => m.id == media.id);
-    final byBytes = items.indexWhere((m) => m.bytesBase64 == media.bytesBase64);
-    if (byId >= 0) {
-      items[byId] = media;
-    } else if (byBytes >= 0) {
-      items[byBytes] = media;
-    } else {
-      items.insert(0, media);
-    }
-    await _write(items);
-  }
+  Future<void> save(CapturedMedia media) => _serialized(() async {
+        final items = loadAll();
+        final byId = items.indexWhere((m) => m.id == media.id);
+        final byBytes = items.indexWhere((m) => m.bytesBase64 == media.bytesBase64);
+        if (byId >= 0) {
+          items[byId] = media;
+        } else if (byBytes >= 0) {
+          items[byBytes] = media;
+        } else {
+          items.insert(0, media);
+        }
+        await _write(items);
+      });
 
   Future<void> saveAll(List<CapturedMedia> items) async {
     for (final media in items) {
@@ -63,28 +74,28 @@ class CapturedMediaStore {
     }
   }
 
-  Future<void> delete(String id) async {
-    final items = loadAll();
-    items.removeWhere((m) => m.id == id);
-    await _write(items);
-  }
+  Future<void> delete(String id) => _serialized(() async {
+        final items = loadAll();
+        items.removeWhere((m) => m.id == id);
+        await _write(items);
+      });
 
-  Future<void> deleteMany(List<String> ids) async {
-    final idSet = ids.toSet();
-    final items = loadAll();
-    items.removeWhere((m) => idSet.contains(m.id));
-    await _write(items);
-  }
+  Future<void> deleteMany(List<String> ids) => _serialized(() async {
+        final idSet = ids.toSet();
+        final items = loadAll();
+        items.removeWhere((m) => idSet.contains(m.id));
+        await _write(items);
+      });
 
   /// Records the server Media id after a successful upload so the library can
   /// soft-delete the server copy later.
-  Future<void> markUploaded(String id, String remoteMediaId) async {
-    final items = loadAll();
-    final index = items.indexWhere((m) => m.id == id);
-    if (index < 0) return;
-    items[index] = items[index].copyWith(remoteMediaId: remoteMediaId);
-    await _write(items);
-  }
+  Future<void> markUploaded(String id, String remoteMediaId) => _serialized(() async {
+        final items = loadAll();
+        final index = items.indexWhere((m) => m.id == id);
+        if (index < 0) return;
+        items[index] = items[index].copyWith(remoteMediaId: remoteMediaId);
+        await _write(items);
+      });
 
   void clearAll() {
     _store.setString(_libraryKey, jsonEncode(const <Object>[]));

@@ -3,6 +3,8 @@ from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.core.fields import UTCDateTime
+
 
 class FlagCategory(StrEnum):
     SPAM = "spam"
@@ -38,7 +40,7 @@ class FlagOut(BaseModel):
     issue_id: int
     category: str
     details: str | None = None
-    created_at: datetime
+    created_at: UTCDateTime
 
 
 class FlaggedIssueItem(BaseModel):
@@ -51,8 +53,8 @@ class FlaggedIssueItem(BaseModel):
     flag_count: int
     categories: list[str]
     is_hidden: bool
-    latest_flag_at: datetime
-    created_at: datetime
+    latest_flag_at: UTCDateTime
+    created_at: UTCDateTime
 
 
 class FlaggedQueueResponse(BaseModel):
@@ -86,7 +88,6 @@ class IssueCreate(BaseModel):
     fuzz_location: bool = False
     is_fuzzed: bool = False
     is_shielded: bool = False
-    reporter_id: int | None = None
     media_url: str | None = None
     video_url: str | None = None
     media_urls: list[str] = Field(default_factory=list)
@@ -116,9 +117,9 @@ class IssueOut(BaseModel):
     media_url: str | None = None
     video_url: str | None = None
     media_urls: list[str] = Field(default_factory=list)
-    created_at: datetime
-    acknowledged_at: datetime | None = None
-    resolved_at: datetime | None = None
+    created_at: UTCDateTime
+    acknowledged_at: UTCDateTime | None = None
+    resolved_at: UTCDateTime | None = None
     upvotes_count: int = 0
     comments_count: int = 0
     confirmations_count: int = 0
@@ -138,7 +139,7 @@ class NearDuplicateOut(BaseModel):
     longitude: float
     geohash: str | None = None
     distance_meters: float
-    created_at: datetime
+    created_at: UTCDateTime
 
 
 class NearDuplicateCheckResponse(BaseModel):
@@ -203,7 +204,7 @@ class CommentResponse(BaseModel):
     parent_id: str | None = None
     anon_id: str
     content: str
-    created_at: datetime
+    created_at: UTCDateTime
     is_author: bool = False
     replies: list["CommentResponse"] = Field(default_factory=list)
 
@@ -226,4 +227,4 @@ class WinOut(BaseModel):
     before_image_url: str | None = None
     after_image_url: str | None = None
     contributor_credits: list[str] = Field(default_factory=list)
-    created_at: datetime
+    created_at: UTCDateTime

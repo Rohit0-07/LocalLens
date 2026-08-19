@@ -62,7 +62,7 @@ class GamificationScreen extends ConsumerWidget {
             const SizedBox(height: 16.0),
             _BadgesGrid(userBadges: profile.badges),
             const SizedBox(height: 16.0),
-            _ActivityBreakdownCard(counts: profile.activityCounts),
+            _ActivityBreakdownCard(counts: profile.activityCounts, profile: profile),
           ],
         ),
       ),
@@ -185,26 +185,48 @@ class _StreakBanner extends ConsumerWidget {
                 backgroundColor: colorScheme.primary,
                 foregroundColor: colorScheme.onPrimary,
               ),
-              onPressed: () async {
-                if (profile.isGuest) {
-                  showDialog(
-                    context: context,
-                    builder: (_) => const GuestGuard(),
-                  );
-                } else {
-                  await ref.read(claimStreakNotifierProvider.notifier).claimStreak();
-                  final claimState = ref.read(claimStreakNotifierProvider);
-                  claimState.whenOrNull(
-                    error: (err, st) {
-                      final message = err.toString().replaceAll('Exception: ', '').replaceAll('AppError: ', '');
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(message)),
+              onPressed: profile.isGuest
+                  ? () {
+                      showDialog(
+                        context: context,
+                        builder: (_) => const GuestGuard(),
                       );
-                    },
-                  );
-                }
-              },
-              child: Text(context.tr('gamification_claim_streak')),
+                    }
+                  : profile.canClaimStreak
+                      ? () async {
+                          await ref
+                              .read(claimStreakNotifierProvider.notifier)
+                              .claimStreak();
+                          final claimState =
+                              ref.read(claimStreakNotifierProvider);
+                          claimState.whenOrNull(
+                            data: (result) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    result?.message ??
+                                        'Daily streak claimed! +15 Impact Points',
+                                  ),
+                                ),
+                              );
+                            },
+                            error: (err, st) {
+                              final message = err
+                                  .toString()
+                                  .replaceAll('Exception: ', '')
+                                  .replaceAll('AppError: ', '');
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text(message)),
+                              );
+                            },
+                          );
+                        }
+                      : null,
+              child: Text(
+                profile.canClaimStreak
+                    ? context.tr('gamification_claim_streak')
+                    : 'Streak claimed today — back tomorrow!',
+              ),
             ),
           ],
         ),
@@ -313,9 +335,10 @@ class _BadgesGrid extends StatelessWidget {
 }
 
 class _ActivityBreakdownCard extends StatelessWidget {
-  const _ActivityBreakdownCard({required this.counts});
+  const _ActivityBreakdownCard({required this.counts, required this.profile});
 
   final ActivityCounts counts;
+  final GamificationProfile profile;
 
   @override
   Widget build(BuildContext context) {
@@ -362,6 +385,13 @@ class _ActivityBreakdownCard extends StatelessWidget {
               ptsLabel: '+${counts.commentsPosted * 10} pts',
               icon: Icons.comment_outlined,
               color: colorScheme.tertiary,
+            ),
+            const Divider(height: 16.0),
+            _ActivityMetricRow(
+              label: 'Streak Days: ${profile.streakDays}',
+              ptsLabel: '+${profile.streakDays * 15} pts',
+              icon: Icons.local_fire_department_outlined,
+              color: colorScheme.error,
             ),
           ],
         ),

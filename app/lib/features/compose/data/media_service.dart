@@ -151,6 +151,7 @@ class MediaService {
       '/media/upload',
       data: payload,
       options: Options(
+        validateStatus: (_) => true,
         headers: {
           'Content-Type': 'application/json',
           if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
@@ -174,6 +175,7 @@ class MediaService {
     final response = await _dio.delete(
       '/media/$id',
       options: Options(
+        validateStatus: (_) => true,
         headers: {
           'Accept': 'application/json',
           if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',

@@ -2,6 +2,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.core.fields import UTCDateTime
 from app.features.issues.schemas import IssueOut
 
 
@@ -27,7 +28,7 @@ class RepresentativeProfileOut(RepresentativeMetricsOut):
     official_name: str
     title: str
     ward: str
-    verified_at: datetime
+    verified_at: UTCDateTime
 
 
 class PublicRepresentativeProfileOut(RepresentativeMetricsOut):
@@ -38,7 +39,7 @@ class PublicRepresentativeProfileOut(RepresentativeMetricsOut):
     official_name: str
     title: str
     ward: str
-    verified_at: datetime | None = None
+    verified_at: UTCDateTime | None = None
 
 
 class OfficialResponseCreate(BaseModel):
@@ -66,7 +67,7 @@ class OfficialResponseOut(BaseModel):
     message: str
     estimated_resolution_days: int | None = None
     status_update: str | None = None
-    created_at: datetime
+    created_at: UTCDateTime
 
 
 class WardIssuesResponse(BaseModel):

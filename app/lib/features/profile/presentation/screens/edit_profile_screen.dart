@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -9,6 +11,7 @@ import '../../../../core/network/network_providers.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/media_url.dart';
 import '../../../auth/presentation/auth_providers.dart';
+import '../../../compose/data/media_service.dart';
 import '../profile_providers.dart';
 
 class EditProfileScreen extends ConsumerStatefulWidget {
@@ -23,6 +26,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   final _usernameController = TextEditingController();
   final _dobController = TextEditingController();
   bool _submitting = false;
+  String? _photoUrl;
+  Uint8List? _photoPreview;
 
   @override
   void dispose() {
@@ -70,10 +75,11 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             _dobController.text = _formatDateForInput(profile.dateOfBirth);
           }
 
-          final photoUrl = profile.photoUrl != null &&
-                  profile.photoUrl!.isNotEmpty
-              ? resolveMediaUrl(profile.photoUrl)
-              : null;
+          final photoUrl = _photoPreview != null
+              ? null
+              : (profile.photoUrl != null && profile.photoUrl!.isNotEmpty
+                  ? resolveMediaUrl(profile.photoUrl)
+                  : null);
 
           return ListView(
             padding: const EdgeInsets.all(20),
@@ -85,10 +91,19 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                   child: Stack(
                     alignment: Alignment.bottomRight,
                     children: [
-                      photoUrl != null
+                      _photoPreview != null
                           ? ClipOval(
-                              child: Image.network(
-                                photoUrl,
+                              child: Image.memory(
+                                _photoPreview!,
+                                width: 96,
+                                height: 96,
+                                fit: BoxFit.cover,
+                              ),
+                            )
+                          : photoUrl != null
+                              ? ClipOval(
+                                  child: Image.network(
+                                    photoUrl,
                                 width: 96,
                                 height: 96,
                                 fit: BoxFit.cover,
@@ -192,9 +207,31 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     final picker = ImagePicker();
     final picked = await picker.pickImage(source: ImageSource.gallery);
     if (picked == null || !mounted) return;
-    ref.read(appMessengerProvider.notifier).show(
-          'Photo upload is queued with the next sync',
-        );
+
+    final Uint8List bytes;
+    try {
+      bytes = await picked.readAsBytes();
+    } catch (_) {
+      return;
+    }
+
+    setState(() => _photoPreview = bytes);
+
+    try {
+      final media = await ref.read(mediaServiceProvider).uploadMedia(
+            bytes: bytes,
+            isInAppCamera: false,
+          );
+      if (!mounted) return;
+      setState(() => _photoUrl = media.url);
+      ref.read(appMessengerProvider.notifier).show('Photo staged for profile');
+    } catch (err) {
+      if (!mounted) return;
+      setState(() => _photoPreview = null);
+      ref.read(appMessengerProvider.notifier).show(
+            'Could not upload photo. ${err.toString()}',
+          );
+    }
   }
 
   Future<void> _pickDob() async {
@@ -227,6 +264,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     };
     final dob = _parseDob(_dobController.text);
     if (dob != null) body['date_of_birth'] = dob;
+    if (_photoUrl != null && _photoUrl!.isNotEmpty) {
+      body['photo_url'] = _photoUrl;
+    }
 
     try {
       await client.patchJson('/auth/me', body: body);
@@ -259,11 +299,11 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     final month = int.tryParse(parts[1]);
     final year = int.tryParse(parts[2]);
     if (day == null || month == null || year == null) return null;
-    try {
-      final date = DateTime(year, month, day);
-      return '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
-    } catch (_) {
-      return null;
-    }
+    // Reject impossible dates instead of letting DateTime roll them over
+    // (e.g. 31/02 stays invalid rather than silently becoming 03/03).
+    if (month < 1 || month > 12 || day < 1 || year < 1900) return null;
+    final date = DateTime(year, month, day);
+    if (date.year != year || date.month != month || date.day != day) return null;
+    return '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
   }
 }

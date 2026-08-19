@@ -2,6 +2,8 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict
 
+from app.core.fields import UTCDateTime
+
 
 class ReverseGeocodeWardOut(BaseModel):
     model_config = ConfigDict(from_attributes=False)
@@ -36,7 +38,7 @@ class MapPinOut(BaseModel):
     ward_name: str
     is_shielded: bool
     upvotes_count: int
-    created_at: datetime
+    created_at: UTCDateTime
 
 
 class WardBoundaryOut(BaseModel):

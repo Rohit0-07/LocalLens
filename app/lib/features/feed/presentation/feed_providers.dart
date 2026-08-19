@@ -99,6 +99,7 @@ class MultiTypeFeedController extends AsyncNotifier<List<FeedItem>> {
   }
 
   Future<void> refresh() async {
+    ref.invalidate(feedCoordinatesProvider);
     state = const AsyncLoading();
     state = await AsyncValue.guard(build);
   }
@@ -183,6 +184,7 @@ class FeedController extends AsyncNotifier<List<Issue>> {
   }
 
   Future<void> refresh() async {
+    ref.invalidate(feedCoordinatesProvider);
     state = const AsyncLoading();
     state = await AsyncValue.guard(build);
   }

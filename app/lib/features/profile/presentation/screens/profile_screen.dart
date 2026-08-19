@@ -917,18 +917,23 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Future<void> _editPhoto(UserProfile profile) async {
     await _showChangeLimitsNoticeIfNeeded();
     if (!mounted) return;
-    final nextAllowed = profile.photoNextChangeAllowedAt;
+    // Backend timestamps are naive UTC; interpret them as UTC so the limit
+    // countdown isn't shown 5h30m in the past/future.
+    final nextAllowed = _toUtc(profile.photoNextChangeAllowedAt);
+    final blockedUntil = (nextAllowed != null && nextAllowed.isAfter(DateTime.now()))
+        ? nextAllowed
+        : null;
     final source = await showModalBottomSheet<ImageSource>(
       context: context,
       builder: (ctx) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (nextAllowed != null)
+            if (blockedUntil != null)
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
                 child: Text(
-                  'Next photo change allowed: ${_formatDateTime(nextAllowed)}',
+                  'Next photo change allowed: ${_formatDateTime(blockedUntil)}',
                   style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
                     color: Theme.of(ctx).colorScheme.onSurfaceVariant,
                   ),
@@ -1054,6 +1059,23 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final hour = local.hour.toString().padLeft(2, '0');
     final minute = local.minute.toString().padLeft(2, '0');
     return '$day/$month/${local.year} $hour:$minute';
+  }
+
+  /// Interprets a backend naive-UTC timestamp as UTC (Java-style naive
+  /// datetimes get displayed 5h30m early on IST otherwise).
+  static DateTime? _toUtc(DateTime? value) {
+    if (value == null) return null;
+    if (value.isUtc) return value;
+    return DateTime.utc(
+      value.year,
+      value.month,
+      value.day,
+      value.hour,
+      value.minute,
+      value.second,
+      value.millisecond,
+      value.microsecond,
+    );
   }
 
   Widget _buildDivider(ColorScheme colorScheme) {

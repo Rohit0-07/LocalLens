@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/network/network_providers.dart';
+import '../../../auth/presentation/auth_providers.dart';
 import '../../data/notifications_api.dart';
 import '../../domain/notification_item.dart';
 
@@ -56,11 +57,17 @@ final unreadNotificationCountProvider = Provider<int>((ref) {
 class NotificationsController extends Notifier<NotificationsState> {
   @override
   NotificationsState build() {
+    final session = ref.read(sessionProvider);
+    if (session == null || session.isGuest) {
+      return const NotificationsState(isLoading: false);
+    }
     Future.microtask(() => loadNotifications());
     return const NotificationsState(isLoading: true);
   }
 
   Future<void> loadNotifications({NotificationFilter? filter}) async {
+    final session = ref.read(sessionProvider);
+    if (session == null || session.isGuest) return;
     final activeFilter = filter ?? state.filter;
     state = state.copyWith(isLoading: true, filter: activeFilter, clearError: true);
 
@@ -83,33 +90,47 @@ class NotificationsController extends Notifier<NotificationsState> {
   }
 
   Future<void> setFilter(NotificationFilter filter) async {
+    final session = ref.read(sessionProvider);
+    if (session == null || session.isGuest) return;
     if (state.filter == filter && !state.isLoading) return;
     await loadNotifications(filter: filter);
   }
 
   Future<void> markAsRead(String notificationId) async {
+    final session = ref.read(sessionProvider);
+    if (session == null || session.isGuest) return;
     try {
       final api = ref.read(notificationsApiProvider);
       final updated = await api.markAsRead(notificationId);
 
-      final updatedList = state.notifications.map((item) {
-        if (item.id == notificationId) {
-          return updated;
-        }
-        return item;
-      }).toList();
-
       final newUnreadCount = (state.unreadCount - 1).clamp(0, 999);
-      state = state.copyWith(
-        notifications: updatedList,
-        unreadCount: newUnreadCount,
-      );
+      if (state.filter == NotificationFilter.unread) {
+        // Read items vanish from the unread-only view immediately.
+        state = state.copyWith(
+          notifications:
+              state.notifications.where((item) => item.id != notificationId).toList(),
+          unreadCount: newUnreadCount,
+        );
+      } else {
+        final updatedList = state.notifications.map((item) {
+          if (item.id == notificationId) {
+            return updated;
+          }
+          return item;
+        }).toList();
+        state = state.copyWith(
+          notifications: updatedList,
+          unreadCount: newUnreadCount,
+        );
+      }
     } catch (e) {
       // Keep UI resilient
     }
   }
 
   Future<void> markAllAsRead() async {
+    final session = ref.read(sessionProvider);
+    if (session == null || session.isGuest) return;
     try {
       final api = ref.read(notificationsApiProvider);
       await api.markAllAsRead();

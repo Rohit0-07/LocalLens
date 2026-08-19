@@ -2,6 +2,8 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict
 
+from app.core.fields import UTCDateTime
+
 
 class NotificationOut(BaseModel):
     id: str
@@ -11,7 +13,7 @@ class NotificationOut(BaseModel):
     type: str
     reference_id: str | None = None
     is_read: bool
-    created_at: datetime
+    created_at: UTCDateTime
 
     model_config = ConfigDict(from_attributes=True)
 

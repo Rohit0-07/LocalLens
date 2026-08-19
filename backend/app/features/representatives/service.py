@@ -40,7 +40,9 @@ async def compute_rep_metrics(
     total_ward_issues = total_res.scalar() or 0
 
     esc_stmt = select(func.count(Issue.id)).where(
-        Issue.ward == profile.ward, Issue.status == "escalated"
+        Issue.ward == profile.ward,
+        (Issue.status.in_(["escalated", "escalating", "forwarded"]))
+        | (Issue.escalated_at.isnot(None)),
     )
     esc_res = await session.execute(esc_stmt)
     escalated_ward_issues = esc_res.scalar() or 0
@@ -181,8 +183,11 @@ async def list_ward_issues(
     count_stmt = select(func.count(Issue.id)).where(Issue.ward == profile.ward)
 
     if filter == "escalated":
-        stmt = stmt.where(Issue.status == "escalated")
-        count_stmt = count_stmt.where(Issue.status == "escalated")
+        esc_filter = (Issue.status.in_(["escalated", "escalating", "forwarded"])) | (
+            Issue.escalated_at.isnot(None)
+        )
+        stmt = stmt.where(esc_filter)
+        count_stmt = count_stmt.where(esc_filter)
     elif filter == "needs_response":
         stmt = stmt.where(Issue.id.not_in(responded_subquery))
         count_stmt = count_stmt.where(Issue.id.not_in(responded_subquery))

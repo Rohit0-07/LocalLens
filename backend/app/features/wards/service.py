@@ -64,7 +64,7 @@ async def _get_ward_metrics(session: AsyncSession, ward: Ward) -> tuple[int, int
         | (Issue.ward == ward.code)
         | (Issue.ward.ilike(f"%{ward.name}%"))
         | (Issue.ward.ilike(f"%{ward.code}%"))
-    )
+    ) & (Issue.is_hidden.is_(False))
 
     total_issues = (
         await session.execute(select(func.count(Issue.id)).where(where_clause))
@@ -350,8 +350,12 @@ async def list_all_talk_posts_near(
     radius_km: float = 5.0,
     limit: int = 20,
     offset: int = 0,
+    created_before: datetime.datetime | None = None,
 ) -> list[LocalTalkPost]:
-    stmt = select(LocalTalkPost).order_by(LocalTalkPost.created_at.desc()).limit(limit * 2)
+    stmt = select(LocalTalkPost)
+    if created_before is not None:
+        stmt = stmt.where(LocalTalkPost.created_at < created_before)
+    stmt = stmt.order_by(LocalTalkPost.created_at.desc()).limit(limit * 6)
     res = await session.execute(stmt)
     posts = list(res.scalars().all())
 
@@ -374,8 +378,12 @@ async def list_notices_near(
     radius_km: float = 5.0,
     limit: int = 20,
     offset: int = 0,
+    created_before: datetime.datetime | None = None,
 ) -> list[Notice]:
-    stmt = select(Notice).order_by(Notice.created_at.desc()).limit(limit * 2)
+    stmt = select(Notice)
+    if created_before is not None:
+        stmt = stmt.where(Notice.created_at < created_before)
+    stmt = stmt.order_by(Notice.created_at.desc()).limit(limit * 6)
     res = await session.execute(stmt)
     notices = list(res.scalars().all())
 

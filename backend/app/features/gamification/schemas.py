@@ -2,6 +2,8 @@ from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.core.fields import UTCDateTime
+
 
 class ActivityCountsOut(BaseModel):
     issues_created: int = 0
@@ -21,7 +23,7 @@ class UserBadgeOut(BaseModel):
     description: str
     icon_name: str
     category: str
-    unlocked_at: datetime
+    unlocked_at: UTCDateTime
 
     model_config = ConfigDict(from_attributes=True)
 

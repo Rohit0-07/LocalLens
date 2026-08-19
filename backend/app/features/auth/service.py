@@ -292,7 +292,7 @@ async def get_public_user_profile(
     gamif = await get_or_create_user_gamification(session, user_id)
     streak_days = gamif.streak_days if gamif else 0
     impact_score = calculate_impact_score(counts, streak_days)
-    level, _level_name, _ = get_level_info(impact_score)
+    level, level_name, _ = get_level_info(impact_score)
     badges = await evaluate_and_unlock_badges(session, user_id, counts, streak_days)
 
     public_issues_stmt = (
@@ -330,6 +330,7 @@ async def get_public_user_profile(
         upvotes_count=upvotes_count,
         quorum_votes_count=quorum_votes_count,
         level=level,
+        level_name=level_name,
         impact_score=impact_score,
         badges=badges,
         public_issues=public_issues_out,

@@ -2,6 +2,8 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict
 
+from app.core.fields import UTCDateTime
+
 
 class MediaUploadRequest(BaseModel):
     base64_payload: str | None = None
@@ -23,9 +25,11 @@ class MediaUploadOut(BaseModel):
     longitude: float | None = None
     is_fuzzed: bool = False
     issue_id: int | None = None
-    deleted_at: datetime | None = None
+    deleted_at: UTCDateTime | None = None
+    # Echoed back verbatim from the request (naive UTC, no offset) per the
+    # upload contract, so clients round-trip captured_at unchanged.
     captured_at: datetime | None = None
-    created_at: datetime
+    created_at: UTCDateTime
 
     model_config = ConfigDict(from_attributes=True)
 

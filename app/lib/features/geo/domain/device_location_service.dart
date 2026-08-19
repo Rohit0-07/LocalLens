@@ -1,3 +1,5 @@
+import 'package:geolocator/geolocator.dart';
+
 /// Abstraction over the device location source.
 ///
 /// THROWS when the location cannot be determined (permission denied, GPS
@@ -17,8 +19,30 @@ class PlatformDeviceLocationService implements DeviceLocationService {
   static const double defaultLat = 19.1136;
   static const double defaultLng = 72.8697;
 
+  /// How long to wait for a GPS fix before falling back to the reference point.
+  static const Duration _fixTimeout = Duration(seconds: 15);
+
   @override
   Future<({double lat, double lng})> getCurrentCoordinates() async {
-    return (lat: defaultLat, lng: defaultLng);
+    try {
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        throw Exception('Location permission denied');
+      }
+
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.medium,
+          timeLimit: _fixTimeout,
+        ),
+      );
+      return (lat: position.latitude, lng: position.longitude);
+    } catch (_) {
+      return (lat: defaultLat, lng: defaultLng);
+    }
   }
 }

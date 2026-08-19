@@ -1,5 +1,5 @@
 import asyncio
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from sqlalchemy import func, select
@@ -295,7 +295,12 @@ async def claim_user_streak(db: AsyncSession, user: Any) -> StreakClaimOut:
                 code="already_claimed",
             )
 
-        gamif.streak_days += 1
+        # Reset the streak when the last claim wasn't the previous day so a
+        # single missed day actually breaks the run instead of extending it.
+        if gamif.last_streak_date == today_utc - timedelta(days=1):
+            gamif.streak_days += 1
+        else:
+            gamif.streak_days = 1
         gamif.last_streak_date = today_utc
 
         counts = await fetch_activity_counts(db, user_id)

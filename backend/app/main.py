@@ -12,7 +12,6 @@ from app.core.exceptions import AppError, app_error_handler, validation_error_ha
 from app.core.logging import configure_logging
 from app.core.ratelimit import SlidingWindowRateLimiter
 from app.features.media.router import router as media_router
-from app.features.notifications.router import router as notifications_router
 
 
 @asynccontextmanager
@@ -49,7 +48,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.flag_rate_limiter = issues_service.flag_rate_limiter
     app.add_exception_handler(AppError, app_error_handler)
     app.add_exception_handler(RequestValidationError, validation_error_handler)  # type: ignore[arg-type]
-    app.include_router(notifications_router, prefix="/notifications", tags=["notifications"])
     app.include_router(media_router, prefix="/api/v1/media", tags=["media"])
     app.include_router(api_router)
     return app

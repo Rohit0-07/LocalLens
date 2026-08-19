@@ -2,6 +2,7 @@ import datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.core.fields import UTCDateTime
 from app.features.issues.schemas import IssueOut
 from app.features.representatives.schemas import RepresentativeMetricsOut
 
@@ -14,7 +15,7 @@ class AssignedRepresentativeOut(RepresentativeMetricsOut):
     ward: str = Field(default="", description="Assigned ward of the representative")
     official_name: str = Field(..., description="Official name of the representative")
     title: str = Field(..., description="Designated title, e.g. Ward Representative")
-    verified_at: datetime.datetime | None = Field(None, description="Verification timestamp")
+    verified_at: UTCDateTime | None = Field(None, description="Verification timestamp")
 
 
 class WardSummaryOut(BaseModel):
@@ -44,7 +45,7 @@ class WardDetailOut(WardSummaryOut):
     recent_issues: list[IssueOut] = Field(
         default_factory=list, description="Recent public non-shielded issues"
     )
-    updated_at: datetime.datetime = Field(..., description="Last updated timestamp")
+    updated_at: UTCDateTime = Field(..., description="Last updated timestamp")
 
 
 class WardListResponse(BaseModel):
@@ -76,7 +77,7 @@ class LocalTalkPostOut(BaseModel):
     replies_count: int
     latitude: float | None = None
     longitude: float | None = None
-    created_at: datetime.datetime
+    created_at: UTCDateTime
 
 
 class NoticeOut(BaseModel):
@@ -86,9 +87,9 @@ class NoticeOut(BaseModel):
     title: str
     description: str
     official_header: str
-    valid_until: datetime.datetime | None = None
+    valid_until: UTCDateTime | None = None
     ward: str
     latitude: float
     longitude: float
     geohash: str | None = None
-    created_at: datetime.datetime
+    created_at: UTCDateTime
