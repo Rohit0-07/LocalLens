@@ -28,6 +28,11 @@ class RepresentativeProfileOut(RepresentativeMetricsOut):
     official_name: str
     title: str
     ward: str
+    department: str | None = "all"
+    is_unclaimed: bool = False
+    handle: str | None = None
+    contact_email: str | None = None
+    contact_phone: str | None = None
     verified_at: UTCDateTime
 
 
@@ -39,6 +44,11 @@ class PublicRepresentativeProfileOut(RepresentativeMetricsOut):
     official_name: str
     title: str
     ward: str
+    department: str | None = "all"
+    is_unclaimed: bool = False
+    handle: str | None = None
+    contact_email: str | None = None
+    contact_phone: str | None = None
     verified_at: UTCDateTime | None = None
 
 

@@ -17,6 +17,7 @@ abstract final class RoutePaths {
   static const search = '/search';
   static const gamification = '/gamification';
   static const adminFlaggedQueue = '/admin/flagged-queue';
+  static const wards = '/wards';
   static const wardDetail = '/ward/:slug';
   static const outbox = '/outbox';
   static const settings = '/settings';

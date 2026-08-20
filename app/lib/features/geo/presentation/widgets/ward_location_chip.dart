@@ -29,6 +29,7 @@ class WardLocationChip extends StatelessWidget {
         ),
       WardLocationSuccess(place: 'Outside coverage') => const _StaticChip(
           key: Key('wardLocationOutsideCoverage'),
+          icon: Icons.explore_outlined,
           text: 'Outside coverage',
         ),
       WardLocationSuccess(:final place, :final code, :final wardSlug) =>

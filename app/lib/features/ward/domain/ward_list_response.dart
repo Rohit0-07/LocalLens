@@ -13,6 +13,8 @@ class WardListResponse {
     required this.offset,
   });
 
+  List<WardSummaryOut> get wards => items;
+
   factory WardListResponse.fromJson(Map<String, dynamic> json) {
     return WardListResponse(
       items: json['items'] != null

@@ -11,5 +11,6 @@ abstract interface class SearchRepository {
     DateTime? createdAfter,
     DateTime? createdBefore,
     String? ward,
+    String? account,
   });
 }

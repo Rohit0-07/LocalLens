@@ -116,7 +116,21 @@ class _WardDetailScreenState extends ConsumerState<WardDetailScreen> {
                   ],
                 ),
                 const SizedBox(height: 8),
-                if (rep != null)
+                if (wardDetail.representatives.isNotEmpty)
+                  ...wardDetail.representatives.map(
+                    (r) => Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: WardRepCard(
+                        representative: r,
+                        onTap: r.userId > 0
+                            ? () => context.push(
+                                  RoutePaths.publicProfileFor(r.userId),
+                                )
+                            : null,
+                      ),
+                    ),
+                  )
+                else if (rep != null)
                   WardRepCard(
                     representative: rep,
                     onTap: rep.userId > 0

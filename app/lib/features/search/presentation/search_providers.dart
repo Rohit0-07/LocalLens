@@ -37,6 +37,7 @@ class RecentSearchesNotifier extends Notifier<List<String>> {
   }
 
   Future<void> add(String q) async {
+    if (q.trim().isEmpty) return;
     await ref.read(recentSearchStoreProvider).add(q);
     state = ref.read(recentSearchStoreProvider).load();
   }
@@ -55,10 +56,15 @@ class SearchResultsNotifier extends AsyncNotifier<List<Issue>> {
 
   Future<void> runQuery(String q, {double? latitude, double? longitude}) async {
     final query = q.trim();
-    if (query.isEmpty) return;
+    final filters = ref.read(searchFiltersProvider);
+
+    if (query.isEmpty && !filters.isActive) {
+      state = const AsyncData(<Issue>[]);
+      return;
+    }
+
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
-      final filters = ref.read(searchFiltersProvider);
       double? effectiveLatitude = latitude;
       double? effectiveLongitude = longitude;
       double? radiusKm;
@@ -67,15 +73,23 @@ class SearchResultsNotifier extends AsyncNotifier<List<Issue>> {
         effectiveLatitude ??= defaultLatitude;
         effectiveLongitude ??= defaultLongitude;
       }
-      final createdAfter = switch (filters.datePreset) {
-        SearchDatePreset.anyTime => null,
-        SearchDatePreset.past24Hours =>
-          DateTime.now().toUtc().subtract(const Duration(hours: 24)),
-        SearchDatePreset.past7Days =>
-          DateTime.now().toUtc().subtract(const Duration(days: 7)),
-        SearchDatePreset.past30Days =>
-          DateTime.now().toUtc().subtract(const Duration(days: 30)),
-      };
+
+      DateTime? createdAfter = filters.startDate;
+      DateTime? createdBefore = filters.endDate;
+
+      if (filters.datePreset != SearchDatePreset.custom) {
+        createdAfter = switch (filters.datePreset) {
+          SearchDatePreset.anyTime => null,
+          SearchDatePreset.past24Hours =>
+            DateTime.now().toUtc().subtract(const Duration(hours: 24)),
+          SearchDatePreset.past7Days =>
+            DateTime.now().toUtc().subtract(const Duration(days: 7)),
+          SearchDatePreset.past30Days =>
+            DateTime.now().toUtc().subtract(const Duration(days: 30)),
+          SearchDatePreset.custom => filters.startDate,
+        };
+      }
+
       final results = await ref
           .read(searchRepositoryProvider)
           .search(
@@ -86,9 +100,14 @@ class SearchResultsNotifier extends AsyncNotifier<List<Issue>> {
             categories: filters.categories,
             radiusKm: radiusKm,
             createdAfter: createdAfter,
+            createdBefore: createdBefore,
             ward: filters.ward,
+            account: filters.account,
           );
-      await ref.read(recentSearchesProvider.notifier).add(query);
+
+      if (query.isNotEmpty) {
+        await ref.read(recentSearchesProvider.notifier).add(query);
+      }
       return results;
     });
   }

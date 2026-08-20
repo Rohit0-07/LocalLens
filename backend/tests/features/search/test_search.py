@@ -405,6 +405,9 @@ async def test_search_result_schema(client, create_user_headers):
         "media_url",
         "video_url",
         "media_urls",
+        "assigned_representative",
+        "resolved_by",
+        "resolution_type",
     }
     headers = await create_user_headers("+919000000021")
     await _create_issue(client, headers, title="Pothole on Main St")

@@ -78,6 +78,21 @@ class ModerationResultOut(BaseModel):
     message: str
 
 
+class AssignedAuthorityOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    official_name: str
+    title: str
+    ward: str
+    department: str | None = "all"
+    handle: str | None = None
+    is_unclaimed: bool = False
+    is_verified: bool = True
+    contact_email: str | None = None
+    contact_phone: str | None = None
+
+
 class IssueCreate(BaseModel):
     title: str = Field(min_length=5, max_length=100)
     description: str = Field(default="", max_length=1000)
@@ -128,6 +143,66 @@ class IssueOut(BaseModel):
     resolution_notes: str | None = None
     has_upvoted: bool = False
     has_official_response: bool = False
+    assigned_representative: AssignedAuthorityOut | None = None
+    resolved_by: str | None = None
+    resolution_type: str | None = None
+
+
+class WrongAssignmentReportCreate(BaseModel):
+    suggested_ward: str | None = None
+    suggested_category: str | None = None
+    reason: str = Field(min_length=3, max_length=500)
+
+
+class WrongAssignmentReportOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    issue_id: int
+    user_id: int | None = None
+    suggested_ward: str | None = None
+    suggested_category: str | None = None
+    reason: str
+    created_at: UTCDateTime
+
+
+class AdminReassignRequest(BaseModel):
+    ward: str | None = None
+    category: str | None = None
+    assigned_representative_id: str | None = None
+    reason: str | None = Field(None, max_length=500)
+
+
+class QuorumVoterOut(BaseModel):
+    user_id: int
+    username: str | None = None
+    display_name: str | None = None
+    vote: str
+    reason: str | None = None
+    is_nearby: bool = True
+    created_at: UTCDateTime
+
+
+class IssueTimelineEventOut(BaseModel):
+    event_type: str
+    title: str
+    description: str | None = None
+    actor_name: str | None = None
+    actor_handle: str | None = None
+    actor_role: str | None = None
+    is_unclaimed: bool = False
+    media_url: str | None = None
+    created_at: UTCDateTime
+
+
+class IssueTimelineResponse(BaseModel):
+    issue_id: int
+    status: str
+    resolution_type: str | None = None
+    resolved_by: str | None = None
+    events: list[IssueTimelineEventOut]
+    confirmations: list[QuorumVoterOut] = Field(default_factory=list)
+    disputes: list[QuorumVoterOut] = Field(default_factory=list)
 
 
 class NearDuplicateOut(BaseModel):

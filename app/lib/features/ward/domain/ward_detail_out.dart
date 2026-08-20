@@ -14,6 +14,7 @@ class WardDetailOut {
   final double resolutionRatePct;
   final List<String> topCategories;
   final WardRepresentativeOut? assignedRepresentative;
+  final List<WardRepresentativeOut> representatives;
   final List<Issue> recentIssues;
   final DateTime? updatedAt;
 
@@ -30,11 +31,19 @@ class WardDetailOut {
     required this.resolutionRatePct,
     this.topCategories = const [],
     this.assignedRepresentative,
+    this.representatives = const [],
     this.recentIssues = const [],
     this.updatedAt,
   });
 
   factory WardDetailOut.fromJson(Map<String, dynamic> json) {
+    final repsRaw = json['representatives'];
+    final repsList = repsRaw is List
+        ? repsRaw
+            .map((r) => WardRepresentativeOut.fromJson(r as Map<String, dynamic>))
+            .toList()
+        : <WardRepresentativeOut>[];
+
     return WardDetailOut(
       slug: json['slug'] as String,
       name: json['name'] as String,
@@ -50,15 +59,17 @@ class WardDetailOut {
           ? List<String>.from(json['top_categories'] as List)
           : const [],
       assignedRepresentative: json['assigned_representative'] != null
-          ? WardRepresentativeOut.fromJson(json['assigned_representative'] as Map<String, dynamic>)
-          : null,
+          ? WardRepresentativeOut.fromJson(
+              json['assigned_representative'] as Map<String, dynamic>)
+          : (repsList.isNotEmpty ? repsList.first : null),
+      representatives: repsList,
       recentIssues: json['recent_issues'] != null
           ? (json['recent_issues'] as List)
               .map((i) => Issue.fromJson(i as Map<String, dynamic>))
               .toList()
           : const [],
       updatedAt: json['updated_at'] != null
-          ? DateTime.parse(json['updated_at'] as String)
+          ? DateTime.tryParse(json['updated_at'] as String)
           : null,
     );
   }
@@ -77,6 +88,7 @@ class WardDetailOut {
       'resolution_rate_pct': resolutionRatePct,
       'top_categories': topCategories,
       'assigned_representative': assignedRepresentative?.toJson(),
+      'representatives': representatives.map((r) => r.toJson()).toList(),
       'recent_issues': recentIssues.map((i) => i.toJson()).toList(),
       'updated_at': updatedAt?.toIso8601String(),
     };

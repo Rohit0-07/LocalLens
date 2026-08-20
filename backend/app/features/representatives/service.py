@@ -5,6 +5,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AppError
+from app.features.auth.models import User
 from app.features.issues.models import Issue
 from app.features.issues.service import to_issue_out
 from app.features.representatives.models import OfficialResponse, RepresentativeProfile
@@ -139,12 +140,19 @@ async def get_representative_profile_out(
     session: AsyncSession, profile: RepresentativeProfile
 ) -> RepresentativeProfileOut:
     metrics = await compute_rep_metrics(session, profile)
+    user_stmt = select(User.username).where(User.id == profile.user_id)
+    username = (await session.execute(user_stmt)).scalar_one_or_none()
     return RepresentativeProfileOut(
         id=profile.id,
         user_id=profile.user_id,
         official_name=profile.official_name,
         title=profile.title,
         ward=profile.ward,
+        department=getattr(profile, "department", "all"),
+        is_unclaimed=getattr(profile, "is_unclaimed", False),
+        handle=username,
+        contact_email=getattr(profile, "contact_email", None),
+        contact_phone=getattr(profile, "contact_phone", None),
         verified_at=profile.verified_at,
         **metrics.model_dump(),
     )
@@ -158,12 +166,19 @@ async def get_public_rep_by_user(
     if profile is None:
         raise AppError("Representative not found", status_code=404, code="rep_not_found")
     metrics = await compute_rep_metrics(session, profile)
+    user_stmt = select(User.username).where(User.id == profile.user_id)
+    username = (await session.execute(user_stmt)).scalar_one_or_none()
     return PublicRepresentativeProfileOut(
         id=profile.id,
         user_id=profile.user_id,
         official_name=profile.official_name,
         title=profile.title,
         ward=profile.ward,
+        department=getattr(profile, "department", "all"),
+        is_unclaimed=getattr(profile, "is_unclaimed", False),
+        handle=username,
+        contact_email=getattr(profile, "contact_email", None),
+        contact_phone=getattr(profile, "contact_phone", None),
         verified_at=profile.verified_at,
         **metrics.model_dump(),
     )

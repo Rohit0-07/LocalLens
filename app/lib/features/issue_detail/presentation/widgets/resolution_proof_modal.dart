@@ -102,35 +102,10 @@ class _ResolutionProofModalState extends ConsumerState<ResolutionProofModal> {
               });
               Navigator.pop(modalCtx);
             },
-            onGalleryPickSelected: (images) {
-              if (images.isNotEmpty) {
-                setState(() {
-                  _capturedBytes = images.first;
-                  _isInAppCamera = false;
-                  _errorMessage = null;
-                });
-              }
-              Navigator.pop(modalCtx);
-            },
           ),
         );
       },
     );
-  }
-
-  Future<void> _pickFromGallery() async {
-    try {
-      final picker = ImagePicker();
-      final picked = await picker.pickImage(source: ImageSource.gallery);
-      if (picked != null) {
-        final bytes = await picked.readAsBytes();
-        setState(() {
-          _capturedBytes = bytes;
-          _isInAppCamera = false;
-          _errorMessage = null;
-        });
-      }
-    } catch (_) {}
   }
 
   Future<void> _submitResolution() async {
@@ -399,32 +374,18 @@ class _ResolutionProofModalState extends ConsumerState<ResolutionProofModal> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Take a photo on-site or choose from gallery',
+                        context.tr('camera_only_capture_hint'),
+                        textAlign: TextAlign.center,
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: colorScheme.onSurfaceVariant,
                         ),
                       ),
                       const SizedBox(height: 14),
-                      Wrap(
-                        spacing: 12,
-                        runSpacing: 8,
-                        alignment: WrapAlignment.center,
-                        children: [
-                          FilledButton.icon(
-                            key: const Key('resolution_take_photo_button'),
-                            icon: const Icon(Icons.photo_camera_rounded,
-                                size: 18),
-                            label: Text(context.tr('resolution_take_photo')),
-                            onPressed: _openCameraViewfinder,
-                          ),
-                          OutlinedButton.icon(
-                            key: const Key('resolution_gallery_pick_button'),
-                            icon: const Icon(Icons.photo_library_outlined,
-                                size: 18),
-                            label: Text(context.tr('resolution_pick_gallery')),
-                            onPressed: _pickFromGallery,
-                          ),
-                        ],
+                      FilledButton.icon(
+                        key: const Key('resolution_take_photo_button'),
+                        icon: const Icon(Icons.photo_camera_rounded, size: 18),
+                        label: Text(context.tr('resolution_take_photo')),
+                        onPressed: _openCameraViewfinder,
                       ),
                     ],
                   ),

@@ -51,7 +51,6 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   }
 
   void _runSearch(String query) {
-    if (query.trim().isEmpty) return;
     ref.read(searchResultsProvider.notifier).runQuery(query);
   }
 
@@ -65,7 +64,6 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   }
 
   void _retryLastQuery() {
-    if (_lastQuery.isEmpty) return;
     _runSearch(_lastQuery);
   }
 
@@ -76,18 +74,14 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     );
     if (result != null) {
       ref.read(searchFiltersProvider.notifier).apply(result);
-      final query = _lastQuery.isEmpty ? _controller.text.trim() : _lastQuery;
-      if (query.isNotEmpty) {
-        _runSearch(query);
-      }
+      final query = _controller.text.trim();
+      _runSearch(query);
     }
   }
 
   void _clearFilters() {
     ref.read(searchFiltersProvider.notifier).reset();
-    if (_lastQuery.isNotEmpty) {
-      _runSearch(_lastQuery);
-    }
+    _runSearch(_controller.text.trim());
   }
 
   @override
@@ -158,7 +152,34 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                   GestureDetector(
                     onTap: () {
                       ref.read(searchFiltersProvider.notifier).setWard(null);
-                      if (_lastQuery.isNotEmpty) _runSearch(_lastQuery);
+                      _runSearch(_controller.text.trim());
+                    },
+                    child: const Icon(Icons.close, size: 16),
+                  ),
+                ],
+              ),
+            ),
+          // ── Active Account Filter Display ──────────────────
+          if (filters.account != null)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              color: Theme.of(context).colorScheme.secondaryContainer.withValues(alpha: 0.3),
+              child: Row(
+                children: [
+                  const Icon(Icons.alternate_email_rounded, size: 16),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Account: @${filters.account}',
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const Spacer(),
+                  GestureDetector(
+                    onTap: () {
+                      ref.read(searchFiltersProvider.notifier).apply(filters.copyWith(account: null));
+                      _runSearch(_controller.text.trim());
                     },
                     child: const Icon(Icons.close, size: 16),
                   ),

@@ -6,6 +6,111 @@ part of 'issue.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
+_AssignedAuthority _$AssignedAuthorityFromJson(Map<String, dynamic> json) =>
+    _AssignedAuthority(
+      id: json['id'] as String,
+      officialName: json['official_name'] as String,
+      title: json['title'] as String,
+      ward: json['ward'] as String,
+      department: json['department'] as String? ?? 'all',
+      handle: json['handle'] as String?,
+      isUnclaimed: json['is_unclaimed'] as bool? ?? false,
+      isVerified: json['is_verified'] as bool? ?? true,
+      contactEmail: json['contact_email'] as String?,
+      contactPhone: json['contact_phone'] as String?,
+    );
+
+Map<String, dynamic> _$AssignedAuthorityToJson(_AssignedAuthority instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'official_name': instance.officialName,
+      'title': instance.title,
+      'ward': instance.ward,
+      'department': instance.department,
+      'handle': instance.handle,
+      'is_unclaimed': instance.isUnclaimed,
+      'is_verified': instance.isVerified,
+      'contact_email': instance.contactEmail,
+      'contact_phone': instance.contactPhone,
+    };
+
+_QuorumVoter _$QuorumVoterFromJson(Map<String, dynamic> json) => _QuorumVoter(
+  userId: (json['user_id'] as num).toInt(),
+  username: json['username'] as String?,
+  displayName: json['display_name'] as String?,
+  vote: json['vote'] as String,
+  reason: json['reason'] as String?,
+  isVerifiedNearby: json['is_verified_nearby'] as bool? ?? true,
+  createdAt: DateTime.parse(json['created_at'] as String),
+);
+
+Map<String, dynamic> _$QuorumVoterToJson(_QuorumVoter instance) =>
+    <String, dynamic>{
+      'user_id': instance.userId,
+      'username': instance.username,
+      'display_name': instance.displayName,
+      'vote': instance.vote,
+      'reason': instance.reason,
+      'is_verified_nearby': instance.isVerifiedNearby,
+      'created_at': instance.createdAt.toIso8601String(),
+    };
+
+_IssueTimelineEvent _$IssueTimelineEventFromJson(Map<String, dynamic> json) =>
+    _IssueTimelineEvent(
+      eventType: json['event_type'] as String,
+      title: json['title'] as String,
+      description: json['description'] as String,
+      timestamp: DateTime.parse(json['timestamp'] as String),
+      actor: json['actor'] as String?,
+      actorRole: json['actor_role'] as String?,
+      mediaUrl: json['media_url'] as String?,
+      metadata: json['metadata'] as Map<String, dynamic>?,
+    );
+
+Map<String, dynamic> _$IssueTimelineEventToJson(_IssueTimelineEvent instance) =>
+    <String, dynamic>{
+      'event_type': instance.eventType,
+      'title': instance.title,
+      'description': instance.description,
+      'timestamp': instance.timestamp.toIso8601String(),
+      'actor': instance.actor,
+      'actor_role': instance.actorRole,
+      'media_url': instance.mediaUrl,
+      'metadata': instance.metadata,
+    };
+
+_IssueTimelineData _$IssueTimelineDataFromJson(Map<String, dynamic> json) =>
+    _IssueTimelineData(
+      issueId: (json['issue_id'] as num).toInt(),
+      status: json['status'] as String,
+      events:
+          (json['events'] as List<dynamic>?)
+              ?.map(
+                (e) => IssueTimelineEvent.fromJson(e as Map<String, dynamic>),
+              )
+              .toList() ??
+          const <IssueTimelineEvent>[],
+      confirmations:
+          (json['confirmations'] as List<dynamic>?)
+              ?.map((e) => QuorumVoter.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const <QuorumVoter>[],
+      disputes:
+          (json['disputes'] as List<dynamic>?)
+              ?.map((e) => QuorumVoter.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const <QuorumVoter>[],
+    );
+
+Map<String, dynamic> _$IssueTimelineDataToJson(_IssueTimelineData instance) =>
+    <String, dynamic>{
+      'issue_id': instance.issueId,
+      'status': instance.status,
+      'events': instance.events,
+      'confirmations': instance.confirmations,
+      'disputes': instance.disputes,
+    };
+
 _Issue _$IssueFromJson(Map<String, dynamic> json) => _Issue(
   id: (json['id'] as num).toInt(),
   title: json['title'] as String,
@@ -42,6 +147,13 @@ _Issue _$IssueFromJson(Map<String, dynamic> json) => _Issue(
       const <String>[],
   videoUrl: json['video_url'] as String?,
   reporterId: (json['reporter_id'] as num?)?.toInt(),
+  assignedRepresentative: json['assigned_representative'] == null
+      ? null
+      : AssignedAuthority.fromJson(
+          json['assigned_representative'] as Map<String, dynamic>,
+        ),
+  resolvedBy: json['resolved_by'] as String?,
+  resolutionType: json['resolution_type'] as String?,
 );
 
 Map<String, dynamic> _$IssueToJson(_Issue instance) => <String, dynamic>{
@@ -72,4 +184,7 @@ Map<String, dynamic> _$IssueToJson(_Issue instance) => <String, dynamic>{
   'media_urls': instance.mediaUrls,
   'video_url': instance.videoUrl,
   'reporter_id': instance.reporterId,
+  'assigned_representative': instance.assignedRepresentative,
+  'resolved_by': instance.resolvedBy,
+  'resolution_type': instance.resolutionType,
 };

@@ -6,9 +6,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.exceptions import AppError
+from app.features.auth.models import User
 from app.features.issues.geo import bbox_statement, haversine_km
 from app.features.issues.models import Issue
 from app.features.issues.service import evaluate_escalation
+from app.features.representatives.models import RepresentativeProfile
 from app.features.wards.models import Ward
 
 
@@ -53,42 +55,74 @@ def parse_iso_datetime(value: str) -> datetime:
 async def search_issues(
     session: AsyncSession,
     *,
-    q: str,
-    latitude: float | None,
-    longitude: float | None,
-    radius_km: float,
-    status: str | None,
-    category: str | None,
-    categories: list[str] | None,
-    created_after: datetime | None,
-    created_before: datetime | None,
-    ward: str | None,
-    limit: int,
-    offset: int,
+    q: str = "",
+    latitude: float | None = None,
+    longitude: float | None = None,
+    radius_km: float = 5.0,
+    status: str | None = None,
+    category: str | None = None,
+    categories: list[str] | None = None,
+    created_after: datetime | None = None,
+    created_before: datetime | None = None,
+    ward: str | None = None,
+    account: str | None = None,
+    limit: int = 20,
+    offset: int = 0,
 ) -> list[Issue]:
-    query = q.strip()
-    if not query:
-        raise AppError("Search query cannot be empty", status_code=422, code="empty_query")
+    query = (q or "").strip()
 
-    pattern = f"%{_escape_like(query)}%"
-    text_match = or_(
-        Issue.title.ilike(pattern, escape="\\"),
-        Issue.description.ilike(pattern, escape="\\"),
-        Issue.category.ilike(pattern, escape="\\"),
-        Issue.ward.ilike(pattern, escape="\\"),
+    statement: Select[tuple[Issue]] = (
+        select(Issue)
+        .outerjoin(User, Issue.reporter_id == User.id)
+        .options(
+            selectinload(Issue.reporter),
+            selectinload(Issue.assigned_representative).selectinload(RepresentativeProfile.user),
+        )
     )
 
-    statement: Select[tuple[Issue]] = select(Issue).options(selectinload(Issue.reporter)).where(text_match)
     if latitude is not None and longitude is not None:
         statement = await bbox_statement(latitude, longitude, radius_km)
+        statement = (
+            statement.outerjoin(User, Issue.reporter_id == User.id)
+            .options(
+                selectinload(Issue.reporter),
+                selectinload(Issue.assigned_representative).selectinload(RepresentativeProfile.user),
+            )
+        )
+
+    if query:
+        pattern = f"%{_escape_like(query)}%"
+        clean_handle = query.lstrip("@")
+        text_match = or_(
+            Issue.title.ilike(pattern, escape="\\"),
+            Issue.description.ilike(pattern, escape="\\"),
+            Issue.category.ilike(pattern, escape="\\"),
+            Issue.ward.ilike(pattern, escape="\\"),
+            User.username.ilike(f"%{_escape_like(clean_handle)}%", escape="\\"),
+            User.display_name.ilike(pattern, escape="\\"),
+        )
         statement = statement.where(text_match)
-    if status is not None:
+
+    if account:
+        clean_acc = account.strip().lstrip("@")
+        if clean_acc:
+            acc_pattern = f"%{_escape_like(clean_acc)}%"
+            statement = statement.where(
+                or_(
+                    User.username.ilike(acc_pattern, escape="\\"),
+                    User.display_name.ilike(acc_pattern, escape="\\"),
+                )
+            )
+
+    if status is not None and status.strip() and status.lower() != "all":
         statement = statement.where(Issue.status == status)
-    if category is not None:
+    if category is not None and category.strip() and category.lower() != "all":
         statement = statement.where(Issue.category == category)
     if categories:
-        statement = statement.where(Issue.category.in_(categories))
-    if ward is not None:
+        valid_cats = [c for c in categories if c.lower() != "all"]
+        if valid_cats:
+            statement = statement.where(Issue.category.in_(valid_cats))
+    if ward is not None and ward.strip() and ward.lower() != "all":
         normalized_ward = _alnum(ward)
         ward_match = or_(
             Issue.ward == ward,

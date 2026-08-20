@@ -15,6 +15,12 @@ class AssignedRepresentativeOut(RepresentativeMetricsOut):
     ward: str = Field(default="", description="Assigned ward of the representative")
     official_name: str = Field(..., description="Official name of the representative")
     title: str = Field(..., description="Designated title, e.g. Ward Representative")
+    department: str | None = Field(default="all", description="Department/category handled")
+    handle: str | None = Field(default=None, description="Username/account handle")
+    is_unclaimed: bool = Field(default=False, description="Whether this is an unclaimed dummy handle")
+    is_verified: bool = Field(default=True, description="Whether representative is verified")
+    contact_email: str | None = Field(default=None, description="Contact email")
+    contact_phone: str | None = Field(default=None, description="Contact phone")
     verified_at: UTCDateTime | None = Field(None, description="Verification timestamp")
 
 
@@ -40,7 +46,10 @@ class WardDetailOut(WardSummaryOut):
         default_factory=list, description="Top categories by issue frequency"
     )
     assigned_representative: AssignedRepresentativeOut | None = Field(
-        None, description="Assigned ward representative details"
+        None, description="Primary assigned ward representative details"
+    )
+    representatives: list[AssignedRepresentativeOut] = Field(
+        default_factory=list, description="All departmental representatives for this ward"
     )
     recent_issues: list[IssueOut] = Field(
         default_factory=list, description="Recent public non-shielded issues"

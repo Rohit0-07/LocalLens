@@ -35,7 +35,8 @@ async def _rate_limit_search(request: Request, user: OptionalUser = None) -> Non
 async def search_issues_endpoint(
     session: SessionDep,
     settings: SettingsDep,
-    q: Annotated[str, Query()],
+    q: Annotated[str | None, Query()] = None,
+    account: Annotated[str | None, Query()] = None,
     user: OptionalUser = None,
     _rate_limited: Annotated[None, Depends(_rate_limit_search)] = None,
     latitude: Annotated[float | None, Query(ge=-90, le=90)] = None,
@@ -50,8 +51,18 @@ async def search_issues_endpoint(
     limit: Annotated[int, Query(ge=1, le=50)] = 20,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> list[IssueOut]:
-    query = q.strip()
-    if not query:
+    query = (q or "").strip()
+    has_filters = any([
+        latitude is not None and longitude is not None,
+        status is not None and status.strip() and status.lower() != "all",
+        category is not None and category.strip() and category.lower() != "all",
+        bool(categories),
+        ward is not None and ward.strip() and ward.lower() != "all",
+        account is not None and account.strip(),
+        created_after is not None,
+        created_before is not None,
+    ])
+    if not query and not has_filters:
         raise AppError("Search query cannot be empty", status_code=422, code="empty_query")
     if len(query) > 100:
         raise AppError(
@@ -63,7 +74,7 @@ async def search_issues_endpoint(
             status_code=400,
             code="both_coordinates_required",
         )
-    if status is not None and status not in _ALLOWED_STATUSES:
+    if status is not None and status.strip() and status.lower() != "all" and status not in _ALLOWED_STATUSES:
         raise AppError("Invalid status filter", status_code=422, code="invalid_status")
     if category is not None and len(category) > 32:
         raise AppError(
@@ -80,6 +91,10 @@ async def search_issues_endpoint(
     if ward is not None and len(ward) > 64:
         raise AppError(
             "ward must be at most 64 characters", status_code=422, code="invalid_ward"
+        )
+    if account is not None and len(account) > 64:
+        raise AppError(
+            "account must be at most 64 characters", status_code=422, code="invalid_account"
         )
     parsed_created_after = (
         service.parse_iso_datetime(created_after) if created_after is not None else None
@@ -108,6 +123,7 @@ async def search_issues_endpoint(
         category=category,
         categories=categories,
         ward=ward,
+        account=account,
         created_after=parsed_created_after,
         created_before=parsed_created_before,
         limit=limit,

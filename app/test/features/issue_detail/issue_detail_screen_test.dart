@@ -25,6 +25,17 @@ class FakeIssueDetailApi implements IssueDetailApi {
 
   @override
   Future<void> deleteComment(int issueId, dynamic commentId) async {}
+
+  @override
+  Future<dynamic> getTimeline(int issueId) async => null;
+
+  @override
+  Future<void> reportWrongAssignment({
+    required int issueId,
+    String? suggestedWard,
+    String? suggestedCategory,
+    String? reason,
+  }) async {}
 }
 
 void main() {

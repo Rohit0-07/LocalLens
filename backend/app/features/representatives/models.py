@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -21,6 +21,10 @@ class RepresentativeProfile(Base):
     official_name: Mapped[str] = mapped_column(String(255), nullable=False)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     ward: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    department: Mapped[str | None] = mapped_column(String(64), nullable=True, default="all", server_default=text("'all'"))
+    is_unclaimed: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("0"), nullable=False)
+    contact_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    contact_phone: Mapped[str | None] = mapped_column(String(50), nullable=True)
     verified_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
 
     user: Mapped["User"] = relationship("User", back_populates="representative_profile")

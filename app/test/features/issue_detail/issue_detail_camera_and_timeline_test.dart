@@ -33,6 +33,17 @@ class FakeIssueDetailApi implements IssueDetailApi {
 
   @override
   Future<void> deleteComment(int issueId, dynamic commentId) async {}
+
+  @override
+  Future<dynamic> getTimeline(int issueId) async => null;
+
+  @override
+  Future<void> reportWrongAssignment({
+    required int issueId,
+    String? suggestedWard,
+    String? suggestedCategory,
+    String? reason,
+  }) async {}
 }
 
 class TrackingFakeFeedRepository extends FakeFeedRepository {
@@ -424,7 +435,7 @@ void main() {
       expect(find.byKey(const Key('resolution_take_photo_button')),
           findsOneWidget);
       expect(find.byKey(const Key('resolution_gallery_pick_button')),
-          findsOneWidget);
+          findsNothing);
 
       // Tap Take Photo button -> Opens CameraViewfinder
       await tester.tap(find.byKey(const Key('resolution_take_photo_button')));

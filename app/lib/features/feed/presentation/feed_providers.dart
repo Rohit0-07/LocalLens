@@ -54,7 +54,9 @@ final feedFilterProvider = StateProvider<String>((ref) => 'all');
 /// rebuild-and-refetch loop is triggered when the provider completes.
 Future<({double lat, double lng})> _feedCoords(Ref ref) async {
   try {
-    return await ref.watch(feedCoordinatesProvider.future);
+    final coords = ref.read(feedCoordinatesProvider).valueOrNull;
+    if (coords != null) return coords;
+    return (lat: defaultLatitude, lng: defaultLongitude);
   } catch (_) {
     return (lat: defaultLatitude, lng: defaultLongitude);
   }

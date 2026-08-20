@@ -7,6 +7,7 @@ from app.core.exceptions import AppError
 from app.features.issues import service
 from app.features.issues.models import Issue
 from app.features.issues.schemas import (
+    AdminReassignRequest,
     CommentCreate,
     CommentResponse,
     FlagCreate,
@@ -15,6 +16,7 @@ from app.features.issues.schemas import (
     FlagOut,
     IssueCreate,
     IssueOut,
+    IssueTimelineResponse,
     ModerationActionRequest,
     ModerationResultOut,
     NearDuplicateOut,
@@ -22,6 +24,8 @@ from app.features.issues.schemas import (
     ResolutionSubmit,
     UpvoteRequest,
     WinOut,
+    WrongAssignmentReportCreate,
+    WrongAssignmentReportOut,
 )
 
 router = APIRouter()
@@ -380,6 +384,66 @@ async def flag_issue_endpoint(
         current_user=current_user,
         secret=settings.jwt_secret,
     )
+
+
+@router.post(
+    "/{issue_id}/report-wrong-assignment",
+    response_model=WrongAssignmentReportOut,
+    status_code=status.HTTP_201_CREATED,
+)
+async def report_wrong_assignment_endpoint(
+    issue_id: int,
+    report_in: WrongAssignmentReportCreate,
+    session: SessionDep,
+    user: OptionalUser = None,
+) -> WrongAssignmentReportOut:
+    user_id = user.id if (user and not getattr(user, "is_guest", False)) else None
+    report = await service.report_wrong_assignment(
+        session=session,
+        issue_id=issue_id,
+        user_id=user_id,
+        suggested_ward=report_in.suggested_ward,
+        suggested_category=report_in.suggested_category,
+        reason=report_in.reason,
+    )
+    return WrongAssignmentReportOut.model_validate(report)
+
+
+@router.get("/{issue_id}/timeline", response_model=IssueTimelineResponse)
+async def get_issue_timeline_endpoint(
+    issue_id: int,
+    session: SessionDep,
+) -> IssueTimelineResponse:
+    return await service.get_issue_timeline(session, issue_id)
+
+
+@admin_router.post("/issues/{issue_id}/reassign", response_model=IssueOut)
+async def admin_reassign_endpoint(
+    issue_id: int,
+    payload: AdminReassignRequest,
+    session: SessionDep,
+    current_user: CurrentUser,
+    settings: SettingsDep,
+) -> IssueOut:
+    if not (
+        getattr(current_user, "is_admin", False)
+        or getattr(current_user, "role", "") in ("admin", "moderator")
+    ):
+        raise AppError(
+            status_code=403,
+            error_code="admin_required",
+            detail="Administrative privileges required.",
+        )
+    issue = await service.admin_reassign_issue(
+        session=session,
+        issue_id=issue_id,
+        admin_user=current_user,
+        ward=payload.ward,
+        category=payload.category,
+        assigned_representative_id=payload.assigned_representative_id,
+        reason=payload.reason,
+    )
+    return service.to_issue_out(issue, settings.jwt_secret, user_id=current_user.id)
 
 
 @admin_router.get("/flagged-issues", response_model=FlaggedQueueResponse)

@@ -30,13 +30,45 @@ class AdvancedFilterSheet extends ConsumerStatefulWidget {
 
 class _AdvancedFilterSheetState extends ConsumerState<AdvancedFilterSheet> {
   late SearchFilters _selection = widget.initial;
+  late final TextEditingController _accountController =
+      TextEditingController(text: widget.initial.account ?? '');
+
+  @override
+  void dispose() {
+    _accountController.dispose();
+    super.dispose();
+  }
 
   void _resetLocal() {
-    setState(() => _selection = const SearchFilters());
+    setState(() {
+      _selection = const SearchFilters();
+      _accountController.clear();
+    });
   }
 
   void _apply() {
     Navigator.of(context).pop(_selection);
+  }
+
+  Future<void> _pickCustomDateRange() async {
+    final now = DateTime.now();
+    final picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2020),
+      lastDate: now.add(const Duration(days: 365)),
+      initialDateRange: _selection.startDate != null && _selection.endDate != null
+          ? DateTimeRange(start: _selection.startDate!, end: _selection.endDate!)
+          : DateTimeRange(start: now.subtract(const Duration(days: 14)), end: now),
+    );
+    if (picked != null) {
+      setState(() {
+        _selection = _selection.copyWith(
+          datePreset: SearchDatePreset.custom,
+          startDate: picked.start,
+          endDate: picked.end,
+        );
+      });
+    }
   }
 
   @override
@@ -44,7 +76,7 @@ class _AdvancedFilterSheetState extends ConsumerState<AdvancedFilterSheet> {
     final theme = Theme.of(context);
     final sectionLabel = theme.textTheme.titleSmall;
     final wardListAsync = ref.watch(wardListNotifierProvider);
-    final wards = wardListAsync.valueOrNull?.items ?? [];
+    final wards = wardListAsync.valueOrNull?.wards ?? [];
 
     return SafeArea(
       child: SingleChildScrollView(
@@ -55,12 +87,49 @@ class _AdvancedFilterSheetState extends ConsumerState<AdvancedFilterSheet> {
           children: [
             Text(context.tr('filter_title'), style: theme.textTheme.titleLarge),
             const SizedBox(height: 16),
+
+            // ── Account / Handle Filter ────────────────────────────
+            Text(context.tr('filter_by_account'), style: sectionLabel),
+            const SizedBox(height: 8),
+            TextField(
+              key: const Key('filter_account_field'),
+              controller: _accountController,
+              decoration: InputDecoration(
+                hintText: '@username or citizen handle...',
+                prefixIcon: const Icon(Icons.alternate_email_rounded, size: 18),
+                filled: true,
+                fillColor: theme.colorScheme.surfaceContainerHighest,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              ),
+              onChanged: (val) {
+                final trimmed = val.trim();
+                _selection = _selection.copyWith(
+                  account: trimmed.isNotEmpty ? trimmed : null,
+                );
+              },
+            ),
+            const SizedBox(height: 16),
+
+            // ── Status Selection ───────────────────────────────────
             Text(context.tr('filter_status'), style: sectionLabel),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
               runSpacing: 8,
               children: [
+                ChoiceChip(
+                  key: const Key('statusChip_all'),
+                  label: const Text('All'),
+                  selected: _selection.status == null,
+                  onSelected: (_) => setState(() {
+                    _selection = _selection.copyWith(status: null);
+                  }),
+                ),
                 for (final status in kSearchStatusOptions)
                   ChoiceChip(
                     key: Key('statusChip_$status'),
@@ -73,6 +142,8 @@ class _AdvancedFilterSheetState extends ConsumerState<AdvancedFilterSheet> {
               ],
             ),
             const SizedBox(height: 16),
+
+            // ── Category Selection ─────────────────────────────────
             Text(context.tr('filter_category'), style: sectionLabel),
             const SizedBox(height: 8),
             Wrap(
@@ -82,7 +153,7 @@ class _AdvancedFilterSheetState extends ConsumerState<AdvancedFilterSheet> {
                 for (final category in kSearchCategoryOptions)
                   FilterChip(
                     key: Key('categoryChip_$category'),
-                    label: Text(StringFormatters.formatCategory(category)),
+                    label: Text(context.tr('cat_$category')),
                     selected: _selection.categories.contains(category),
                     onSelected: (_) => setState(() {
                       final selectedCategories =
@@ -102,11 +173,11 @@ class _AdvancedFilterSheetState extends ConsumerState<AdvancedFilterSheet> {
             const SizedBox(height: 16),
 
             // ── Ward Selection ────────────────────────────────────
-            Text('Ward', style: sectionLabel),
+            Text(context.tr('filter_by_ward'), style: sectionLabel),
             const SizedBox(height: 8),
             if (wards.isEmpty)
               Text(
-                'No wards loaded',
+                'Loading wards…',
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
@@ -128,7 +199,8 @@ class _AdvancedFilterSheetState extends ConsumerState<AdvancedFilterSheet> {
                     ChoiceChip(
                       key: Key('wardChip_${ward.slug}'),
                       label: Text(ward.name),
-                      selected: _selection.ward == ward.slug,
+                      selected: _selection.ward == ward.slug ||
+                          _selection.ward == ward.name,
                       onSelected: (_) => setState(() {
                         _selection = _selection.copyWith(ward: ward.slug);
                       }),
@@ -137,6 +209,7 @@ class _AdvancedFilterSheetState extends ConsumerState<AdvancedFilterSheet> {
               ),
             const SizedBox(height: 16),
 
+            // ── Distance / Proximity ──────────────────────────────
             Text(context.tr('filter_distance'), style: sectionLabel),
             const SizedBox(height: 8),
             SegmentedButton<SearchDistanceOption>(
@@ -176,7 +249,9 @@ class _AdvancedFilterSheetState extends ConsumerState<AdvancedFilterSheet> {
               ),
             ],
             const SizedBox(height: 16),
-            Text(context.tr('filter_posted'), style: sectionLabel),
+
+            // ── Date Preset & Custom Range ─────────────────────────
+            Text(context.tr('filter_date_range'), style: sectionLabel),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
@@ -187,13 +262,37 @@ class _AdvancedFilterSheetState extends ConsumerState<AdvancedFilterSheet> {
                     key: Key('dateChip_${preset.name}'),
                     label: Text(_datePresetLabel(preset)),
                     selected: _selection.datePreset == preset,
-                    onSelected: (_) => setState(() {
-                      _selection = _selection.copyWith(datePreset: preset);
-                    }),
+                    onSelected: (_) async {
+                      if (preset == SearchDatePreset.custom) {
+                        await _pickCustomDateRange();
+                      } else {
+                        setState(() {
+                          _selection = _selection.copyWith(
+                            datePreset: preset,
+                            startDate: null,
+                            endDate: null,
+                          );
+                        });
+                      }
+                    },
                   ),
               ],
             ),
+            if (_selection.datePreset == SearchDatePreset.custom &&
+                _selection.startDate != null &&
+                _selection.endDate != null) ...[
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: _pickCustomDateRange,
+                icon: const Icon(Icons.date_range_outlined, size: 16),
+                label: Text(
+                  '${_selection.startDate!.toString().substring(0, 10)} → ${_selection.endDate!.toString().substring(0, 10)}',
+                ),
+              ),
+            ],
             const SizedBox(height: 24),
+
+            // ── Footer Buttons ─────────────────────────────────────
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
@@ -206,7 +305,7 @@ class _AdvancedFilterSheetState extends ConsumerState<AdvancedFilterSheet> {
                 FilledButton(
                   key: const Key('applyFiltersButton'),
                   onPressed: _apply,
-                  child: Text(context.tr('filter_show_results')),
+                  child: Text(context.tr('filter_apply')),
                 ),
               ],
             ),
@@ -227,6 +326,7 @@ String _datePresetLabel(SearchDatePreset preset) {
       return 'Past 7 days';
     case SearchDatePreset.past30Days:
       return 'Past 30 days';
+    case SearchDatePreset.custom:
+      return 'Custom range';
   }
 }
-

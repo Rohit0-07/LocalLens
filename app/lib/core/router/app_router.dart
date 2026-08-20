@@ -29,6 +29,7 @@ import '../../features/profile/presentation/screens/settings_screen.dart';
 import '../../features/reels/presentation/reels_screen.dart';
 import '../../features/rep_dashboard/presentation/rep_dashboard_screen.dart';
 import '../../features/search/presentation/search_screen.dart';
+import '../../features/ward/presentation/screens/wards_list_screen.dart';
 import '../../features/ward/presentation/ward_detail_screen.dart';
 import '../../features/ward/presentation/widgets/local_talk_compose_sheet.dart';
 import '../l10n/app_strings.dart';
@@ -226,6 +227,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: RoutePaths.adminFlaggedQueue,
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const AdminFlaggedQueueScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.wards,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const WardsListScreen(),
       ),
       GoRoute(
         path: RoutePaths.wardDetail,

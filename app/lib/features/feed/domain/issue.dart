@@ -4,6 +4,72 @@ part 'issue.freezed.dart';
 part 'issue.g.dart';
 
 @freezed
+abstract class AssignedAuthority with _$AssignedAuthority {
+  const factory AssignedAuthority({
+    required String id,
+    @JsonKey(name: 'official_name') required String officialName,
+    required String title,
+    required String ward,
+    @Default('all') String department,
+    String? handle,
+    @JsonKey(name: 'is_unclaimed') @Default(false) bool isUnclaimed,
+    @JsonKey(name: 'is_verified') @Default(true) bool isVerified,
+    @JsonKey(name: 'contact_email') String? contactEmail,
+    @JsonKey(name: 'contact_phone') String? contactPhone,
+  }) = _AssignedAuthority;
+
+  factory AssignedAuthority.fromJson(Map<String, Object?> json) =>
+      _$AssignedAuthorityFromJson(json);
+}
+
+@freezed
+abstract class QuorumVoter with _$QuorumVoter {
+  const factory QuorumVoter({
+    @JsonKey(name: 'user_id') required int userId,
+    String? username,
+    @JsonKey(name: 'display_name') String? displayName,
+    required String vote,
+    String? reason,
+    @JsonKey(name: 'is_verified_nearby') @Default(true) bool isVerifiedNearby,
+    @JsonKey(name: 'created_at') required DateTime createdAt,
+  }) = _QuorumVoter;
+
+  factory QuorumVoter.fromJson(Map<String, Object?> json) =>
+      _$QuorumVoterFromJson(json);
+}
+
+@freezed
+abstract class IssueTimelineEvent with _$IssueTimelineEvent {
+  const factory IssueTimelineEvent({
+    @JsonKey(name: 'event_type') required String eventType,
+    required String title,
+    required String description,
+    required DateTime timestamp,
+    String? actor,
+    @JsonKey(name: 'actor_role') String? actorRole,
+    @JsonKey(name: 'media_url') String? mediaUrl,
+    Map<String, dynamic>? metadata,
+  }) = _IssueTimelineEvent;
+
+  factory IssueTimelineEvent.fromJson(Map<String, Object?> json) =>
+      _$IssueTimelineEventFromJson(json);
+}
+
+@freezed
+abstract class IssueTimelineData with _$IssueTimelineData {
+  const factory IssueTimelineData({
+    @JsonKey(name: 'issue_id') required int issueId,
+    required String status,
+    @Default(<IssueTimelineEvent>[]) List<IssueTimelineEvent> events,
+    @Default(<QuorumVoter>[]) List<QuorumVoter> confirmations,
+    @Default(<QuorumVoter>[]) List<QuorumVoter> disputes,
+  }) = _IssueTimelineData;
+
+  factory IssueTimelineData.fromJson(Map<String, Object?> json) =>
+      _$IssueTimelineDataFromJson(json);
+}
+
+@freezed
 abstract class Issue with _$Issue {
   const factory Issue({
     required int id,
@@ -33,6 +99,9 @@ abstract class Issue with _$Issue {
     @JsonKey(name: 'media_urls') @Default(<String>[]) List<String> mediaUrls,
     @JsonKey(name: 'video_url') String? videoUrl,
     @JsonKey(name: 'reporter_id') int? reporterId,
+    @JsonKey(name: 'assigned_representative') AssignedAuthority? assignedRepresentative,
+    @JsonKey(name: 'resolved_by') String? resolvedBy,
+    @JsonKey(name: 'resolution_type') String? resolutionType,
   }) = _Issue;
 
   const Issue._();

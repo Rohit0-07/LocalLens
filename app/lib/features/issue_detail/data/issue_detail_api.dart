@@ -111,4 +111,27 @@ class IssueDetailApi {
   Future<void> deleteComment(int issueId, dynamic commentId) async {
     await _client.postJson('/issues/$issueId/comments/$commentId/delete');
   }
+
+  Future<dynamic> getTimeline(int issueId) async {
+    final data = await _client.getJson('/issues/$issueId/timeline');
+    return data;
+  }
+
+  Future<void> reportWrongAssignment({
+    required int issueId,
+    String? suggestedWard,
+    String? suggestedCategory,
+    String? reason,
+  }) async {
+    await _client.postJson(
+      '/issues/$issueId/report-wrong-assignment',
+      body: {
+        if (suggestedWard != null && suggestedWard.isNotEmpty)
+          'suggested_ward': suggestedWard,
+        if (suggestedCategory != null && suggestedCategory.isNotEmpty)
+          'suggested_category': suggestedCategory,
+        if (reason != null && reason.isNotEmpty) 'reason': reason,
+      },
+    );
+  }
 }

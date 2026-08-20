@@ -19,7 +19,7 @@ from app.core.database import Base
 
 if TYPE_CHECKING:
     from app.features.auth.models import User
-    from app.features.representatives.models import OfficialResponse
+    from app.features.representatives.models import OfficialResponse, RepresentativeProfile
 
 
 class Issue(Base):
@@ -59,10 +59,42 @@ class Issue(Base):
     disputes_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     quorum_expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
-    reporter: Mapped["User | None"] = relationship()
+    assigned_representative_id: Mapped[str | None] = mapped_column(
+        String(255), ForeignKey("representative_profiles.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    resolved_by: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    resolution_type: Mapped[str | None] = mapped_column(String(32), nullable=True)
+
+    reporter: Mapped["User | None"] = relationship(foreign_keys=[reporter_id])
+    assigned_representative: Mapped["RepresentativeProfile | None"] = relationship(
+        "RepresentativeProfile", foreign_keys=[assigned_representative_id]
+    )
     official_responses: Mapped[list["OfficialResponse"]] = relationship(
         "OfficialResponse", back_populates="issue", cascade="all, delete-orphan"
     )
+    wrong_assignment_reports: Mapped[list["WrongAssignmentReport"]] = relationship(
+        "WrongAssignmentReport", back_populates="issue", cascade="all, delete-orphan"
+    )
+
+
+class WrongAssignmentReport(Base):
+    __tablename__ = "wrong_assignment_reports"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    issue_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("issues.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    user_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    suggested_ward: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    suggested_category: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    reason: Mapped[str] = mapped_column(String(500), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), nullable=False
+    )
+
+    issue: Mapped["Issue"] = relationship("Issue", back_populates="wrong_assignment_reports")
 
 
 class Flag(Base):
@@ -143,6 +175,8 @@ class QuorumVote(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), nullable=False
     )
+
+    user: Mapped["User | None"] = relationship(foreign_keys=[user_id])
 
 
 class UpvoteRateLimit(Base):

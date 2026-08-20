@@ -564,23 +564,62 @@ class AppStrings {
       'ta': 'பிரதிநிதி டாஷ்போர்டு',
       'te': 'ప్రతినిధి డాష్‌బోర్డ్',
     },
-    'cat_road': {'en': 'Road', 'hi': 'सड़क', 'mr': 'रस्ता', 'ta': 'சாலை', 'te': 'రోడ్డు'},
+    'cat_road': {
+      'en': 'Road & Potholes',
+      'hi': 'सड़क और गड्ढे',
+      'mr': 'रस्ते आणि खड्डे',
+      'ta': 'சாலை மற்றும் குழிகள்',
+      'te': 'రోడ్లు మరియు గుంతలు',
+    },
+    'cat_water': {
+      'en': 'Water Supply',
+      'hi': 'जल आपूर्ति',
+      'mr': 'पाणी पुरवठा',
+      'ta': 'குடிநீர் விநியோகம்',
+      'te': 'నీటి సరఫరా',
+    },
+    'cat_power': {
+      'en': 'Power & Electricity',
+      'hi': 'बिजली और प्रकाश',
+      'mr': 'वीज आणि प्रकाश',
+      'ta': 'மின்சாரம் மற்றும் விளக்குகள்',
+      'te': 'విద్యుత్ మరియు లైట్లు',
+    },
+    'cat_waste': {
+      'en': 'Waste Management',
+      'hi': 'कचरा प्रबंधन',
+      'mr': 'कचरा व्यवस्थापन',
+      'ta': 'கழிவு மேலாண்மை',
+      'te': 'చెత్త నిర్వహణ',
+    },
+    'cat_sewage': {
+      'en': 'Sewage & Drainage',
+      'hi': 'सीवरेज और जल निकासी',
+      'mr': 'सांडपाणी आणि निचरा',
+      'ta': 'கழிவுநீர் வடிகால்',
+      'te': 'మురుగునీటి పారుదల',
+    },
+    'cat_lighting': {
+      'en': 'Street Lighting',
+      'hi': 'स्ट्रीट लाइट',
+      'mr': 'रस्त्यावरील दिवे',
+      'ta': 'தெரு விளக்குகள்',
+      'te': 'వీధి దీపాలు',
+    },
     'cat_sanitation': {
       'en': 'Sanitation',
       'hi': 'स्वच्छता',
       'mr': 'स्वच्छता',
-      'ta': 'துப்புரவு',
+      'ta': 'சுகாதாரம்',
       'te': 'పారిశుధ్యం',
     },
-    'cat_water': {'en': 'Water', 'hi': 'पानी', 'mr': 'पाणी', 'ta': 'தண்ணீர்', 'te': 'నీరు'},
-    'cat_lighting': {
-      'en': 'Lighting',
-      'hi': 'प्रकाश',
-      'mr': 'प्रकाश',
-      'ta': 'விளக்கு',
-      'te': 'లైటింగ్',
+    'cat_other': {
+      'en': 'Other',
+      'hi': 'अन्य',
+      'mr': 'इतर',
+      'ta': 'பிற',
+      'te': 'ఇతర',
     },
-    'cat_other': {'en': 'Other', 'hi': 'अन्य', 'mr': 'इतर', 'ta': 'மற்றவை', 'te': 'ఇతర'},
     // ---- Auth / Sign In ----
     'sign_in_tagline': {
       'en': 'Civic engagement for your neighborhood',
@@ -1252,15 +1291,263 @@ class AppStrings {
       'ta': 'தீர்க்கப்படாத சிக்கல்கள் வார்டு சபை படிக்கு தானாக உயர்த்தப்படும்.',
       'te': 'పరిష్కరించని సమస్యలు వార్డు కౌన్సిల్ స్థాయికి స్వయంచాలకంగా ఎస్కలేట్ అవుతాయి.',
     },
+    // ---- Search & Filters ----
+    'filter_within_radius': {
+      'en': 'Within Radius',
+      'hi': 'त्रिज्या के भीतर',
+      'mr': 'त्रिज्येच्या आत',
+      'ta': 'ஆரத்திற்குள்',
+      'te': 'పరిధి లోపల',
+    },
+    'filter_by_ward': {
+      'en': 'By Ward',
+      'hi': 'वार्ड अनुसार',
+      'mr': 'वॉर्डनुसार',
+      'ta': 'வார்டு மூலம்',
+      'te': 'వార్డు ద్వారా',
+    },
+    'filter_by_account': {
+      'en': 'By Account / Handle',
+      'hi': 'अकाउंट / हैंडल अनुसार',
+      'mr': 'खाते / हँडलनुसार',
+      'ta': 'கணக்கு / கைப்பிடி மூலம்',
+      'te': 'ఖాతా / హ్యాండిల్ ద్వారా',
+    },
+    'filter_date_range': {
+      'en': 'Date Range',
+      'hi': 'तिथि सीमा',
+      'mr': 'तारीख श्रेणी',
+      'ta': 'தேதி வரம்பு',
+      'te': 'తేదీ పరిధి',
+    },
+    'filter_from_date': {
+      'en': 'From Date',
+      'hi': 'आरंभ तिथि',
+      'mr': 'प्रारंभ तारीख',
+      'ta': 'தொடக்க தேதி',
+      'te': 'ప్రారంభ తేదీ',
+    },
+    'filter_to_date': {
+      'en': 'To Date',
+      'hi': 'अंतिम तिथि',
+      'mr': 'शेवटची तारीख',
+      'ta': 'முடிவு தேதி',
+      'te': 'ముగింపు తేదీ',
+    },
+    'filter_all_wards': {
+      'en': 'All Wards',
+      'hi': 'सभी वार्ड',
+      'mr': 'सर्व वॉर्ड',
+      'ta': 'அனைத்து வார்டுகளும்',
+      'te': 'అన్ని వార్డులు',
+    },
+    'filter_apply': {
+      'en': 'Apply Filters',
+      'hi': 'फ़िल्टर लागू करें',
+      'mr': 'फिल्टर लावा',
+      'ta': 'வடிகட்டிகளைப் பயன்படுத்து',
+      'te': 'ఫిల్టర్లను వర్తించండి',
+    },
+    'filter_reset': {
+      'en': 'Reset',
+      'hi': 'रीसेट',
+      'mr': 'रीसेट',
+      'ta': 'மீட்டமை',
+      'te': 'రీసెట్',
+    },
+    'filter_search_placeholder': {
+      'en': 'Search issues, tags, accounts...',
+      'hi': 'समस्याएं, टैग, खाते खोजें...',
+      'mr': 'समस्या, टॅग्ज, खाती शोधा...',
+      'ta': 'சிக்கல்கள், குறிச்சொற்கள், கணக்குகளைத் தேடுங்கள்...',
+      'te': 'సమస్యలు, ట్యాగ్‌లు, ఖాతాలను శోధించండి...',
+    },
+    // ---- Ward & Authority Assignment ----
+    'report_wrong_ward': {
+      'en': 'Report Wrong Ward / Department',
+      'hi': 'गलत वार्ड / विभाग की रिपोर्ट करें',
+      'mr': 'चुकीचा वॉर्ड / विभागाची तक्रार करा',
+      'ta': 'தவறான வார்டு / துறையைப் புகாரளிக்கவும்',
+      'te': 'తప్పు వార్డు / విభాగాన్ని నివేదించండి',
+    },
+    'report_wrong_ward_title': {
+      'en': 'Report Assignment Error',
+      'hi': 'असाइनमेंट त्रुटि की रिपोर्ट करें',
+      'mr': 'नियुक्ती त्रुटीची तक्रार करा',
+      'ta': 'ஒதுக்கீட்டுப் பிழையைப் புகாரளிக்கவும்',
+      'te': 'కేటాయింపు లోపాన్ని నివేదించండి',
+    },
+    'report_wrong_ward_desc': {
+      'en': 'Help correct this issue by suggesting the appropriate ward or department.',
+      'hi': 'उचित वार्ड या विभाग का सुझाव देकर इस समस्या को सही करने में मदद करें।',
+      'mr': 'योग्य वॉर्ड किंवा विभागाची शिफारस करून ही समस्या दुरुस्त करण्यात मदत करा.',
+      'ta': 'சரியான வார்டு அல்லது துறையைப் பரிந்துரைத்து இந்தச் சிக்கலை சரிசெய்ய உதவவும்.',
+      'te': 'సరైన వార్డు లేదా విభాగాన్ని సూచించడం ద్వారా ఈ సమస్యను సరిదిద్దడానికి సహాయం చేయండి.',
+    },
+    'suggested_ward_label': {
+      'en': 'Suggested Ward',
+      'hi': 'सुझाया गया वार्ड',
+      'mr': 'सुचवलेला वॉर्ड',
+      'ta': 'பரிந்துரைக்கப்பட்ட வார்டு',
+      'te': 'సూచించిన వార్డు',
+    },
+    'suggested_category_label': {
+      'en': 'Suggested Category',
+      'hi': 'सुझाई गई श्रेणी',
+      'mr': 'सुचवलेली श्रेणी',
+      'ta': 'பரிந்துரைக்கப்பட்ட வகை',
+      'te': 'సూచించిన వర్గం',
+    },
+    'report_reason_label': {
+      'en': 'Reason for Correction',
+      'hi': 'सुधार का कारण',
+      'mr': 'दुरुस्तीचे कारण',
+      'ta': 'திருத்தத்திற்கான காரணம்',
+      'te': 'సవరణకు कारणं',
+    },
+    'report_reason_hint': {
+      'en': 'e.g. This is located across the main junction in Ward 12...',
+      'hi': 'उदा. यह वार्ड 12 के मुख्य जंक्शन के पास स्थित है...',
+      'mr': 'उदा. हे वॉर्ड 12 च्या मुख्य जंक्शनजवळ आहे...',
+      'ta': 'எ.கா. இது வார்டு 12 இல் உள்ள முக்கிய சந்திப்பில் அமைந்துள்ளது...',
+      'te': 'ఉదా. ఇది వార్డు 12 లోని ప్రధాన కూడలిలో ఉంది...',
+    },
+    'submit_report': {
+      'en': 'Submit Report',
+      'hi': 'रिपोर्ट जमा करें',
+      'mr': 'तक्रार सादर करा',
+      'ta': 'அறிக்கையைச் சமர்ப்பிக்கவும்',
+      'te': 'నివేదికను సమర్పించండి',
+    },
+    'report_submitted_success': {
+      'en': 'Assignment report submitted successfully',
+      'hi': 'असाइनमेंट रिपोर्ट सफलतापूर्वक जमा कर दी गई',
+      'mr': 'नियुक्ती अहवाल यशस्वीरित्या सादर केला',
+      'ta': 'ஒதுக்கீட்டு அறிக்கை வெற்றிகரமாக சமர்ப்பிக்கப்பட்டது',
+      'te': 'కేటాయింపు నివేదిక విజయవంతంగా సమర్పించబడింది',
+    },
+    'assigned_authority': {
+      'en': 'Assigned Authority',
+      'hi': 'नियुक्त प्राधिकारी',
+      'mr': 'नियुक्त प्राधिकारी',
+      'ta': 'ஒதுக்கப்பட்ட அதிகாரி',
+      'te': 'కేటాయించిన అధికారి',
+    },
+    'claimed_authority_badge': {
+      'en': 'Verified Official',
+      'hi': 'सत्यापित अधिकारी',
+      'mr': 'सत्यापित अधिकारी',
+      'ta': 'சரிபார்க்கப்பட்ட அதிகாரி',
+      'te': 'ధృవీకరించబడిన అధికారి',
+    },
+    'unclaimed_authority_badge': {
+      'en': 'Unclaimed Authority Handle',
+      'hi': 'अनावा दावाकृत हैंडल',
+      'mr': 'दावा न केलेले हँडल',
+      'ta': 'கோரப்படாத கைப்பிடி',
+      'te': 'క్లెయిమ్ చేయని హ్యాండిల్',
+    },
+    'unclaimed_authority_notice': {
+      'en': 'Official handle active for automated issue dispatch & tracking.',
+      'hi': 'स्वचालित समस्या प्रेषण और ट्रैकिंग के लिए आधिकारिक हैंडल सक्रिय है।',
+      'mr': 'स्वयंचलित समस्या पाठवणे आणि ट्रॅकिंगसाठी अधिकृत हँडल सक्रिय आहे.',
+      'ta': 'தானியங்கி சிக்கல் அனுப்புதல் மற்றும் கண்காணிப்புக்கு அதிகாரப்பூர்வ கைப்பிடி செயலில் உள்ளது.',
+      'te': 'స్వయంచాలక సమస్య పంపకం మరియు ట్రాకింగ్ కోసం అధికారిక హ్యాండిల్ చురుకుగా ఉంది.',
+    },
+    'resolution_type_official': {
+      'en': 'Authority Resolved',
+      'hi': 'अधिकारी द्वारा हल',
+      'mr': 'अधिकाऱ्याने सोडवले',
+      'ta': 'அதிகாரியால் தீர்க்கப்பட்டது',
+      'te': 'అధికారి ద్వారా పరిష్కరించబడింది',
+    },
+    'resolution_type_community': {
+      'en': 'Community Resolved (Quorum Verified)',
+      'hi': 'समुदाय द्वारा हल (कोरम सत्यापित)',
+      'mr': 'समुदायाने सोडवले (कोरम सत्यापित)',
+      'ta': 'சமூகத்தால் தீர்க்கப்பட்டது (சரிபார்க்கப்பட்டது)',
+      'te': 'సమాజం ద్వారా పరిష్కరించబడింది (ధృవీకరించబడింది)',
+    },
+    'activity_timeline_title': {
+      'en': 'Escalation Ladder Audit',
+      'hi': 'एस्केलेशन लेडर ऑडिट',
+      'mr': 'एस्केलेशन शिडी ऑडिट',
+      'ta': 'எஸ்கலேஷன் ஏணி தணிக்கை',
+      'te': 'ఎస్కేలేషన్ నిచ్చెన ఆడిట్',
+    },
+    'activity_timeline_expand': {
+      'en': 'Expand Full Activity Timeline',
+      'hi': 'पूरी गतिविधि समयरेखा देखें',
+      'mr': 'संपूर्ण क्रियाकलाप टाइमलाइन पहा',
+      'ta': 'முழு செயல்பாடு காலவரிசையை விரிவாக்கு',
+      'te': 'పూర్తి కార్యాచరణ కాలక్రమాన్ని విస్తరించండి',
+    },
+    'activity_timeline_collapse': {
+      'en': 'Hide Activity Timeline',
+      'hi': 'समयरेखा छुपाएं',
+      'mr': 'टाइमलाइन लपवा',
+      'ta': 'காலவரிசையை மறை',
+      'te': 'కాలక్రమాన్ని దాచండి',
+    },
+    'verified_nearby': {
+      'en': 'Verified Nearby',
+      'hi': 'सत्यापित निकटवर्ती',
+      'mr': 'सत्यापित जवळचा',
+      'ta': 'அருகிலுள்ள சரிபார்க்கப்பட்டது',
+      'te': 'సమీపంలో ధృవీకరించబడింది',
+    },
+    'camera_only_capture_hint': {
+      'en': 'Take a live photo as verification proof (Gallery disabled to prevent spoofing)',
+      'hi': 'सत्यापन प्रमाण के रूप में लाइव फोटो लें (गैलरी अक्षम है)',
+      'mr': 'पडताळणी पुरावा म्हणून थेट फोटो घ्या (गॅलरी अक्षम आहे)',
+      'ta': 'சரிபார்ப்பு ஆதாரமாக நேரடி புகைப்படத்தை எடுக்கவும் (கேலரி முடக்கப்பட்டுள்ளது)',
+      'te': 'ధృవీకరణ ఆధారంగా ప్రత్యక్ష ఫోటో తీయండి (గ్యాలరీ నిలిపివేయబడింది)',
+    },
+    'wards_directory_title': {
+      'en': 'Wards & Representatives',
+      'hi': 'वार्ड और प्रतिनिधि',
+      'mr': 'वॉर्ड आणि प्रतिनिधी',
+      'ta': 'வார்டுகள் மற்றும் பிரதிநிதிகள்',
+      'te': 'వార్డులు మరియు ప్రతినిధులు',
+    },
+    'wards_directory_subtitle': {
+      'en': 'Explore municipal wards, departmental engineers & councillors',
+      'hi': 'नगर निगम वार्ड, विभागीय इंजीनियर और पार्षदों का विवरण',
+      'mr': 'महानगरपालिका वॉर्ड, विभागीय अभियंते आणि नगरसेवक एक्सप्लोर करा',
+      'ta': 'நகராட்சி வார்டுகள், துறை பொறியாளர்கள் மற்றும் கவுன்சிலர்களை ஆராயுங்கள்',
+      'te': 'మునిసిపల్ వార్డులు, డిపార్ట్‌మెంటల్ ఇంజనీర్లు మరియు కౌన్సిలర్లను అన్వేషించండి',
+    },
+    'view_all_wards': {
+      'en': 'Explore All Wards',
+      'hi': 'सभी वार्ड देखें',
+      'mr': 'सर्व वॉर्ड एक्सप्लोर करा',
+      'ta': 'அனைத்து வார்டுகளையும் ஆராயுங்கள்',
+      'te': 'అన్ని వార్డులను అన్వేషించండి',
+    },
   };
 
+  /// Clean helper to transform a snake_case key into readable Title Case if missing
+  static String _cleanFallback(String key) {
+    var raw = key;
+    if (raw.startsWith('cat_')) {
+      raw = raw.substring(4);
+    } else if (raw.startsWith('filter_')) {
+      raw = raw.substring(7);
+    }
+    return raw
+        .split('_')
+        .where((w) => w.isNotEmpty)
+        .map((w) => '${w[0].toUpperCase()}${w.substring(1).toLowerCase()}')
+        .join(' ');
+  }
+
   /// Returns the translated string for [key] in [languageCode], falling back
-  /// to English when a translation is missing.
+  /// to English or human-formatted text when a translation is missing.
   static String translate(String languageCode, String key) {
     final row = _table[key];
-    if (row == null) return key;
+    if (row == null) return _cleanFallback(key);
     if (row.containsKey(languageCode)) return row[languageCode]!;
-    return row[_fallback] ?? key;
+    return row[_fallback] ?? _cleanFallback(key);
   }
 }
 

@@ -19,21 +19,29 @@ class SearchApi implements SearchRepository {
     DateTime? createdAfter,
     DateTime? createdBefore,
     String? ward,
+    String? account,
   }) async {
+    final cleanQuery = query.trim();
+    final cleanAccount = account?.trim().replaceFirst('@', '');
+
     final data = await _client.getJson(
       '/search',
       query: {
-        'q': query,
-        'latitude': ?latitude,
-        'longitude': ?longitude,
-        'status': ?status,
+        'q': cleanQuery,
+        if (latitude != null) 'latitude': latitude,
+        if (longitude != null) 'longitude': longitude,
+        if (status != null && status.isNotEmpty && status.toLowerCase() != 'all')
+          'status': status,
         if (categories.isNotEmpty) 'categories': categories,
-        'radius_km': ?radiusKm,
+        if (radiusKm != null) 'radius_km': radiusKm,
         if (createdAfter != null)
           'created_after': createdAfter.toUtc().toIso8601String(),
         if (createdBefore != null)
           'created_before': createdBefore.toUtc().toIso8601String(),
-        'ward': ?ward,
+        if (ward != null && ward.isNotEmpty && ward.toLowerCase() != 'all')
+          'ward': ward,
+        if (cleanAccount != null && cleanAccount.isNotEmpty)
+          'account': cleanAccount,
         'limit': 20,
       },
     );

@@ -73,10 +73,14 @@ class WardRepCard extends ConsumerWidget {
                               ),
                             ),
                             const SizedBox(width: 6),
-                            const Icon(
-                              Icons.verified_rounded,
-                              size: 18,
-                              color: Colors.black,
+                            Icon(
+                              representative.isUnclaimed
+                                  ? Icons.hourglass_top_rounded
+                                  : Icons.verified_rounded,
+                              size: 16,
+                              color: representative.isUnclaimed
+                                  ? Colors.amber.shade800
+                                  : AppColors.resolved,
                             ),
                           ],
                         ),
@@ -87,23 +91,51 @@ class WardRepCard extends ConsumerWidget {
                             color: colorScheme.onSurfaceVariant,
                           ),
                         ),
-                        if (representative.verifiedAt != null) ...[
-                          const SizedBox(height: 4),
-                          Row(
-                            children: [
-                              Icon(Icons.shield_outlined,
-                                  size: 14, color: AppColors.resolved),
-                              const SizedBox(width: 4),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: colorScheme.surfaceContainerHighest,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                representative.department.toUpperCase(),
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: colorScheme.primary,
+                                ),
+                              ),
+                            ),
+                            if (representative.handle != null &&
+                                representative.handle!.isNotEmpty) ...[
+                              const SizedBox(width: 6),
                               Text(
-                                'Verified Official',
+                                '@${representative.handle}',
                                 style: theme.textTheme.labelSmall?.copyWith(
-                                  color: AppColors.resolved,
                                   fontWeight: FontWeight.w600,
+                                  color: colorScheme.onSurfaceVariant,
                                 ),
                               ),
                             ],
-                          ),
-                        ],
+                            const SizedBox(width: 6),
+                            Text(
+                              representative.isUnclaimed
+                                  ? '• Unclaimed'
+                                  : '• Verified',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: representative.isUnclaimed
+                                    ? Colors.amber.shade800
+                                    : AppColors.resolved,
+                              ),
+                            ),
+                          ],
+                        ),
                       ],
                     ),
                   ),

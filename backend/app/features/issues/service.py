@@ -20,8 +20,10 @@ from app.features.issues.models import (
     Upvote,
     UpvoteRateLimit,
     Win,
+    WrongAssignmentReport,
 )
 from app.features.issues.schemas import (
+    AssignedAuthorityOut,
     CommentCreate,
     CommentResponse,
     FlagCategory,
@@ -31,12 +33,19 @@ from app.features.issues.schemas import (
     FlagOut,
     IssueCreate,
     IssueOut,
+    IssueTimelineEventOut,
+    IssueTimelineResponse,
     ModerationAction,
     ModerationActionRequest,
     ModerationResultOut,
     NearDuplicateOut,
+    QuorumVoterOut,
     WinOut,
+    WrongAssignmentReportCreate,
+    WrongAssignmentReportOut,
 )
+from app.features.representatives.models import OfficialResponse, RepresentativeProfile
+from app.features.wards.models import Ward
 
 flag_rate_limiter = SlidingWindowRateLimiter(max_requests=5, window_seconds=600)
 
@@ -155,6 +164,25 @@ def to_issue_out(
     if not issue.is_anonymous or (user_id is not None and user_id == issue.reporter_id):
         reporter_id_val = issue.reporter_id
 
+    assigned_rep_out = None
+    if "assigned_representative" in issue.__dict__ and issue.__dict__["assigned_representative"] is not None:
+        rep_obj = issue.__dict__["assigned_representative"]
+        user_handle = None
+        if "user" in rep_obj.__dict__ and rep_obj.__dict__["user"] is not None:
+            user_handle = rep_obj.__dict__["user"].username
+        assigned_rep_out = AssignedAuthorityOut(
+            id=rep_obj.id,
+            official_name=rep_obj.official_name,
+            title=rep_obj.title,
+            ward=rep_obj.ward,
+            department=getattr(rep_obj, "department", "all"),
+            handle=user_handle,
+            is_unclaimed=getattr(rep_obj, "is_unclaimed", False),
+            is_verified=not getattr(rep_obj, "is_unclaimed", False),
+            contact_email=getattr(rep_obj, "contact_email", None),
+            contact_phone=getattr(rep_obj, "contact_phone", None),
+        )
+
     return IssueOut(
         id=issue.id,
         title=issue.title,
@@ -188,6 +216,9 @@ def to_issue_out(
         resolution_notes=issue.resolution_notes,
         has_upvoted=has_upvoted,
         has_official_response=has_official_response,
+        assigned_representative=assigned_rep_out,
+        resolved_by=issue.resolved_by,
+        resolution_type=issue.resolution_type,
     )
 
 
@@ -240,6 +271,36 @@ async def create_issue(
 
     first_media = payload.media_url or (media_urls_list[0] if media_urls_list else None)
 
+    # Dynamic ward resolution
+    ward_stmt = select(Ward)
+    ward_rows = (await session.execute(ward_stmt)).scalars().all()
+    assigned_ward_name = "Ward 45, Urban Central"
+    min_distance = float("inf")
+    for w in ward_rows:
+        dist = haversine_km(lat, lng, w.center_latitude, w.center_longitude)
+        if dist < min_distance:
+            min_distance = dist
+            assigned_ward_name = w.name
+
+    # Auto-assign representative based on ward and category
+    assigned_rep_id = None
+    rep_stmt = select(RepresentativeProfile).where(
+        (RepresentativeProfile.ward == assigned_ward_name)
+        | (RepresentativeProfile.ward.ilike(f"%{assigned_ward_name}%"))
+    )
+    rep_rows = list((await session.execute(rep_stmt)).scalars().all())
+    if rep_rows:
+        matched_rep = next(
+            (r for r in rep_rows if r.department and r.department.lower() == payload.category.lower()),
+            None,
+        )
+        if not matched_rep:
+            matched_rep = next(
+                (r for r in rep_rows if r.department in ("all", "general", None)),
+                rep_rows[0],
+            )
+        assigned_rep_id = matched_rep.id
+
     issue = Issue(
         title=payload.title,
         description=payload.description,
@@ -247,7 +308,8 @@ async def create_issue(
         latitude=lat,
         longitude=lng,
         geohash=gh,
-        ward="Ward 45, Urban Central",
+        ward=assigned_ward_name,
+        assigned_representative_id=assigned_rep_id,
         is_anonymous=payload.is_anonymous,
         fuzz_location=is_fuzzed,
         is_fuzzed=is_fuzzed,
@@ -261,7 +323,12 @@ async def create_issue(
     session.add(issue)
     await session.commit()
     issue = await session.scalar(
-        select(Issue).options(selectinload(Issue.reporter)).where(Issue.id == issue.id)
+        select(Issue)
+        .options(
+            selectinload(Issue.reporter),
+            selectinload(Issue.assigned_representative).selectinload(RepresentativeProfile.user),
+        )
+        .where(Issue.id == issue.id)
     )
     await _link_media_to_issue(session, issue, media_urls_list)
     return issue  # type: ignore[return-value]
@@ -284,6 +351,10 @@ async def list_issues_near(
         statement = statement.where(Issue.status == status_filter)
     if created_before is not None:
         statement = statement.where(Issue.created_at < created_before)
+    statement = statement.options(
+        selectinload(Issue.reporter),
+        selectinload(Issue.assigned_representative).selectinload(RepresentativeProfile.user),
+    )
     statement = statement.order_by(Issue.created_at.desc()).limit(limit * 6).offset(offset)
     result = await session.execute(statement)
     issues = list(result.scalars().all())
@@ -310,7 +381,13 @@ async def list_issues_near(
 
 async def get_issue(session: AsyncSession, issue_id: int) -> Issue | None:
     result = await session.execute(
-        select(Issue).options(selectinload(Issue.reporter)).where(Issue.id == issue_id)
+        select(Issue)
+        .options(
+            selectinload(Issue.reporter),
+            selectinload(Issue.assigned_representative).selectinload(RepresentativeProfile.user),
+            selectinload(Issue.official_responses),
+        )
+        .where(Issue.id == issue_id)
     )
     issue = result.scalar_one_or_none()
     if issue is not None:
@@ -1050,4 +1127,226 @@ async def moderate_issue(
         is_hidden=issue.is_hidden,
         reporter_banned=reporter_banned,
         message=msg,
+    )
+
+
+async def report_wrong_assignment(
+    session: AsyncSession,
+    issue_id: int,
+    user_id: int | None,
+    suggested_ward: str | None,
+    suggested_category: str | None,
+    reason: str,
+) -> WrongAssignmentReport:
+    issue = await session.get(Issue, issue_id)
+    if issue is None:
+        raise AppError("Issue not found", status_code=404, code="not_found")
+    report = WrongAssignmentReport(
+        issue_id=issue_id,
+        user_id=user_id,
+        suggested_ward=suggested_ward,
+        suggested_category=suggested_category,
+        reason=reason,
+    )
+    session.add(report)
+    await session.commit()
+    await session.refresh(report)
+    return report
+
+
+async def admin_reassign_issue(
+    session: AsyncSession,
+    issue_id: int,
+    admin_user: User,
+    ward: str | None = None,
+    category: str | None = None,
+    assigned_representative_id: str | None = None,
+    reason: str | None = None,
+) -> Issue:
+    issue = await session.get(Issue, issue_id)
+    if issue is None:
+        raise AppError("Issue not found", status_code=404, code="not_found")
+    if ward is not None:
+        issue.ward = ward
+    if category is not None:
+        issue.category = category
+    if assigned_representative_id is not None:
+        issue.assigned_representative_id = assigned_representative_id
+    elif ward or category:
+        rep_stmt = select(RepresentativeProfile).where(
+            (RepresentativeProfile.ward == issue.ward)
+            | (RepresentativeProfile.ward.ilike(f"%{issue.ward}%"))
+        )
+        rep_rows = list((await session.execute(rep_stmt)).scalars().all())
+        if rep_rows:
+            matched_rep = next(
+                (r for r in rep_rows if r.department and r.department.lower() == issue.category.lower()),
+                None,
+            )
+            if not matched_rep:
+                matched_rep = next(
+                    (r for r in rep_rows if r.department in ("all", "general", None)),
+                    rep_rows[0],
+                )
+            issue.assigned_representative_id = matched_rep.id
+
+    moderator_id = admin_user.id if isinstance(admin_user.id, int) else 1
+    audit = ModerationAudit(
+        issue_id=issue_id,
+        action="reassign",
+        reason=reason or f"Reassigned ward={issue.ward} category={issue.category}",
+        moderated_by=moderator_id,
+    )
+    session.add(audit)
+    await session.commit()
+    await session.refresh(issue)
+    return issue
+
+
+async def get_issue_timeline(
+    session: AsyncSession,
+    issue_id: int,
+) -> IssueTimelineResponse:
+    stmt = (
+        select(Issue)
+        .options(
+            selectinload(Issue.reporter),
+            selectinload(Issue.assigned_representative).selectinload(RepresentativeProfile.user),
+            selectinload(Issue.official_responses).selectinload(
+                OfficialResponse.representative
+            ).selectinload(RepresentativeProfile.user),
+        )
+        .where(Issue.id == issue_id)
+    )
+    issue = (await session.execute(stmt)).scalar_one_or_none()
+    if issue is None:
+        raise AppError("Issue not found", status_code=404, code="not_found")
+
+    events: list[IssueTimelineEventOut] = []
+
+    # Event 1: Reported
+    reporter_handle = None
+    if not issue.is_anonymous and issue.reporter:
+        reporter_handle = issue.reporter.username
+    events.append(
+        IssueTimelineEventOut(
+            event_type="reported",
+            title="Issue Reported",
+            description=issue.description or issue.title,
+            actor_name=reporter_label_for(issue),
+            actor_handle=reporter_handle,
+            actor_role="Reporter",
+            media_url=issue.media_url,
+            created_at=issue.created_at,
+        )
+    )
+
+    # Event 2: Assigned
+    if issue.assigned_representative:
+        rep = issue.assigned_representative
+        rep_user = (
+            rep.user.username
+            if rep.user
+            else (
+                await session.execute(select(User.username).where(User.id == rep.user_id))
+            ).scalar_one_or_none()
+        )
+        events.append(
+            IssueTimelineEventOut(
+                event_type="assigned",
+                title=f"Assigned to {rep.official_name}",
+                description=f"Department: {(rep.department or 'general').capitalize()} | Ward: {issue.ward}",
+                actor_name=rep.official_name,
+                actor_handle=rep_user,
+                actor_role=rep.title,
+                is_unclaimed=getattr(rep, "is_unclaimed", False),
+                created_at=issue.created_at,
+            )
+        )
+
+    # Event 3: Official Responses / Acknowledgments
+    for resp in issue.official_responses:
+        rep_name = resp.representative.official_name if resp.representative else "Ward Authority"
+        rep_handle = resp.representative.user.username if resp.representative and resp.representative.user else None
+        events.append(
+            IssueTimelineEventOut(
+                event_type="acknowledged" if resp.status_update == "acknowledged" else "official_response",
+                title="Official Response" if resp.status_update != "acknowledged" else "Acknowledged by Authority",
+                description=resp.message,
+                actor_name=rep_name,
+                actor_handle=rep_handle,
+                actor_role="Ward Representative",
+                created_at=resp.created_at,
+            )
+        )
+    if not issue.official_responses and issue.acknowledged_at:
+        events.append(
+            IssueTimelineEventOut(
+                event_type="acknowledged",
+                title="Acknowledged by Authority",
+                description="Official review recorded and scheduled for field fix.",
+                created_at=issue.acknowledged_at,
+            )
+        )
+
+    # Event 4: Resolution Proof Submitted
+    if issue.resolution_proof:
+        events.append(
+            IssueTimelineEventOut(
+                event_type="proof_submitted",
+                title="Resolution Proof Uploaded",
+                description=issue.resolution_notes or "Photo proof submitted for verification.",
+                media_url=issue.resolution_proof,
+                created_at=issue.resolved_at or issue.created_at,
+            )
+        )
+
+    # Event 5: Quorum Votes
+    votes_stmt = (
+        select(QuorumVote)
+        .options(selectinload(QuorumVote.user))
+        .where(QuorumVote.issue_id == issue_id)
+        .order_by(QuorumVote.created_at.asc())
+    )
+    votes = list((await session.execute(votes_stmt)).scalars().all())
+    confirmations_list: list[QuorumVoterOut] = []
+    disputes_list: list[QuorumVoterOut] = []
+
+    for v in votes:
+        u_name = v.user.display_name if v.user else None
+        u_handle = v.user.username if v.user else None
+        voter_out = QuorumVoterOut(
+            user_id=v.user_id,
+            username=u_handle,
+            display_name=u_name,
+            vote=v.vote,
+            reason=v.reason,
+            is_nearby=True,
+            created_at=v.created_at,
+        )
+        if v.vote == "confirm":
+            confirmations_list.append(voter_out)
+        else:
+            disputes_list.append(voter_out)
+
+    # Event 6: Final Resolved Win
+    if issue.status == "resolved":
+        events.append(
+            IssueTimelineEventOut(
+                event_type="resolved",
+                title="Verified Civic Win",
+                description=f"Resolution verified ({issue.resolution_type or 'community'}).",
+                media_url=issue.resolution_proof,
+                created_at=issue.resolved_at or issue.created_at,
+            )
+        )
+
+    return IssueTimelineResponse(
+        issue_id=issue.id,
+        status=issue.status,
+        resolution_type=issue.resolution_type,
+        resolved_by=issue.resolved_by,
+        events=events,
+        confirmations=confirmations_list,
+        disputes=disputes_list,
     )

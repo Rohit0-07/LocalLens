@@ -4,6 +4,7 @@ import urllib.parse
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.core.exceptions import AppError
 from app.core.ratelimit import SlidingWindowRateLimiter
@@ -150,27 +151,44 @@ async def get_ward_detail(
     top_cat_res = await session.execute(top_cat_stmt)
     top_categories = [row[0] for row in top_cat_res.all()]
 
-    # Representative
+    # Representatives
     rep_stmt = select(RepresentativeProfile).where(
-        (RepresentativeProfile.ward == ward.name) | (RepresentativeProfile.ward == ward.slug)
+        (RepresentativeProfile.ward == ward.name)
+        | (RepresentativeProfile.ward == ward.slug)
+        | (RepresentativeProfile.ward == ward.code)
     )
-    rep = (await session.execute(rep_stmt)).scalars().first()
-    assigned_rep = None
-    if rep:
-        rep_metrics = await compute_rep_metrics(session, rep)
-        assigned_rep = AssignedRepresentativeOut(
-            id=rep.id,
-            user_id=rep.user_id,
-            ward=rep.ward,
-            official_name=rep.official_name,
-            title=rep.title,
-            verified_at=rep.verified_at,
-            **rep_metrics.model_dump(),
+    rep_objs = list((await session.execute(rep_stmt)).scalars().all())
+    reps_list: list[AssignedRepresentativeOut] = []
+    for r in rep_objs:
+        r_metrics = await compute_rep_metrics(session, r)
+        u_stmt = select(User.username).where(User.id == r.user_id)
+        u_handle = (await session.execute(u_stmt)).scalar_one_or_none()
+        reps_list.append(
+            AssignedRepresentativeOut(
+                id=r.id,
+                user_id=r.user_id,
+                ward=r.ward,
+                official_name=r.official_name,
+                title=r.title,
+                department=getattr(r, "department", "all"),
+                handle=u_handle,
+                is_unclaimed=getattr(r, "is_unclaimed", False),
+                is_verified=not getattr(r, "is_unclaimed", False),
+                contact_email=getattr(r, "contact_email", None),
+                contact_phone=getattr(r, "contact_phone", None),
+                verified_at=r.verified_at,
+                **r_metrics.model_dump(),
+            )
         )
+    assigned_rep = reps_list[0] if reps_list else None
 
     # Recent issues (exclude shielded unresolved)
     recent_stmt = (
         select(Issue)
+        .options(
+            selectinload(Issue.reporter),
+            selectinload(Issue.assigned_representative).selectinload(RepresentativeProfile.user),
+        )
         .where(where_clause & ~((Issue.is_shielded.is_(True)) & (Issue.status != "resolved")))
         .order_by(Issue.created_at.desc())
         .limit(issues_limit)
@@ -192,6 +210,7 @@ async def get_ward_detail(
         resolution_rate_pct=resolution_rate_pct,
         top_categories=top_categories,
         assigned_representative=assigned_rep,
+        representatives=reps_list,
         recent_issues=recent_issues,
         updated_at=ward.updated_at or datetime.datetime.utcnow(),
     )

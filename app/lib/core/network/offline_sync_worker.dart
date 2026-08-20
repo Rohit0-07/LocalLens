@@ -53,6 +53,13 @@ class _OfflineSyncWorkerState extends ConsumerState<OfflineSyncWorker> {
                 type: ToastType.success,
               );
         }
+      } else {
+        if (mounted) {
+          ref.read(appMessengerProvider.notifier).show(
+                'Back online — synchronizing outbox queue',
+                type: ToastType.info,
+              );
+        }
       }
     } catch (_) {
       // Ignored or logged by queue failure handler

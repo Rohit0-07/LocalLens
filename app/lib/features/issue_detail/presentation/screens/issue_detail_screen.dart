@@ -16,6 +16,7 @@ import '../../../compose/data/media_service.dart';
 import '../../../feed/domain/issue.dart';
 import '../../../feed/presentation/feed_providers.dart';
 import '../../../rep_dashboard/presentation/rep_dashboard_providers.dart';
+import '../widgets/assigned_authority_card.dart';
 import '../widgets/audit_timeline_card.dart';
 import '../widgets/comments_section.dart';
 import '../widgets/official_response_card.dart';
@@ -287,6 +288,15 @@ class IssueDetailScreen extends ConsumerWidget {
                   ],
                 ),
                 const Divider(height: 32),
+
+                // Assigned Department Authority
+                AssignedAuthorityCard(
+                  issue: issue,
+                  onReportSubmitted: () {
+                    ref.invalidate(singleIssueProvider(issueId));
+                  },
+                ),
+                const SizedBox(height: 16),
 
                 // Rich Detailed Audit Timeline
                 AuditTimelineCard(

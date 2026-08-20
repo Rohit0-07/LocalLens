@@ -2,7 +2,7 @@
 
 Consolidated, prioritized list of bugs found during codebase analysis and manual testing.
 Tag legend: `[U]` = reported during manual testing, `[M]` = found during code analysis.
-Every entry now carries a **Fix** (what changed) and **Files** (the file(s) touched). Files are
+Every entry carries a **Fix** (what changed) and **Files** (the file(s) touched). Files are
 listed once under their primary bug; shared files are cross-referenced (e.g. "see #18") so the
 register stays clean while remaining traceable. `[FIXED]` marks the bug as resolved in code.
 
@@ -126,3 +126,88 @@ register stays clean while remaining traceable. `[FIXED]` marks the bug as resol
     - **Files:** `app/lib/features/compose/presentation/compose_screen.dart`
 
 ---
+
+## PHASE 2 — REMAINING AUDIT ISSUES & SYSTEM INTEGRATION (BUGS_REMAIN.MD)
+
+34. `[U]` **[FIXED] Ward & Representative System, Auto-Assignment, Dummy/Unclaimed Authority Handles, Wrong Ward Flagging & Reallocation, Escalation Ladder Fix, Community Resolution Verification & Expandable Activity Timeline**
+    - **Root Causes**:
+      - Issues were created without automated routing to departmental authorities (e.g. Roads, Water, Power, Waste, Councillor).
+      - Authority profiles had no concept of unclaimed placeholders vs verified civic officers with handles.
+      - Users had no mechanism to report wrongly assigned wards or categories, and admins lacked reassignment endpoints.
+      - Issue detail rendered an overwhelming, unstructured timeline rather than a concise summary with an expandable chronological audit log.
+      - Authority resolutions and community quorum verifications were conflated into a single ambiguous status badge.
+    - **Fix**:
+      - *Backend*: Extended `RepresentativeProfile` with `department`, `is_unclaimed`, `contact_email`, `contact_phone`. Updated `create_issue` to auto-assign the departmental representative matching the issue's ward & category (or default ward councillor).
+      - *Reassignment & Governance*: Added `POST /api/v1/issues/{id}/report-wrong-assignment` with `WrongAssignmentReport` model and `POST /api/v1/admin/issues/{id}/reassign` with notification dispatch.
+      - *Timeline Endpoint*: Added `GET /api/v1/issues/{id}/timeline` returning full chronological audit trails with voter handles and "Verified Nearby" indicators.
+      - *Frontend UI*: Built `AssignedAuthorityCard` displaying handle, claimed/unclaimed badge, and modal dialog to report wrong ward. Upgraded `AuditTimelineCard` to feature a concise progress header with an **Expand / Collapse Full Activity Timeline** toggle. Added `ResolutionBadge` distinguishing "Official Authority Resolution" from "Community Quorum Verified".
+    - **Files**:
+      - `backend/app/features/representatives/models.py`, `schemas.py`, `service.py`
+      - `backend/app/features/issues/models.py`, `schemas.py`, `service.py`, `router.py`
+      - `backend/app/features/wards/schemas.py`, `service.py`
+      - `backend/tests/features/issues/test_wrong_assignment_and_timeline.py`
+      - `app/lib/features/feed/domain/issue.dart`, `app/lib/features/issue_detail/data/issue_detail_api.dart`
+      - `app/lib/features/issue_detail/presentation/widgets/assigned_authority_card.dart`
+      - `app/lib/features/issue_detail/presentation/widgets/audit_timeline_card.dart`
+      - `app/lib/features/issue_detail/presentation/screens/issue_detail_screen.dart`
+
+35. `[U]` **[FIXED] Resolution Fix Media Upload Restricted to In-App Camera Only (No Gallery)**
+    - **Root Causes**:
+      - `ResolutionProofModal` allowed users to pick existing images from device storage gallery, breaking on-site GPS verification integrity.
+    - **Fix**:
+      - Removed gallery picker button entirely from `ResolutionProofModal`.
+      - Enforced live viewfinder camera capture with GPS EXIF locking (`CameraViewfinder`) for all resolution proofs.
+    - **Files**:
+      - `app/lib/features/issue_detail/presentation/widgets/resolution_proof_modal.dart`
+      - `app/test/features/issue_detail/issue_detail_camera_and_timeline_test.dart`
+
+36. `[U]` **[FIXED] Public Directory / Explorer for Wards & Department Representatives**
+    - **Root Causes**:
+      - Ward detail screen only exposed a single representative and omitted other municipal department engineers.
+      - There was no dedicated directory route to browse and search all wards across the city.
+    - **Fix**:
+      - Enhanced `WardDetailOut` and backend query to populate all departmental representatives (`representatives` list).
+      - Updated `WardRepCard` to display department tag, `@handle`, and claimed / unclaimed badges.
+      - Added `WardsListScreen` and registered `/wards` route in `RoutePaths` and `GoRouter` with real-time search filtering.
+    - **Files**:
+      - `backend/app/features/wards/schemas.py`, `service.py`
+      - `app/lib/features/ward/domain/ward_representative_out.dart`, `ward_detail_out.dart`
+      - `app/lib/features/ward/presentation/widgets/ward_rep_card.dart`
+      - `app/lib/features/ward/presentation/screens/ward_detail_screen.dart`
+      - `app/lib/features/ward/presentation/screens/wards_list_screen.dart`
+      - `app/lib/core/router/route_paths.dart`, `app_router.dart`
+
+37. `[U]` **[FIXED] Search Section Fix & Granular Filter-Driven Map Search**
+    - **Root Causes**:
+      - `GET /api/v1/search` threw 422 Unprocessable Entity when `q` was empty even if filters (category, ward, status) were applied.
+      - Search did not support searching by user account / citizen handle.
+      - The Flutter app search results notifier did not trigger searches when only filters were active with an empty search query field.
+    - **Fix**:
+      - *Backend*: Made `q` optional in search router and service when any filter (`category`, `categories`, `status`, `ward`, `account`, `created_after`, `created_before`, `latitude/longitude`) is present. Added multi-field text search matching title, description, category, ward, and reporter username.
+      - *Frontend*: Added `account` parameter and custom date range picker to `SearchFilters`, `SearchApi`, and `AdvancedFilterSheet`. Updated `SearchResultsNotifier` to execute filter-only queries seamlessly.
+    - **Files**:
+      - `backend/app/features/search/router.py`, `service.py`
+      - `backend/tests/features/search/test_search.py`
+      - `app/lib/features/search/domain/search_filters.dart`, `search_repository.dart`
+      - `app/lib/features/search/data/search_api.dart`
+      - `app/lib/features/search/presentation/search_providers.dart`
+      - `app/lib/features/search/presentation/advanced_filter_sheet.dart`
+      - `app/lib/features/search/presentation/search_screen.dart`
+
+38. `[U]` **[FIXED] Localization & Display Formatting (Eliminated Raw Snake_Case Strings)**
+    - **Root Causes**:
+      - Category names and filter options were falling back to raw snake_case or unlocalized strings in the UI.
+    - **Fix**:
+      - Added translations across all 5 supported languages (English, Hindi, Marathi, Tamil, Telugu) for all category keys (`cat_road`, `cat_water`, `cat_power`, `cat_waste`, `cat_sewage`, `cat_lighting`, `cat_sanitation`, `cat_other`), search filters (`filter_by_ward`, `filter_by_account`, `filter_date_range`, `filter_within_radius`, etc.), and timeline labels.
+      - Updated `AppStrings.tr()` to automatically convert missing keys into clean Title Case format (`_humanizeKeyFallback`), eliminating raw snake_case strings.
+    - **Files**:
+      - `app/lib/core/l10n/app_strings.dart`
+
+39. `[U]` **[FIXED] Streamlined "Outside Coverage" Location Indicator**
+    - **Root Causes**:
+      - The outside-coverage indicator rendered an intrusive warning banner across screens.
+    - **Fix**:
+      - Replaced intrusive text banner with a sleek, non-blocking location chip (`WardLocationChip`) with an exploration icon (`Icons.explore_outlined`) that never blocks user interaction.
+    - **Files**:
+      - `app/lib/features/geo/presentation/widgets/ward_location_chip.dart`
+      - `app/test/features/geo/geo_widget_test.dart`

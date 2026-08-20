@@ -312,6 +312,9 @@ async def _seed_issues(
             resolution_proof=row.get("resolution_proof"),
             resolution_notes=row.get("resolution_notes"),
             quorum_expires_at=_parse_dt(row.get("quorum_expires_at")),
+            assigned_representative_id=row.get("assigned_representative_id"),
+            resolved_by=row.get("resolved_by"),
+            resolution_type=row.get("resolution_type"),
         )
 
     _dedup(session, rows, existing, key, factory)
@@ -331,6 +334,10 @@ async def _seed_representatives(
             official_name=row["official_name"],
             title=row["title"],
             ward=row["ward"],
+            department=row.get("department", "all"),
+            is_unclaimed=row.get("is_unclaimed", False),
+            contact_email=row.get("contact_email"),
+            contact_phone=row.get("contact_phone"),
             verified_at=_parse_dt(row.get("verified_at")),
         )
 

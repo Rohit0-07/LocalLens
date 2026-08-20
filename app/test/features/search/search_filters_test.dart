@@ -66,6 +66,7 @@ class FakeSearchRepository implements SearchRepository {
     DateTime? createdAfter,
     DateTime? createdBefore,
     String? ward,
+    String? account,
   }) async {
     searchCount += 1;
     lastQuery = query;

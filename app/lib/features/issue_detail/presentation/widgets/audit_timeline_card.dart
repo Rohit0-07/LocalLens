@@ -9,27 +9,43 @@ import '../../../../core/utils/relative_time.dart';
 import '../../../feed/domain/issue.dart';
 import '../../../rep_dashboard/domain/official_response.dart';
 
-/// A rich, easy-to-read vertical audit timeline widget that clearly references
+/// A rich, expandable vertical audit timeline widget that clearly references
 /// which user/authority posted what across the lifecycle of an issue:
 /// 1. Reported by [Reporter / Anon ID] with relative time & media links.
-/// 2. Acknowledged by [Representative/Authority] (if acknowledged).
-/// 3. Resolution Proof Uploaded with photo preview & resolution notes.
-/// 4. Community Verification in Progress (confirming neighbors e.g. 2 / 3).
-/// 5. Resolved & Published as Win (if resolved).
-class AuditTimelineCard extends StatelessWidget {
+/// 2. Assigned Authority with claimed/unclaimed status.
+/// 3. Acknowledged by [Representative/Authority] (if acknowledged).
+/// 4. Resolution Proof Uploaded with photo preview & resolution notes.
+/// 5. Community Verification (confirmations & disputes with voter handles & nearby flags).
+/// 6. Resolved (Authority Resolved vs Community Quorum Resolved).
+class AuditTimelineCard extends StatefulWidget {
   const AuditTimelineCard({
     super.key,
     required this.issue,
     this.officialResponses = const [],
+    this.initiallyExpanded = true,
   });
 
   final Issue issue;
   final List<OfficialResponse> officialResponses;
+  final bool initiallyExpanded;
+
+  @override
+  State<AuditTimelineCard> createState() => _AuditTimelineCardState();
+}
+
+class _AuditTimelineCardState extends State<AuditTimelineCard> {
+  late bool _isExpanded;
+
+  @override
+  void initState() {
+    super.initState();
+    _isExpanded = widget.initiallyExpanded;
+  }
 
   /// Deadline for the currently-active step, used to render a live
   /// countdown derived from the report timestamp per the 24h/72h/7d cadence.
   DateTime? _activeDeadline(String status) {
-    final createdAt = issue.createdAt;
+    final createdAt = widget.issue.createdAt;
     switch (status) {
       case 'escalating':
         return createdAt.add(const Duration(hours: 72));
@@ -46,135 +62,261 @@ class AuditTimelineCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final issue = widget.issue;
     final status = issue.status;
     final isResolved = issue.status == 'resolved';
     final isPendingQuorum = issue.status == 'pending_quorum';
     final isAcknowledged = issue.acknowledgedAt != null ||
-        officialResponses.isNotEmpty ||
+        widget.officialResponses.isNotEmpty ||
         (status != 'unacknowledged' && status != 'open');
     final hasProof = issue.resolutionProof != null &&
         issue.resolutionProof!.trim().isNotEmpty;
-    final officialName = officialResponses.isNotEmpty
-        ? officialResponses.first.officialName
-        : null;
+    final officialName = widget.officialResponses.isNotEmpty
+        ? widget.officialResponses.first.officialName
+        : (issue.assignedRepresentative?.officialName);
+
+    final resolutionType = issue.resolutionType;
+    final isOfficialResolved = resolutionType == 'official';
+    final isCommunityResolved = resolutionType == 'community' ||
+        (isResolved && !isOfficialResolved);
 
     return Card(
       elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Header Row with Expand Toggle
             Row(
               children: [
                 const Icon(Icons.timeline_rounded, color: AppColors.brand),
                 const SizedBox(width: 8),
-                Text(
-                  context.tr('issue_escalation_ladder'),
-                  style: theme.textTheme.titleMedium
-                      ?.copyWith(fontWeight: FontWeight.bold),
+                Expanded(
+                  child: Text(
+                    context.tr('activity_timeline_title'),
+                    style: theme.textTheme.titleMedium
+                        ?.copyWith(fontWeight: FontWeight.bold),
+                  ),
                 ),
+                if (isResolved)
+                  Container(
+                    key: const Key('resolution_type_badge'),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: isOfficialResolved
+                          ? AppColors.brand.withValues(alpha: 0.15)
+                          : AppColors.resolved.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: isOfficialResolved
+                            ? AppColors.brand
+                            : AppColors.resolved,
+                        width: 1,
+                      ),
+                    ),
+                    child: Text(
+                      isOfficialResolved
+                          ? context.tr('resolution_type_official')
+                          : context.tr('resolution_type_community'),
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: isOfficialResolved
+                            ? AppColors.brand
+                            : AppColors.resolved,
+                      ),
+                    ),
+                  ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
 
-            // Event 1: Reported by [Reporter Name / Anon ID]
-            _TimelineItem(
-              key: const Key('timeline_event_reported'),
-              isFirst: true,
-              isDone: true,
-              isActive: status == 'unacknowledged' || status == 'open',
-              title:
-                  '${context.tr('timeline_event_reported')} ${issue.reporterLabel}',
-              subtitle:
-                  '${issue.ward} • ${formatRelativeTime(issue.createdAt)}',
-              icon: Icons.flag_rounded,
-              trailingWidget: _buildReportMediaPreviews(context),
-            ),
-
-            // Event 2: Acknowledged by [Representative/Authority]
-            _TimelineItem(
-              key: const Key('timeline_event_acknowledged'),
-              isDone: isAcknowledged,
-              isActive: status == 'under_review' ||
-                  status == 'escalating' ||
-                  status == 'forwarded',
-              title: isAcknowledged
-                  ? '${context.tr('timeline_event_acknowledged')} ${officialName ?? 'Ward Authority'}'
-                  : 'Awaiting Representative Acknowledgment',
-              subtitle: isAcknowledged
-                  ? (issue.acknowledgedAt != null
-                      ? 'Acknowledged ${formatRelativeTime(issue.acknowledgedAt!)}'
-                      : 'Official review recorded & scheduled')
-                  : 'Auto-escalates if not reviewed within 24-72 hours',
-              icon: Icons.verified_user_rounded,
-              deadline: (status == 'escalating' || status == 'forwarded')
-                  ? _activeDeadline(status)
-                  : null,
-            ),
-
-            // Event 3: Resolution Proof Uploaded
-            _TimelineItem(
-              key: const Key('timeline_event_proof'),
-              isDone: hasProof,
-              isActive: (isPendingQuorum || hasProof) && !isResolved,
-              title: hasProof
-                  ? context.tr('timeline_event_proof_uploaded')
-                  : 'Resolution Proof Pending',
-              subtitle: hasProof
-                  ? (issue.resolutionNotes != null &&
-                          issue.resolutionNotes!.isNotEmpty
-                      ? '${context.tr('resolution_notes_label')} ${issue.resolutionNotes}'
-                      : 'Photo proof submitted by field team')
-                  : 'Authority / field worker must submit photo proof of fix',
-              icon: Icons.camera_alt_rounded,
-              trailingWidget:
-                  hasProof ? _buildResolutionProofPreview(context) : null,
-            ),
-
-            // Event 4: Community Verification in Progress
-            _TimelineItem(
-              key: const Key('timeline_event_verification'),
-              isDone: issue.confirmationsCount >= 3 || isResolved,
-              isActive: isPendingQuorum,
-              title: context.tr('timeline_event_verification'),
-              subtitle: '${issue.confirmationsCount} / 3 neighbors confirmed'
-                  '${issue.disputesCount > 0 ? ' • ${issue.disputesCount} disputed' : ''}',
-              icon: Icons.people_alt_rounded,
-              deadline: isPendingQuorum ? _activeDeadline(status) : null,
-              trailingWidget: Column(
+            // Concise Summary Box (Always visible)
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const SizedBox(height: 6),
-                  LinearProgressIndicator(
-                    value: (issue.confirmationsCount / 3).clamp(0.0, 1.0),
-                    backgroundColor: colorScheme.surfaceContainerHighest,
-                    color: isResolved ? AppColors.resolved : AppColors.verified,
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Status: ${context.tr("status_$status")}',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        formatRelativeTime(issue.createdAt),
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    context.tr('quorum_note'),
-                    style: theme.textTheme.labelSmall
-                        ?.copyWith(color: colorScheme.onSurfaceVariant),
+                  const SizedBox(height: 8),
+                  LinearProgressIndicator(
+                    value: isResolved
+                        ? 1.0
+                        : (isPendingQuorum
+                            ? 0.75
+                            : (isAcknowledged ? 0.5 : 0.25)),
+                    backgroundColor: colorScheme.surfaceContainerHighest,
+                    color: isResolved ? AppColors.resolved : AppColors.brand,
+                    borderRadius: BorderRadius.circular(4),
                   ),
                 ],
               ),
             ),
+            const SizedBox(height: 12),
 
-            // Event 5: Resolved & Published as Win
-            _TimelineItem(
-              key: const Key('timeline_event_resolved'),
-              isLast: true,
-              isDone: isResolved,
-              isActive: isResolved,
-              title: context.tr('timeline_event_resolved'),
-              subtitle: isResolved
-                  ? (issue.resolvedAt != null
-                      ? 'Civic win verified on ${formatRelativeTime(issue.resolvedAt!)}'
-                      : 'Neighborhood resolution verified and published')
-                  : 'Final resolution once 3 verified neighbors confirm the fix',
-              icon: Icons.emoji_events_rounded,
+            // Toggle Expand Button
+            InkWell(
+              key: const Key('toggle_activity_timeline_button'),
+              onTap: () => setState(() => _isExpanded = !_isExpanded),
+              borderRadius: BorderRadius.circular(8),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      _isExpanded
+                          ? context.tr('activity_timeline_collapse')
+                          : context.tr('activity_timeline_expand'),
+                      style: TextStyle(
+                        color: colorScheme.primary,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Icon(
+                      _isExpanded
+                          ? Icons.keyboard_arrow_up_rounded
+                          : Icons.keyboard_arrow_down_rounded,
+                      size: 18,
+                      color: colorScheme.primary,
+                    ),
+                  ],
+                ),
+              ),
             ),
+
+            // Expanded Full Timeline
+            if (_isExpanded) ...[
+              const Divider(height: 24),
+
+              // Event 1: Reported
+              _TimelineItem(
+                key: const Key('timeline_event_reported'),
+                isFirst: true,
+                isDone: true,
+                isActive: status == 'unacknowledged' || status == 'open',
+                title:
+                    '${context.tr('timeline_event_reported')} ${issue.reporterLabel}',
+                subtitle:
+                    '${issue.ward} • ${formatRelativeTime(issue.createdAt)}',
+                icon: Icons.flag_rounded,
+                trailingWidget: _buildReportMediaPreviews(context),
+              ),
+
+              // Event 2: Auto-Assigned / Acknowledged
+              _TimelineItem(
+                key: const Key('timeline_event_acknowledged'),
+                isDone: isAcknowledged,
+                isActive: status == 'under_review' ||
+                    status == 'escalating' ||
+                    status == 'forwarded',
+                title: isAcknowledged
+                    ? '${context.tr('timeline_event_acknowledged')} ${officialName ?? 'Ward Authority'}'
+                    : 'Auto-Assigned to ${issue.assignedRepresentative?.officialName ?? issue.ward}',
+                subtitle: isAcknowledged
+                    ? (issue.acknowledgedAt != null
+                        ? 'Acknowledged ${formatRelativeTime(issue.acknowledgedAt!)}'
+                        : 'Official review recorded & scheduled')
+                    : 'Authority handle: @${issue.assignedRepresentative?.handle ?? "unassigned"}',
+                icon: Icons.verified_user_rounded,
+                deadline: (status == 'escalating' || status == 'forwarded')
+                    ? _activeDeadline(status)
+                    : null,
+              ),
+
+              // Event 3: Resolution Proof Uploaded
+              _TimelineItem(
+                key: const Key('timeline_event_proof'),
+                isDone: hasProof,
+                isActive: (isPendingQuorum || hasProof) && !isResolved,
+                title: hasProof
+                    ? context.tr('timeline_event_proof_uploaded')
+                    : 'Resolution Proof Pending',
+                subtitle: hasProof
+                    ? (issue.resolutionNotes != null &&
+                            issue.resolutionNotes!.isNotEmpty
+                        ? '${context.tr('resolution_notes_label')} ${issue.resolutionNotes}'
+                        : 'Live GPS photo proof submitted on-site')
+                    : 'Must be verified with live in-app camera proof',
+                icon: Icons.camera_alt_rounded,
+                trailingWidget:
+                    hasProof ? _buildResolutionProofPreview(context) : null,
+              ),
+
+              // Event 4: Community Verification in Progress
+              _TimelineItem(
+                key: const Key('timeline_event_verification'),
+                isDone: issue.confirmationsCount >= 3 || isResolved,
+                isActive: isPendingQuorum,
+                title: context.tr('timeline_event_verification'),
+                subtitle: '${issue.confirmationsCount} / 3 neighbors confirmed'
+                    '${issue.disputesCount > 0 ? ' • ${issue.disputesCount} disputed' : ''}',
+                icon: Icons.people_alt_rounded,
+                deadline: isPendingQuorum ? _activeDeadline(status) : null,
+                trailingWidget: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 6),
+                    LinearProgressIndicator(
+                      value: (issue.confirmationsCount / 3).clamp(0.0, 1.0),
+                      backgroundColor: colorScheme.surfaceContainerHighest,
+                      color:
+                          isResolved ? AppColors.resolved : AppColors.verified,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      context.tr('inbox_quorum_desc'),
+                      style: theme.textTheme.labelSmall
+                          ?.copyWith(color: colorScheme.onSurfaceVariant),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Event 5: Resolved & Published
+              _TimelineItem(
+                key: const Key('timeline_event_resolved'),
+                isLast: true,
+                isDone: isResolved,
+                isActive: isResolved,
+                title: isResolved
+                    ? context.tr('timeline_event_resolved')
+                    : 'Pending Neighborhood Resolution',
+                subtitle: isResolved
+                    ? (issue.resolvedAt != null
+                        ? 'Civic win verified on ${formatRelativeTime(issue.resolvedAt!)}'
+                        : 'Neighborhood resolution verified and published')
+                    : 'Final resolution once confirmed by 3 verified neighbors',
+                icon: Icons.emoji_events_rounded,
+              ),
+            ],
           ],
         ),
       ),
@@ -182,8 +324,9 @@ class AuditTimelineCard extends StatelessWidget {
   }
 
   Widget? _buildReportMediaPreviews(BuildContext context) {
-    final mediaUrls = issue.mediaUrls;
-    final hasVideo = issue.videoUrl != null && issue.videoUrl!.isNotEmpty;
+    final mediaUrls = widget.issue.mediaUrls;
+    final hasVideo =
+        widget.issue.videoUrl != null && widget.issue.videoUrl!.isNotEmpty;
     if (mediaUrls.isEmpty && !hasVideo) return null;
 
     return Padding(
@@ -191,10 +334,9 @@ class AuditTimelineCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // What the reporter said (caption) alongside their uploads.
-          if (issue.description.isNotEmpty) ...[
+          if (widget.issue.description.isNotEmpty) ...[
             Text(
-              issue.description,
+              widget.issue.description,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
@@ -231,7 +373,6 @@ class AuditTimelineCard extends StatelessWidget {
                               color: Colors.grey,
                             ),
                           ),
-                          // Chronological upload number badge.
                           Positioned(
                             left: 4,
                             bottom: 4,
@@ -291,7 +432,7 @@ class AuditTimelineCard extends StatelessWidget {
   }
 
   Widget _buildResolutionProofPreview(BuildContext context) {
-    final proof = issue.resolutionProof!;
+    final proof = widget.issue.resolutionProof!;
     final resolved = resolveMediaUrl(proof);
     final isEmptyUrl = resolved.isEmpty;
     return Padding(
@@ -325,23 +466,6 @@ class AuditTimelineCard extends StatelessWidget {
                             color: AppColors.resolved, size: 32),
                       ),
                     ),
-                    loadingBuilder: (context, child, progress) =>
-                        progress == null
-                            ? child
-                            : Container(
-                                height: 80,
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .surfaceContainerHighest,
-                                child: const Center(
-                                  child: SizedBox(
-                                    width: 20,
-                                    height: 20,
-                                    child: CircularProgressIndicator(
-                                        strokeWidth: 2),
-                                  ),
-                                ),
-                              ),
                   )
                 else
                   Container(
@@ -385,7 +509,7 @@ class AuditTimelineCard extends StatelessWidget {
                         Icon(Icons.zoom_in, color: Colors.white, size: 14),
                         SizedBox(width: 2),
                         Text(
-                          'Proof Photo',
+                          'Proof Photo (Camera GPS)',
                           style: TextStyle(color: Colors.white, fontSize: 10),
                         ),
                       ],
@@ -412,8 +536,8 @@ class AuditTimelineCard extends StatelessWidget {
               Image.network(
                 resolved,
                 fit: BoxFit.contain,
-                errorBuilder: (context, error, stackTrace) => Padding(
-                  padding: const EdgeInsets.all(32),
+                errorBuilder: (context, error, stackTrace) => const Padding(
+                  padding: EdgeInsets.all(32),
                   child: Icon(Icons.broken_image, size: 48),
                 ),
               )
@@ -473,7 +597,6 @@ class _TimelineItem extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Step Dot & Vertical Line
           SizedBox(
             width: 28,
             child: Column(
@@ -516,7 +639,6 @@ class _TimelineItem extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
-          // Content
           Expanded(
             child: Padding(
               padding: EdgeInsets.only(bottom: isLast ? 0 : 20),
@@ -551,7 +673,7 @@ class _TimelineItem extends StatelessWidget {
                       color: colorScheme.onSurfaceVariant,
                     ),
                   ),
-                  ?trailingWidget,
+                  if (trailingWidget != null) trailingWidget!,
                 ],
               ),
             ),
