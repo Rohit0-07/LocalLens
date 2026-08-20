@@ -1,55 +1,48 @@
-# LocalLens Data Migrations
+# LocalLens Team Data Sync
 
-This folder contains **versioned data migrations** to synchronize database records (fixtures, sample wards, notices, users, categories, and system data) across development machines without checking `.db` files into Git.
+This folder is **transient**. It holds one data snapshot per team hand-off so
+every team member's local SQLite dev database sees the same **data** (schema
+changes live in `backend/alembic/`). Database files are git-ignored
+(`*.db`), so rows are shared by exporting them to a committed `.sql` file.
 
-## How It Works
+## The one-snapshot flow
 
-1. **Alembic** manages schema / table structures (`backend/alembic/`).
-2. **Data Migrations** (`backend/data_migrations/`) manage table content / rows.
-3. When you run the backend server (`make backend` or `uvicorn app.main:app`), pending data migrations execute automatically inside FastAPI's startup lifecycle and record completion in the `_data_migrations` SQLite table.
+Strict turn-taking keeps every database identical after each hand-off, so a
+full snapshot is always safe to apply.
 
-## Authoring a New Data Migration
+| Step | Who | Command | What happens |
+|------|-----|---------|--------------|
+| 0 | new teammate | `make setup` → `make backend` → `make seed` | Baseline schema + seed demo data only |
+| 1 | sender (has new data) | `make sync-export` | Writes `sync.sql` (full idempotent snapshot) + bundles media into `media/` |
+| 2 | sender | `git commit` + `git push` | Pushes the snapshot |
+| 3 | receiver | `git pull` | Pulls the snapshot |
+| 4 | receiver | `make backend` (or `make sync-db`) | Startup auto-applies it, then deletes `sync.sql` and `media/` |
 
-1. Create a new file in this directory with a sequential numeric prefix, e.g. `0002_add_mumbai_wards.py`.
-2. Follow the standard template:
+> Apply is **transactional and idempotent**: it upserts (`INSERT ...
+> ON CONFLICT DO UPDATE`) every row in foreign-key-safe order, and rolls back
+> completely on the first error. If it fails, `sync.sql` is left in place so
+> the reason can be investigated. Applying twice changes nothing.
 
-```python
-"""0002_add_mumbai_wards: Add sample wards for western suburbs."""
-
-from __future__ import annotations
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-from app.features.wards.models import Ward
-
-MIGRATION_ID = "0002_add_mumbai_wards"
-DESCRIPTION = "Add Bandra and Andheri ward boundaries and metadata."
-
-
-async def apply(session: AsyncSession) -> None:
-    # Check if records already exist to keep migrations idempotent
-    existing = (await session.execute(select(Ward.slug).where(Ward.slug == "ward-50-bandra"))).scalar_one_or_none()
-    if not existing:
-        ward = Ward(
-            name="Ward 50, Bandra West",
-            slug="ward-50-bandra",
-            code="W50",
-            center_latitude=19.0596,
-            center_longitude=72.8295,
-        )
-        session.add(ward)
-```
-
-3. Commit and push the migration file to Git.
-4. When your teammates pull and run `make backend` (or `make sync-db`), the migration will automatically apply to their local database!
-
-## Useful Commands
+## Commands
 
 ```sh
-# Apply all pending data migrations manually
-make sync-db
-# or directly with uv
-cd backend && uv run python -m app.core.data_migrator --apply
+# Sender: dump your whole DB to backend/data_migrations/sync.sql (+ media/)
+make sync-export
+# or: cd backend && uv run python -m app.core.data_sync export
 
-# Check migration status (applied vs pending)
-cd backend && uv run python -m app.core.data_migrator --status
+# Receiver: apply the pulled snapshot (also runs automatically at startup)
+make sync-db
+# or: cd backend && uv run python -m app.core.data_sync apply
 ```
+
+## Rules (so hand-offs stay clean)
+
+- **One snapshot at a time.** Export, push, have everyone apply, then start
+  again. Never export while another snapshot is in flight.
+- **Never hand-edit `sync.sql`.** It is machine-generated. If your changes
+  are more than row data (new columns, constraints), they belong in an
+  Alembic migration.
+- **Baseline demo data stays in `seed/`.** This folder only carries the row
+  mutations that happened since the last hand-off.
+- **`sync.sql` and `media/` are deleted after a successful apply.** If they
+  re-appear in `git status`, someone exported but nobody applied yet.
