@@ -601,6 +601,78 @@ async def _report(session: AsyncSession) -> None:
         print(f"  {name:<20} {total:>4}")
 
 
+async def seed_database(
+    session: AsyncSession,
+    settings: Settings | None = None,
+    clear: bool = False,
+) -> None:
+    """Seed the database with baseline demo data."""
+    settings = settings or Settings()
+
+    if clear:
+        existing: dict[str, set[Any]] = {}
+    else:
+        existing = {
+            "users": await _keys(session, User.id),
+            "wards": await _keys(session, Ward.slug),
+            "media": await _keys(session, Media.id),
+            "issues": await _keys(session, Issue.id),
+            "representatives": await _keys(session, RepresentativeProfile.id),
+            "comments": await _keys(session, Comment.id),
+            "upvotes": await _keys(session, Upvote.issue_id, Upvote.user_id),
+            "notifications": await _keys(session, Notification.id),
+            "flags": await _keys(session, Flag.issue_id, Flag.reporter_id),
+            "moderation_audits": await _keys(
+                session,
+                ModerationAudit.issue_id,
+                ModerationAudit.action,
+                ModerationAudit.reason,
+            ),
+            "gamification": await _keys(session, UserGamification.user_id),
+            "badges": await _keys(session, UserBadge.user_id, UserBadge.badge_id),
+            "official_responses": await _keys(session, OfficialResponse.id),
+            "quorum_votes": await _keys(session, QuorumVote.issue_id, QuorumVote.user_id),
+        }
+
+    # Sync demo media and video files to upload directories
+    data = _load_data()
+    _sync_media_files(data)
+
+    secret = settings.jwt_secret
+
+    await _seed_users(session, data["users"], existing.get("users", set()))
+    await _seed_wards(session, data["wards"], existing.get("wards", set()))
+    await _seed_media(session, data["media"], existing.get("media", set()))
+    await _seed_issues(session, data["issues"], existing.get("issues", set()))
+    await _seed_representatives(
+        session, data["representatives"], existing.get("representatives", set())
+    )
+    await _seed_comments(session, data["comments"], existing.get("comments", set()), secret)
+    await _seed_upvotes(session, data["upvotes"], existing.get("upvotes", set()))
+    await _seed_notifications(
+        session, data["notifications"], existing.get("notifications", set())
+    )
+    await _seed_flags(session, data["flags"], existing.get("flags", set()), secret)
+    await _seed_moderation_audits(
+        session, data["moderation_audits"], existing.get("moderation_audits", set())
+    )
+    await _seed_gamification(
+        session, data["gamification"], existing.get("gamification", set())
+    )
+    await _seed_gamification_badges(
+        session, data["gamification"], existing.get("badges", set())
+    )
+    await _seed_official_responses(
+        session, data["official_responses"], existing.get("official_responses", set())
+    )
+    await _seed_quorum_votes(
+        session, data["quorum_votes"], existing.get("quorum_votes", set())
+    )
+    await _seed_wins_for_resolved_issues(session)
+
+    await _reconcile_counters(session)
+
+
 async def _main(args: argparse.Namespace) -> None:
     settings = Settings(database_url=args.db) if args.db else Settings()
     db = Database(settings.database_url)
@@ -609,68 +681,7 @@ async def _main(args: argparse.Namespace) -> None:
             await db.drop_all()
         await db.create_all()
         async with db.session_factory() as session:
-            if args.clear:
-                existing: dict[str, set[Any]] = {}
-            else:
-                existing = {
-                    "users": await _keys(session, User.id),
-                    "wards": await _keys(session, Ward.slug),
-                    "media": await _keys(session, Media.id),
-                    "issues": await _keys(session, Issue.id),
-                    "representatives": await _keys(session, RepresentativeProfile.id),
-                    "comments": await _keys(session, Comment.id),
-                    "upvotes": await _keys(session, Upvote.issue_id, Upvote.user_id),
-                    "notifications": await _keys(session, Notification.id),
-                    "flags": await _keys(session, Flag.issue_id, Flag.reporter_id),
-                    "moderation_audits": await _keys(
-                        session,
-                        ModerationAudit.issue_id,
-                        ModerationAudit.action,
-                        ModerationAudit.reason,
-                    ),
-                    "gamification": await _keys(session, UserGamification.user_id),
-                    "badges": await _keys(session, UserBadge.user_id, UserBadge.badge_id),
-                    "official_responses": await _keys(session, OfficialResponse.id),
-                    "quorum_votes": await _keys(session, QuorumVote.issue_id, QuorumVote.user_id),
-                }
-
-            # Sync demo media and video files to upload directories
-            data = _load_data()
-            _sync_media_files(data)
-
-            secret = settings.jwt_secret
-
-            await _seed_users(session, data["users"], existing.get("users", set()))
-            await _seed_wards(session, data["wards"], existing.get("wards", set()))
-            await _seed_media(session, data["media"], existing.get("media", set()))
-            await _seed_issues(session, data["issues"], existing.get("issues", set()))
-            await _seed_representatives(
-                session, data["representatives"], existing.get("representatives", set())
-            )
-            await _seed_comments(session, data["comments"], existing.get("comments", set()), secret)
-            await _seed_upvotes(session, data["upvotes"], existing.get("upvotes", set()))
-            await _seed_notifications(
-                session, data["notifications"], existing.get("notifications", set())
-            )
-            await _seed_flags(session, data["flags"], existing.get("flags", set()), secret)
-            await _seed_moderation_audits(
-                session, data["moderation_audits"], existing.get("moderation_audits", set())
-            )
-            await _seed_gamification(
-                session, data["gamification"], existing.get("gamification", set())
-            )
-            await _seed_gamification_badges(
-                session, data["gamification"], existing.get("badges", set())
-            )
-            await _seed_official_responses(
-                session, data["official_responses"], existing.get("official_responses", set())
-            )
-            await _seed_quorum_votes(
-                session, data["quorum_votes"], existing.get("quorum_votes", set())
-            )
-            await _seed_wins_for_resolved_issues(session)
-
-            await _reconcile_counters(session)
+            await seed_database(session, settings=settings, clear=args.clear)
             await _report(session)
     finally:
         await db.dispose()

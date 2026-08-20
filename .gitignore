@@ -29,6 +29,8 @@ build/
 *.db-wal
 uploads/*
 !uploads/.gitkeep
+backend/uploads/*
+!backend/uploads/.gitkeep
 
 # Environment variables & secrets
 .env

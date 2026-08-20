@@ -2,19 +2,29 @@ PY ?= uv
 APP_DIR := app
 BACKEND_DIR := backend
 
-.PHONY: help setup backend app seed check lint test gen format
+.PHONY: help setup backend app seed sync-db check lint test gen format
+
+ifeq ($(OS),Windows_NT)
+HELP_ECHO = @echo $(1)
+else
+HELP_ECHO = @echo "$(1)"
+endif
 
 help:
-	@echo "LocalLens targets:"
-	@echo "  make setup       install backend deps + app packages"
-	@echo "  make backend     backend dev server (uvicorn --reload)"
-	@echo "  make app         run the Flutter app"
-	@echo "  make seed        wipe and reseed the dev database from seed/data"
-	@echo "  make gen         freezed/json_serializable codegen"
-	@echo "  make format      format both codebases"
-	@echo "  make lint        ruff + flutter analyze"
-	@echo "  make test        pytest + flutter test"
-	@echo "  make check       lint + test"
+	$(call HELP_ECHO,LocalLens targets:)
+	$(call HELP_ECHO,  make setup       install backend deps + app packages)
+	$(call HELP_ECHO,  make backend     backend dev server (uvicorn --reload))
+	$(call HELP_ECHO,  make sync-db     sync database content from data_migrations)
+	$(call HELP_ECHO,  make app         run the Flutter app)
+	$(call HELP_ECHO,  make seed        wipe and reseed the dev database from seed/data)
+	$(call HELP_ECHO,  make gen         freezed/json_serializable codegen)
+	$(call HELP_ECHO,  make format      format both codebases)
+	$(call HELP_ECHO,  make lint        ruff + flutter analyze)
+	$(call HELP_ECHO,  make test        pytest + flutter test)
+	$(call HELP_ECHO,  make check       lint + test)
+
+sync-db:
+	cd $(BACKEND_DIR) && $(PY) run python -m app.core.data_migrator --apply
 
 seed:
 	cd $(BACKEND_DIR) && $(PY) run python seed.py
@@ -24,7 +34,7 @@ setup:
 	cd $(APP_DIR) && flutter pub get
 
 backend:
-	cd $(BACKEND_DIR) && source .venv/bin/activate && $(PY) run alembic upgrade head && $(PY) run uvicorn app.main:app --reload
+	cd $(BACKEND_DIR) && $(PY) run alembic upgrade head && $(PY) run python -m app.core.data_migrator && $(PY) run uvicorn app.main:app --reload
 
 app:
 	cd $(APP_DIR) && flutter run
@@ -45,3 +55,4 @@ test:
 	cd $(APP_DIR) && flutter test
 
 check: lint test
+

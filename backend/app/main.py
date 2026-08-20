@@ -19,6 +19,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     settings = app.state.settings
     if settings.environment == "development":
         await app.state.database.create_all()
+        from app.core.data_migrator import run_data_migrations
+
+        await run_data_migrations(app.state.database, settings)
     yield
     await app.state.database.dispose()
 
