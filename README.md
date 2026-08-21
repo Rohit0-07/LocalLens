@@ -5,9 +5,9 @@ public services from their phone; the feed is filtered to the user's own neighbo
 authorities are notified, and issues move through an escalation ladder until resolved.
 
 This repository is a **monorepo** with a Python/FastAPI backend and a Flutter app, both
-kept small and feature-first. The repository also carries a Spec-Driven Development
-harness (OpenCode / Claude Code / Antigravity) — see [`pipeline.md`](pipeline.md) and
-`AGENTS.md` for that.
+kept small and feature-first. Code changes are driven by **one ticket per task** in
+`docs/tickets/` — see `AGENTS.md` for the workflow and `docs/CODEBASE_MAP.md` for where
+everything lives.
 
 ## Repo layout
 

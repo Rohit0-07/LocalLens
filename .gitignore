@@ -38,23 +38,11 @@ backend/uploads/*
 !.env.example
 backend/.env*
 
-# SDD & Agent Harness runtime state & logs
-.sdd/runs/
-.sdd/state.json
-logs/*
-!logs/.gitkeep
-docs/0_repo_index.json
-docs/4_interfaces.json
-.agents/*
-!.agents/hooks.json
-BRIEFING.md
-handoff.md
-ORIGINAL_REQUEST.md
+# Archived harness reference (kept, never followed)
+# .archive/ is committed so the old SDD/teamwork setup survives for reference.
 
 # Node & OpenCode plugin
 .opencode/node_modules/
-.opencode/package-lock.json
-.opencode/package.json
 node_modules/
 
 # OS / Editor / IDE
