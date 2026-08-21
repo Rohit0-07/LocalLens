@@ -1,38 +1,30 @@
-# NNN-short-slug
+# <short-id>: <One-line title>
 
-**Status:** open | in-progress | done | blocked
+Status: Open
 
-## Goal
+## Summary
 
-One clear sentence: what the finished change looks like.
+<2–4 lines: what is broken/missing, for whom, and why it matters. Link to any
+design doc section (LocalLens_App_Info.md / LocalLens_Feature_Checklist.md).>
 
-## Problem / expected behaviour
+## Files to touch
 
-What happens today (or the bug report verbatim) and what SHOULD happen.
+<!-- The contract: the diff stays inside this list. Widen only by editing the ticket. -->
 
-## Files to look for
+- `backend/...` — <what changes there>
+- `app/lib/features/<name>/...` — <what changes there>
+- `backend/tests/features/<name>/test_*.py` or `app/test/features/<name>/...` — <tests>
 
-- (exact files — no guessing, no browsing. From `docs/CODEBASE_MAP.md`.)
+## Out of scope
 
-## Acceptance criteria
+- <explicitly excluded, so scope creep has something to point at>
 
-- [ ] verifiable outcome 1
-- [ ] verifiable outcome 2
-
-## Write Test
-
-The tests should be written with a separate agent
-
-- If the change are only in backend/frontend then only write backend/frontend test
-- If the changes are in both then write tests for both
-- The test Should be based on aceptance criteria
-- The tests should be written in such a way that it can be run with `make check` command
-
-## Verify
+## Verify command
 
 ```sh
-make check
-# or targeted, e.g.:
-# cd backend && uv run pytest tests/features/<name>
-# flutter test test/features/<name>/..._test.dart
+make check        # or a targeted subset, e.g.: cd backend && uv run pytest tests/features/<name>
 ```
+
+## Notes
+
+- <constraints, conventions to follow (AGENTS.md §6), edge cases, prior art>
