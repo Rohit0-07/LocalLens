@@ -84,14 +84,18 @@ class FakeFeedRepository implements FeedRepository {
 
   @override
   Future<List<FeedItem>> fetchMultiTypeFeed({
-    required double latitude,
-    required double longitude,
+    double? latitude,
+    double? longitude,
     double radiusKm = 5.0,
     String type = 'all',
     String? cursor,
     int limit = 20,
   }) async {
-    final list = await fetchNearby(latitude: latitude, longitude: longitude, radiusKm: radiusKm);
+    final list = await fetchNearby(
+      latitude: latitude ?? defaultLatitude,
+      longitude: longitude ?? defaultLongitude,
+      radiusKm: radiusKm,
+    );
     return list.map((i) => FeedItem(itemType: FeedItemType.issue, issue: i)).toList();
   }
 

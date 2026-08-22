@@ -1,6 +1,7 @@
 """F-08 Search — backend contract tests (code-blind, contract-driven)."""
 
 import httpx
+from sqlalchemy import select, update
 
 DEFAULT_LAT = 19.1136
 DEFAULT_LNG = 72.8697
@@ -521,3 +522,129 @@ async def test_ward_length_bounds(client, create_user_headers):
     assert response.json()["code"] == "invalid_ward"
     response = await _search(client, q="k", ward="w" * 64, headers=headers)
     assert response.status_code == 200
+
+
+async def _hide_issue(app, issue_id: int) -> None:
+    async with app.state.database.session_factory() as session:
+        from app.features.issues.models import Issue
+
+        await session.execute(update(Issue).where(Issue.id == issue_id).values(is_hidden=True))
+        await session.commit()
+
+
+async def _make_admin(app, phone: str) -> None:
+    async with app.state.database.session_factory() as session:
+        from app.features.auth.models import User
+
+        row = await session.scalar(select(User).where(User.phone == phone))
+        assert row is not None
+        row.is_admin = True
+        await session.commit()
+
+
+async def test_full_pages_with_hidden_interleaved(client, create_user_headers, app):
+    # Hidden rows must be filtered in SQL so limit/offset pages stay full.
+    headers = await create_user_headers("+919000000030")
+    created = [
+        await _create_issue(client, headers, title=f"pagemaker item {number}")
+        for number in range(1, 9)
+    ]
+    for issue in created[::2]:
+        await _hide_issue(app, issue["id"])
+
+    page_1 = await _search(client, q="pagemaker", limit=2, offset=0, headers=headers)
+    page_2 = await _search(client, q="pagemaker", limit=2, offset=2, headers=headers)
+    assert page_1.status_code == page_2.status_code == 200
+    hidden_ids = {issue["id"] for issue in created[::2]}
+    ids_page_1 = [issue["id"] for issue in page_1.json()]
+    ids_page_2 = [issue["id"] for issue in page_2.json()]
+    # Newest-first ordering over the visible rows only; pages are full and
+    # never contain a hidden row.
+    visible_newest_first = [issue["id"] for issue in reversed(created[1::2])]
+    assert len(ids_page_1) == len(ids_page_2) == 2
+    assert not (set(ids_page_1) & hidden_ids)
+    assert not (set(ids_page_2) & hidden_ids)
+    assert ids_page_1 + ids_page_2 == visible_newest_first[:4]
+
+
+async def test_full_pages_with_shielded_unresolved_interleaved(
+    client, create_user_headers
+):
+    headers = await create_user_headers("+919000000031")
+    for number in range(1, 7):
+        await _create_issue(
+            client,
+            headers,
+            title=f"shieldpage item {number}",
+            is_shielded=number % 2 == 0,
+        )
+    page = await _search(client, q="shieldpage", limit=3, offset=0, headers=headers)
+    assert page.status_code == 200
+    titles = _titles(page)
+    assert len(titles) == 3
+    assert all("item 1" in t or "item 3" in t or "item 5" in t for t in titles)
+
+
+async def test_radius_filter_applies_before_pagination(client, create_user_headers):
+    # Points inside the bbox but outside the radius circle must not consume
+    # pagination slots.
+    headers = await create_user_headers("+919000000032")
+    center = (19.1136, 72.8697)
+    corner = (center[0] + 4.0 / 111.0, center[1] + 4.0 / (111.0 * 0.934))
+    titles_in_circle = []
+    for number in range(1, 5):
+        title = f"circleprobe near {number}"
+        await _create_issue(client, headers, title=title, latitude=center[0], longitude=center[1])
+        titles_in_circle.append(title)
+    for number in range(1, 4):
+        await _create_issue(
+            client,
+            headers,
+            title=f"circleprobe corner {number}",
+            latitude=corner[0],
+            longitude=corner[1],
+        )
+
+    first_page = await _search(
+        client,
+        q="circleprobe",
+        latitude=center[0],
+        longitude=center[1],
+        radius_km=1.0,
+        limit=3,
+        offset=0,
+        headers=headers,
+    )
+    second_page = await _search(
+        client,
+        q="circleprobe",
+        latitude=center[0],
+        longitude=center[1],
+        radius_km=1.0,
+        limit=3,
+        offset=3,
+        headers=headers,
+    )
+    assert first_page.status_code == second_page.status_code == 200
+    combined = _titles(first_page) + _titles(second_page)
+    assert sorted(combined) == sorted(titles_in_circle)
+
+
+async def test_search_blob_matches_after_admin_reassign(
+    client, create_user_headers, app
+):
+    headers = await create_user_headers("+919000000033")
+    admin_headers = await create_user_headers("+919000000034")
+    await _make_admin(app, "+919000000034")
+    issue = await _create_issue(client, headers, title="reassign probe")
+
+    response = await client.post(
+        "/api/v1/admin/issues/{}/reassign".format(issue["id"]),
+        json={"category": "drainage", "reason": "wrong bucket"},
+        headers=admin_headers,
+    )
+    assert response.status_code == 200, response.text
+
+    response = await _search(client, q="drainage", headers=headers)
+    assert response.status_code == 200
+    assert "reassign probe" in _titles(response)

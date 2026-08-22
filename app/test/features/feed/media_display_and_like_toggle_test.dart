@@ -69,8 +69,8 @@ class _FakeFeedRepository implements FeedRepository {
 
   @override
   Future<List<FeedItem>> fetchMultiTypeFeed({
-    required double latitude,
-    required double longitude,
+    double? latitude,
+    double? longitude,
     double radiusKm = 5.0,
     String type = 'all',
     String? cursor,
@@ -314,9 +314,16 @@ void main() {
       );
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: WinCard(win: win),
+        ProviderScope(
+          overrides: [
+            feedRepositoryProvider.overrideWithValue(
+              _FakeFeedRepository(issues: []),
+            ),
+          ],
+          child: MaterialApp(
+            home: Scaffold(
+              body: WinCard(win: win),
+            ),
           ),
         ),
       );

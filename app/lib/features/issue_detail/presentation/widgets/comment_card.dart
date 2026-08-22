@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/router/route_paths.dart';
+import '../../../../core/utils/profile_navigation.dart';
 import '../../data/issue_detail_api.dart';
 
 /// Displays a comment and its nested replies with a clean, compact threaded layout.
@@ -136,7 +136,7 @@ class _CommentCardState extends State<CommentCard> {
   }
 }
 
-class _CommentBubble extends StatelessWidget {
+class _CommentBubble extends ConsumerWidget {
   const _CommentBubble({
     required this.comment,
     required this.onReply,
@@ -148,7 +148,7 @@ class _CommentBubble extends StatelessWidget {
   final VoidCallback onDelete;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final initial = comment.anonId.isEmpty
@@ -166,9 +166,7 @@ class _CommentBubble extends StatelessWidget {
               child: InkWell(
                 key: Key('commentAuthor_${comment.id}'),
                 onTap: comment.userId != null
-                    ? () => context.push(
-                          RoutePaths.publicProfileFor(comment.userId!),
-                        )
+                    ? () => openReporterProfile(context, ref, comment.userId)
                     : () {
                         ScaffoldMessenger.of(context).hideCurrentSnackBar();
                         ScaffoldMessenger.of(context).showSnackBar(

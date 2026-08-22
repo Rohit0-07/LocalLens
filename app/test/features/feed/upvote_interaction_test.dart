@@ -95,8 +95,8 @@ class UpvoteTestFeedRepository implements FeedRepository {
 
   @override
   Future<List<FeedItem>> fetchMultiTypeFeed({
-    required double latitude,
-    required double longitude,
+    double? latitude,
+    double? longitude,
     double radiusKm = 5.0,
     String type = 'all',
     String? cursor,

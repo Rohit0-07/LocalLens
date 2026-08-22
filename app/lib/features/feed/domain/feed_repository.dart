@@ -9,9 +9,11 @@ abstract interface class FeedRepository {
     double radiusKm = 5.0,
   });
 
+  /// Fetches the multi-type feed. Null coordinates request the unscoped
+  /// "all wards" feed; non-null coords scope it to a radius around the point.
   Future<List<FeedItem>> fetchMultiTypeFeed({
-    required double latitude,
-    required double longitude,
+    double? latitude,
+    double? longitude,
     double radiusKm = 5.0,
     String type = 'all',
     String? cursor,

@@ -90,6 +90,20 @@ class AppStrings {
       'te': 'లోకల్లెన్స్',
     },
     'feed_filter_all': {'en': 'All', 'hi': 'सभी', 'mr': 'सर्व', 'ta': 'அனைத்து', 'te': 'అన్నీ'},
+    'feed_scope_all': {
+      'en': 'All wards',
+      'hi': 'सभी वार्ड',
+      'mr': 'सर्व वॉर्ड',
+      'ta': 'அனைத்து வார்டுகள்',
+      'te': 'అన్ని వార్డులు',
+    },
+    'feed_scope_my_ward': {
+      'en': 'My ward',
+      'hi': 'मेरा वार्ड',
+      'mr': 'माझा वॉर्ड',
+      'ta': 'என் வார்டு',
+      'te': 'నా వార్డు',
+    },
     'feed_filter_issues': {
       'en': 'Issues',
       'hi': 'समस्याएँ',

@@ -27,10 +27,11 @@ void openReporterProfile(
     return;
   }
   final session = ref.read(sessionProvider);
+  // Session.userId is Object: an int right after login but a String when
+  // restored from storage after an app restart, so compare canonical forms.
   final isSelf = session != null &&
       !session.isGuest &&
-      session.userId is int &&
-      session.userId == reporterId;
+      session.userId.toString() == reporterId.toString();
   if (isSelf) {
     context.go(RoutePaths.profile);
   } else {

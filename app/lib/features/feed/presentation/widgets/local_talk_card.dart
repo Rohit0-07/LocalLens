@@ -1,20 +1,20 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/router/route_paths.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/utils/profile_navigation.dart';
 import '../../../../shared/widgets/media_preview_widget.dart';
 import '../../../ward/domain/local_talk_post.dart';
 
 /// Ward discussion card — feed-first (Twitter) with the author identity of
 /// Instagram. Violet accent ties it to the "local talk" brand moment.
-class LocalTalkCard extends StatelessWidget {
+class LocalTalkCard extends ConsumerWidget {
   final LocalTalkPost post;
 
   const LocalTalkCard({super.key, required this.post});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final colorScheme = theme.colorScheme;
@@ -44,9 +44,7 @@ class LocalTalkCard extends StatelessWidget {
             InkWell(
               key: Key('localTalkAuthor_${post.id}'),
               onTap: post.authorId != null
-                  ? () => context.push(
-                        RoutePaths.publicProfileFor(post.authorId!),
-                      )
+                  ? () => openReporterProfile(context, ref, post.authorId!)
                   : null,
               borderRadius: BorderRadius.circular(8),
               child: Row(

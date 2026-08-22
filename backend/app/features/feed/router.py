@@ -12,8 +12,8 @@ router = APIRouter(tags=["feed"])
 async def get_feed_endpoint(
     session: SessionDep,
     settings: SettingsDep,
-    latitude: Annotated[float, Query()],
-    longitude: Annotated[float, Query()],
+    latitude: Annotated[float | None, Query()] = None,
+    longitude: Annotated[float | None, Query()] = None,
     radius_km: Annotated[float, Query(ge=0.1, le=50)] = 5.0,
     type: Annotated[str, Query(alias="type")] = "all",
     cursor: Annotated[str | None, Query()] = None,

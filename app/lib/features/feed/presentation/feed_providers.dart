@@ -45,6 +45,12 @@ final feedRepositoryProvider = Provider<FeedRepository>(
   (ref) => FeedApi(ref.watch(apiClientProvider)),
 );
 
+/// Spatial scope of the feed: all wards (unscoped) or the device's own ward
+/// (radius query around the current location).
+enum FeedScope { allWards, myWard }
+
+final feedScopeProvider = StateProvider<FeedScope>((ref) => FeedScope.allWards);
+
 final feedFilterProvider = StateProvider<String>((ref) => 'all');
 
 /// Resolves the coordinates to query the feed with, awaiting the device
@@ -92,12 +98,16 @@ class MultiTypeFeedController extends AsyncNotifier<List<FeedItem>> {
   Future<List<FeedItem>> build() async {
     final repository = ref.watch(feedRepositoryProvider);
     final filter = ref.watch(feedFilterProvider);
-    final coords = await _feedCoords(ref);
-    return repository.fetchMultiTypeFeed(
-      latitude: coords.lat,
-      longitude: coords.lng,
-      type: filter,
-    );
+    final scope = ref.watch(feedScopeProvider);
+    if (scope == FeedScope.myWard) {
+      final coords = await _feedCoords(ref);
+      return repository.fetchMultiTypeFeed(
+        latitude: coords.lat,
+        longitude: coords.lng,
+        type: filter,
+      );
+    }
+    return repository.fetchMultiTypeFeed(type: filter);
   }
 
   Future<void> refresh() async {

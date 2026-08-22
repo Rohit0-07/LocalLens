@@ -34,6 +34,7 @@ class Issue(Base):
     longitude: Mapped[float] = mapped_column(Float, nullable=False)
     geohash: Mapped[str | None] = mapped_column(String(12), index=True, nullable=True)
     ward: Mapped[str] = mapped_column(String(64), default="Ward 45, Urban Central", index=True)
+    search_blob: Mapped[str | None] = mapped_column(Text, nullable=True, index=True)
     is_anonymous: Mapped[bool] = mapped_column(default=False)
     fuzz_location: Mapped[bool] = mapped_column(default=False)
     is_fuzzed: Mapped[bool] = mapped_column(default=False)

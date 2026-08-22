@@ -29,8 +29,8 @@ class FakeMultiTypeFeedRepository implements FeedRepository {
 
   @override
   Future<List<FeedItem>> fetchMultiTypeFeed({
-    required double latitude,
-    required double longitude,
+    double? latitude,
+    double? longitude,
     double radiusKm = 5.0,
     String type = 'all',
     String? cursor,
@@ -299,35 +299,41 @@ void main() {
     await tester.pumpAndSettle();
 
     // Tap Issues chip
+    await tester.ensureVisible(find.byKey(const Key('feedFilterChip_issues')));
     await tester.tap(find.byKey(const Key('feedFilterChip_issues')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('issueCard_101')), findsOneWidget);
     expect(find.byKey(const Key('winCard_202')), findsNothing);
 
     // Tap Wins chip
+    await tester.ensureVisible(find.byKey(const Key('feedFilterChip_wins')));
     await tester.tap(find.byKey(const Key('feedFilterChip_wins')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('winCard_202')), findsOneWidget);
     expect(find.byKey(const Key('issueCard_101')), findsNothing);
 
     // Tap Notices chip
+    await tester.ensureVisible(find.byKey(const Key('feedFilterChip_notices')));
     await tester.tap(find.byKey(const Key('feedFilterChip_notices')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('noticeCard_303')), findsOneWidget);
     expect(find.byKey(const Key('winCard_202')), findsNothing);
 
     // Tap Local Talk chip
+    await tester.ensureVisible(find.byKey(const Key('feedFilterChip_local_talk')));
     await tester.tap(find.byKey(const Key('feedFilterChip_local_talk')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('localTalkCard_404')), findsOneWidget);
     expect(find.byKey(const Key('noticeCard_303')), findsNothing);
 
     // Tap Notices chip
+    await tester.ensureVisible(find.byKey(const Key('feedFilterChip_notices')));
     await tester.tap(find.byKey(const Key('feedFilterChip_notices')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('noticeCard_303')), findsOneWidget);
 
     // Tap Local Talk chip
+    await tester.ensureVisible(find.byKey(const Key('feedFilterChip_local_talk')));
     await tester.tap(find.byKey(const Key('feedFilterChip_local_talk')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('localTalkCard_404')), findsOneWidget);
@@ -335,9 +341,15 @@ void main() {
 
   testWidgets('FE-FEED-03: WinCard rendering with photos, banner, credits, and share button', (tester) async {
     await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: WinCard(win: sampleWin),
+      ProviderScope(
+        overrides: [
+          feedRepositoryProvider
+              .overrideWithValue(FakeMultiTypeFeedRepository(items: const [])),
+        ],
+        child: MaterialApp(
+          home: Scaffold(
+            body: WinCard(win: sampleWin),
+          ),
         ),
       ),
     );

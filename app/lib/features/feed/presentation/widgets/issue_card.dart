@@ -14,12 +14,12 @@ import '../../../../shared/widgets/media_preview_widget.dart';
 import '../../../../shared/widgets/status_badge.dart';
 import '../../../auth/presentation/auth_providers.dart';
 import '../../../auth/presentation/widgets/guest_guard.dart';
-import '../../../issue_detail/presentation/controllers/issue_detail_controller.dart';
 import '../../../issue_detail/presentation/widgets/comments_section.dart';
 import '../../../issues/presentation/widgets/flag_issue_dialog.dart';
 import '../../domain/feed_item.dart';
 import '../../domain/issue.dart';
 import '../feed_providers.dart';
+import 'social_action.dart';
 
 /// Clean, modern civic issue card.
 ///
@@ -463,7 +463,7 @@ class IssueCard extends ConsumerWidget {
               Row(
                 key: Key('issueActions_${activeIssue.id}'),
                 children: [
-                  _SocialAction(
+                  SocialAction(
                     key: Key('upvote_button_${activeIssue.id}'),
                     icon: activeIssue.hasUpvoted
                         ? Icons.thumb_up_rounded
@@ -497,15 +497,15 @@ class IssueCard extends ConsumerWidget {
                     },
                   ),
                   const SizedBox(width: 4),
-                  _SocialAction(
+                  SocialAction(
                     key: Key('comment_button_${activeIssue.id}'),
                     icon: Icons.chat_bubble_outline_rounded,
                     color: colorScheme.onSurfaceVariant,
-                    label: _CommentCount(issueId: activeIssue.id),
+                    label: CommentCount(issueId: activeIssue.id),
                     onTap: () => _showCommentsModal(context, activeIssue),
                   ),
                   const Spacer(),
-                  _SocialAction(
+                  SocialAction(
                     key: Key('share_button_${activeIssue.id}'),
                     icon: Icons.share_outlined,
                     color: colorScheme.onSurfaceVariant,
@@ -670,64 +670,6 @@ class _MetaChip extends StatelessWidget {
   }
 }
 
-class _SocialAction extends StatelessWidget {
-  const _SocialAction({
-    super.key,
-    required this.icon,
-    required this.color,
-    required this.label,
-    required this.onTap,
-    this.backgroundColor,
-    this.tooltip,
-  });
-
-  final IconData icon;
-  final Color color;
-  final Widget label;
-  final VoidCallback onTap;
-  final Color? backgroundColor;
-  final String? tooltip;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      label: tooltip,
-      enabled: true,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 40),
-          child: Container(
-            alignment: Alignment.center,
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            decoration: BoxDecoration(
-              color: backgroundColor ?? Colors.transparent,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(icon, size: 18, color: color),
-                const SizedBox(width: 5),
-                DefaultTextStyle(
-                  style: Theme.of(context).textTheme.labelMedium!.copyWith(
-                    color: color,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13,
-                  ),
-                  child: label,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 /// Description text that can expand beyond the collapsed 2-line preview.
 /// A "Read more" affordance appears only when the text actually overflows.
 class _ExpandableDescription extends StatefulWidget {
@@ -786,18 +728,5 @@ class _ExpandableDescriptionState extends State<_ExpandableDescription> {
         );
       },
     );
-  }
-}
-
-class _CommentCount extends ConsumerWidget {
-  const _CommentCount({required this.issueId});
-
-  final int issueId;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final asyncComments = ref.watch(commentsProvider(issueId));
-    final count = asyncComments.asData?.value.length ?? 0;
-    return Text('$count');
   }
 }

@@ -1,7 +1,7 @@
 import re
 from datetime import UTC, datetime
 
-from sqlalchemy import Select, func, or_, select
+from sqlalchemy import Select, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -20,15 +20,6 @@ def _utc_now() -> datetime:
 
 def _escape_like(q: str) -> str:
     return q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
-
-
-def _alnum_expr(column) -> object:
-    """Lowercases [column] and strips punctuation so slug/name/code variants
-    can be compared directly (e.g. 'ward-45-urban-central' == 'Ward 45, Urban Central')."""
-    cleaned = func.lower(column)
-    for ch in ",.-_' ":
-        cleaned = func.replace(cleaned, ch, "")
-    return cleaned
 
 
 def _alnum(value: str) -> str:
@@ -52,6 +43,41 @@ def parse_iso_datetime(value: str) -> datetime:
     return parsed
 
 
+_GEO_OVERFETCH_FACTOR = 6
+
+
+async def _ward_labels(
+    session: AsyncSession, ward: str
+) -> tuple[list[str], list[str]]:
+    """Stored ward labels matching [ward] under the historical contract.
+    Returns (exact_labels, contained_labels):
+
+    - exact_labels: stored labels whose punctuation-insensitive (alnum) form
+      equals or contains the alnum query — matched in Python once per query
+      over the low-cardinality distinct set instead of per-row REPLACEs.
+    - contained_labels: canonical ward-table name/code/slug values that may
+      appear as substrings inside stored labels."""
+    normalized_ward = _alnum(ward)
+    labels = (await session.execute(select(Issue.ward).distinct())).scalars()
+    matched = [
+        label
+        for label in labels
+        if label
+        and (
+            _alnum(label) == normalized_ward or normalized_ward in _alnum(label)
+        )
+    ]
+    contained: list[str] = []
+    ward_row = await session.scalar(
+        select(Ward).where(or_(Ward.slug == ward, Ward.name == ward, Ward.code == ward))
+    )
+    if ward_row is not None:
+        for label in (ward_row.name, ward_row.code, ward_row.slug):
+            if label and label not in contained:
+                contained.append(label)
+    return matched, contained
+
+
 async def search_issues(
     session: AsyncSession,
     *,
@@ -70,6 +96,9 @@ async def search_issues(
     offset: int = 0,
 ) -> list[Issue]:
     query = (q or "").strip()
+    geo = latitude is not None and longitude is not None
+
+    visibility = or_(Issue.is_shielded.is_(False), Issue.status == "resolved")
 
     statement: Select[tuple[Issue]] = (
         select(Issue)
@@ -78,6 +107,7 @@ async def search_issues(
             selectinload(Issue.reporter),
             selectinload(Issue.assigned_representative).selectinload(RepresentativeProfile.user),
         )
+        .where(Issue.is_hidden.is_(False), visibility)
     )
 
     if latitude is not None and longitude is not None:
@@ -86,18 +116,20 @@ async def search_issues(
             statement.outerjoin(User, Issue.reporter_id == User.id)
             .options(
                 selectinload(Issue.reporter),
-                selectinload(Issue.assigned_representative).selectinload(RepresentativeProfile.user),
+                selectinload(Issue.assigned_representative).selectinload(
+                    RepresentativeProfile.user
+                ),
             )
+            .where(Issue.is_hidden.is_(False), visibility)
         )
 
     if query:
         pattern = f"%{_escape_like(query)}%"
         clean_handle = query.lstrip("@")
         text_match = or_(
-            Issue.title.ilike(pattern, escape="\\"),
-            Issue.description.ilike(pattern, escape="\\"),
-            Issue.category.ilike(pattern, escape="\\"),
-            Issue.ward.ilike(pattern, escape="\\"),
+            # search_blob covers title/description/category/ward in one
+            # lowercased column maintained on write (see build_search_blob).
+            Issue.search_blob.ilike(pattern, escape="\\"),
             User.username.ilike(f"%{_escape_like(clean_handle)}%", escape="\\"),
             User.display_name.ilike(pattern, escape="\\"),
         )
@@ -123,53 +155,53 @@ async def search_issues(
         if valid_cats:
             statement = statement.where(Issue.category.in_(valid_cats))
     if ward is not None and ward.strip() and ward.lower() != "all":
-        normalized_ward = _alnum(ward)
-        ward_match = or_(
-            Issue.ward == ward,
-            Issue.ward.ilike(f"%{_escape_like(ward)}%"),
-            _alnum_expr(Issue.ward) == normalized_ward,
-            _alnum_expr(Issue.ward).like(f"%{normalized_ward}%"),
+        labels, contained_labels = await _ward_labels(session, ward.strip())
+        conditions = [Issue.ward.ilike(f"%{_escape_like(ward)}%", escape="\\")]
+        if labels:
+            conditions.append(Issue.ward.in_(labels))
+        conditions.extend(
+            Issue.ward.ilike(f"%{_escape_like(label)}%", escape="\\")
+            for label in contained_labels
         )
-        ward_row = await session.scalar(
-            select(Ward).where(
-                or_(Ward.slug == ward, Ward.name == ward, Ward.code == ward)
-            )
-        )
-        if ward_row is not None:
-            for label in (ward_row.name, ward_row.code, ward_row.slug):
-                ward_match = or_(ward_match, Issue.ward == label)
-                ward_match = or_(
-                    ward_match, Issue.ward.ilike(f"%{_escape_like(label)}%")
-                )
-        statement = statement.where(ward_match)
+        statement = statement.where(or_(*conditions))
     if created_after is not None:
         statement = statement.where(Issue.created_at >= created_after)
     if created_before is not None:
         statement = statement.where(Issue.created_at <= created_before)
-    statement = (
-        statement.order_by(Issue.created_at.desc(), Issue.id.desc()).limit(limit).offset(offset)
-    )
 
+    statement = statement.order_by(Issue.created_at.desc(), Issue.id.desc())
+
+    if geo:
+        # The bbox is a superset of the radius circle; fetch a bounded
+        # over-fetch window, apply the exact haversine check in Python, then
+        # slice the page — so LIMIT/OFFSET never lands on rows that would be
+        # discarded afterwards.
+        result = await session.execute(statement.limit((offset + limit) * _GEO_OVERFETCH_FACTOR))
+        issues = list(result.scalars().all())
+        now = _utc_now()
+        modified = False
+        page: list[Issue] = []
+        assert latitude is not None and longitude is not None
+        for issue in issues:
+            if evaluate_escalation(issue, now):
+                modified = True
+            if haversine_km(latitude, longitude, issue.latitude, issue.longitude) <= radius_km:
+                page.append(issue)
+        if modified:
+            await session.commit()
+        return page[offset : offset + limit]
+
+    statement = statement.limit(limit).offset(offset)
     result = await session.execute(statement)
     issues = list(result.scalars().all())
 
     now = _utc_now()
     modified = False
-    filtered_issues: list[Issue] = []
-
     for issue in issues:
         if evaluate_escalation(issue, now):
             modified = True
-        if issue.is_hidden:
-            continue
-        if issue.is_shielded and issue.status != "resolved":
-            continue
-        if latitude is not None and longitude is not None:
-            if haversine_km(latitude, longitude, issue.latitude, issue.longitude) > radius_km:
-                continue
-        filtered_issues.append(issue)
 
     if modified:
         await session.commit()
 
-    return filtered_issues
+    return issues

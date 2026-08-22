@@ -34,7 +34,7 @@ class HiveRecentSearchStore implements RecentSearchStore {
   Future<void> add(String query) async {
     final trimmed = query.trim();
     if (trimmed.isEmpty) return;
-    final items = load();
+    final items = List<String>.of(load());
     items.removeWhere((q) => q.toLowerCase() == trimmed.toLowerCase());
     items.insert(0, trimmed);
     if (items.length > _maxEntries) {

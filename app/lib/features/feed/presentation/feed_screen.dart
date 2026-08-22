@@ -26,6 +26,7 @@ class FeedScreen extends ConsumerWidget {
     final theme = Theme.of(context);
     final feedAsync = ref.watch(multiTypeFeedProvider);
     final selectedFilter = ref.watch(feedFilterProvider);
+    final selectedScope = ref.watch(feedScopeProvider);
     final pendingOutboxCount = ref.watch(offlineOutboxProvider).pendingCount;
     final unreadNotificationCount = ref.watch(unreadNotificationCountProvider);
 
@@ -116,6 +117,24 @@ class FeedScreen extends ConsumerWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Row(
                   children: [
+                    _buildScopeChip(
+                      context,
+                      ref,
+                      FeedScope.allWards,
+                      context.tr('feed_scope_all'),
+                      selectedScope,
+                      const Key('feedScopeChip_all'),
+                    ),
+                    const SizedBox(width: 8),
+                    _buildScopeChip(
+                      context,
+                      ref,
+                      FeedScope.myWard,
+                      context.tr('feed_scope_my_ward'),
+                      selectedScope,
+                      const Key('feedScopeChip_my_ward'),
+                    ),
+                    const SizedBox(width: 8),
                     _buildFilterChip(
                       context,
                       ref,
@@ -279,6 +298,56 @@ class FeedScreen extends ConsumerWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       onSelected: (_) {
         ref.read(feedFilterProvider.notifier).state = value;
+      },
+    );
+  }
+
+  Widget _buildScopeChip(
+    BuildContext context,
+    WidgetRef ref,
+    FeedScope value,
+    String label,
+    FeedScope currentScope,
+    Key key,
+  ) {
+    final isSelected = currentScope == value;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return FilterChip(
+      key: key,
+      avatar: Icon(
+        value == FeedScope.allWards
+            ? Icons.public_outlined
+            : Icons.location_on_outlined,
+        size: 15,
+        color: isSelected ? AppColors.brand : theme.colorScheme.onSurfaceVariant,
+      ),
+      label: Text(label),
+      selected: isSelected,
+      showCheckmark: false,
+      selectedColor: isDark
+          ? AppColors.brand.withValues(alpha: 0.22)
+          : AppColors.brandLight,
+      backgroundColor: isDark
+          ? theme.colorScheme.surfaceContainerHigh
+          : theme.colorScheme.surface,
+      side: BorderSide(
+        color: isSelected
+            ? AppColors.brand
+            : (isDark ? AppColors.darkBorder : AppColors.lightBorder),
+        width: isSelected ? 1.4 : 1,
+      ),
+      labelStyle: TextStyle(
+        color: isSelected
+            ? AppColors.brand
+            : theme.colorScheme.onSurfaceVariant,
+        fontWeight: FontWeight.w700,
+        fontSize: 13,
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      onSelected: (_) {
+        ref.read(feedScopeProvider.notifier).state = value;
       },
     );
   }

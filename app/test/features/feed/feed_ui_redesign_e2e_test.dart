@@ -85,8 +85,8 @@ class _FakeFeedRepository implements FeedRepository {
 
   @override
   Future<List<FeedItem>> fetchMultiTypeFeed({
-    required double latitude,
-    required double longitude,
+    double? latitude,
+    double? longitude,
     double radiusKm = 5.0,
     String type = 'all',
     String? cursor,
@@ -440,6 +440,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Issues only.
+      await tester.ensureVisible(find.byKey(const Key('feedFilterChip_issues')));
       await tester.tap(find.byKey(const Key('feedFilterChip_issues')));
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('issueCard_101')), findsOneWidget);
@@ -448,6 +449,7 @@ void main() {
       expect(find.byKey(const Key('localTalkCard_404')), findsNothing);
 
       // Wins only.
+      await tester.ensureVisible(find.byKey(const Key('feedFilterChip_wins')));
       await tester.tap(find.byKey(const Key('feedFilterChip_wins')));
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('winCard_202')), findsOneWidget);
@@ -456,6 +458,7 @@ void main() {
       expect(find.byKey(const Key('localTalkCard_404')), findsNothing);
 
       // Notices only.
+      await tester.ensureVisible(find.byKey(const Key('feedFilterChip_notices')));
       await tester.tap(find.byKey(const Key('feedFilterChip_notices')));
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('noticeCard_303')), findsOneWidget);
@@ -464,6 +467,7 @@ void main() {
       expect(find.byKey(const Key('localTalkCard_404')), findsNothing);
 
       // Local talk only.
+      await tester.ensureVisible(find.byKey(const Key('feedFilterChip_local_talk')));
       await tester.tap(find.byKey(const Key('feedFilterChip_local_talk')));
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('localTalkCard_404')), findsOneWidget);
@@ -472,6 +476,7 @@ void main() {
       expect(find.byKey(const Key('noticeCard_303')), findsNothing);
 
       // Back to the full mixed feed.
+      await tester.ensureVisible(find.byKey(const Key('feedFilterChip_all')));
       await tester.tap(find.byKey(const Key('feedFilterChip_all')));
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('issueCard_101')), findsOneWidget);
@@ -747,6 +752,7 @@ void main() {
 
       // Mixed feed does carry share affordances (issue/win cards), so the
       // declutter regression guard only applies once only LocalTalk remains.
+      await tester.ensureVisible(find.byKey(const Key('feedFilterChip_local_talk')));
       await tester.tap(find.byKey(const Key('feedFilterChip_local_talk')));
       await tester.pumpAndSettle();
 

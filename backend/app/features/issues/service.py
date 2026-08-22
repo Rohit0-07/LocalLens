@@ -54,6 +54,15 @@ def _utc_now() -> datetime:
     return datetime.now(UTC).replace(tzinfo=None)
 
 
+def build_search_blob(
+    *, title: str, description: str, category: str, ward: str
+) -> str:
+    """Lowercased, space-joined text indexed by `/search` (F-08)."""
+    return " ".join(
+        part for part in (title, description, category, ward) if part
+    ).lower()
+
+
 def _loaded_reporter(issue: Issue) -> User | None:
     """Return the eager-loaded reporter if present, without triggering a lazy load.
 
@@ -82,6 +91,25 @@ def _masked_identity(issue: Issue) -> str | None:
         if len(local) >= 2:
             return f"{local[0]}•••"
     return None
+
+
+async def _reloaded_issue(session: AsyncSession, issue_id: int) -> Issue:
+    """Re-select an issue with the relationships ``to_issue_out`` needs eagerly loaded.
+
+    Mutation endpoints must not return issues whose ``reporter`` relationship was
+    never loaded: ``to_issue_out`` deliberately avoids lazy loads (see
+    ``_loaded_reporter``) and would otherwise fall back to generic labels such as
+    "Verified citizen".
+    """
+    result = await session.execute(
+        select(Issue)
+        .options(
+            selectinload(Issue.reporter),
+            selectinload(Issue.assigned_representative).selectinload(RepresentativeProfile.user),
+        )
+        .where(Issue.id == issue_id)
+    )
+    return result.scalar_one()
 
 
 def reporter_label_for(issue: Issue) -> str:
@@ -318,6 +346,12 @@ async def create_issue(
         media_url=first_media,
         video_url=payload.video_url,
         media_urls=json.dumps(media_urls_list) if media_urls_list else None,
+        search_blob=build_search_blob(
+            title=payload.title,
+            description=payload.description,
+            category=payload.category,
+            ward=assigned_ward_name,
+        ),
         status="unacknowledged",
     )
     session.add(issue)
@@ -466,8 +500,7 @@ async def acknowledge_issue(session: AsyncSession, issue_id: int) -> Issue:
     issue.acknowledged_at = _utc_now()
     issue.status = "under_review"
     await session.commit()
-    await session.refresh(issue)
-    return issue
+    return await _reloaded_issue(session, issue_id)
 
 
 async def submit_resolution(
@@ -481,8 +514,7 @@ async def submit_resolution(
     issue.status = "pending_quorum"
     issue.quorum_expires_at = _utc_now() + timedelta(days=7)
     await session.commit()
-    await session.refresh(issue)
-    return issue
+    return await _reloaded_issue(session, issue_id)
 
 
 async def vote_quorum(
@@ -537,8 +569,7 @@ async def vote_quorum(
             issue.status = "disputed"
 
     await session.commit()
-    await session.refresh(issue)
-    return issue
+    return await _reloaded_issue(session, issue_id)
 
 
 cast_quorum_vote = vote_quorum
@@ -553,13 +584,13 @@ async def check_quorum_expiration(session: AsyncSession, issue_id: int) -> Issue
         if _utc_now() > issue.quorum_expires_at and issue.confirmations_count < 3:
             issue.status = "disputed"
             await session.commit()
-            await session.refresh(issue)
+            issue = await _reloaded_issue(session, issue_id)
         elif issue.confirmations_count >= 3 and issue.status != "resolved":
             issue.status = "resolved"
             issue.resolved_at = _utc_now()
             await create_win_for_issue(session, issue)
             await session.commit()
-            await session.refresh(issue)
+            issue = await _reloaded_issue(session, issue_id)
     return issue
 
 
@@ -763,8 +794,7 @@ async def upvote_issue(
     session.add(UpvoteRateLimit(user_id=user_id))
     issue.upvotes_count += 1
     await session.commit()
-    await session.refresh(issue)
-    return issue
+    return await _reloaded_issue(session, issue_id)
 
 
 async def get_user_upvoted_issue_ids(
@@ -797,8 +827,7 @@ async def remove_upvote_issue(
     await session.delete(upvote)
     issue.upvotes_count = max(0, issue.upvotes_count - 1)
     await session.commit()
-    await session.refresh(issue)
-    return issue
+    return await _reloaded_issue(session, issue_id)
 
 
 async def post_comment(
@@ -1170,6 +1199,13 @@ async def admin_reassign_issue(
         issue.ward = ward
     if category is not None:
         issue.category = category
+    if ward is not None or category is not None:
+        issue.search_blob = build_search_blob(
+            title=issue.title,
+            description=issue.description,
+            category=issue.category,
+            ward=issue.ward,
+        )
     if assigned_representative_id is not None:
         issue.assigned_representative_id = assigned_representative_id
     elif ward or category:
@@ -1199,8 +1235,7 @@ async def admin_reassign_issue(
     )
     session.add(audit)
     await session.commit()
-    await session.refresh(issue)
-    return issue
+    return await _reloaded_issue(session, issue_id)
 
 
 async def get_issue_timeline(

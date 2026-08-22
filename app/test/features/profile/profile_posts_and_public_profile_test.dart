@@ -203,6 +203,11 @@ void main() {
             ),
           ),
           GoRoute(
+            path: RoutePaths.profile,
+            builder: (context, state) =>
+                const Scaffold(body: Text('OwnProfile')),
+          ),
+          GoRoute(
             path: RoutePaths.settings,
             builder: (context, state) =>
                 const Scaffold(body: Text('SettingsPage')),
@@ -442,7 +447,7 @@ void main() {
     );
 
     testWidgets(
-      'Tapping comment author in CommentCard navigates to PublicProfile',
+      'Tapping own comment author in CommentCard navigates to OwnProfile',
       (WidgetTester tester) async {
         final comment = Comment(
           id: 501,
@@ -473,13 +478,12 @@ void main() {
         await tester.tap(authorTap);
         await tester.pumpAndSettle();
 
-        expect(find.text('PublicProfile:42'), findsOneWidget);
+        expect(find.text('OwnProfile'), findsOneWidget);
       },
     );
 
-    testWidgets('Tapping author in LocalTalkCard navigates to PublicProfile', (
-      WidgetTester tester,
-    ) async {
+    testWidgets('Tapping own author in LocalTalkCard navigates to OwnProfile',
+        (WidgetTester tester) async {
       final post = LocalTalkPost(
         id: 701,
         wardSlug: 'ward-45',
@@ -505,7 +509,7 @@ void main() {
       await tester.tap(authorTap);
       await tester.pumpAndSettle();
 
-      expect(find.text('PublicProfile:42'), findsOneWidget);
+      expect(find.text('OwnProfile'), findsOneWidget);
     });
   });
 }

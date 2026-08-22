@@ -23,11 +23,16 @@ def _parse_cursor(cursor: str | None) -> datetime | None:
     return parsed
 
 
+#: Half the Earth's circumference plus a margin: a radius that no point on
+#: Earth exceeds, so geo-scoping with it matches every issue/win/notice/post.
+_GLOBAL_RADIUS_KM = 20100.0
+
+
 async def get_multi_type_feed(
     session: AsyncSession,
     *,
-    latitude: float,
-    longitude: float,
+    latitude: float | None = None,
+    longitude: float | None = None,
     radius_km: float = 5.0,
     feed_type: str = "all",
     cursor: str | None = None,
@@ -35,6 +40,12 @@ async def get_multi_type_feed(
     jwt_secret: str = "secret",
     user_id: int | None = None,
 ) -> list[dict[str, Any]]:
+    # No coordinates means "all wards": scope the query to the whole planet
+    # instead of filtering by distance.
+    if latitude is None or longitude is None:
+        latitude, longitude = 0.0, 0.0
+        radius_km = _GLOBAL_RADIUS_KM
+
     cursor_dt = _parse_cursor(cursor)
     # Fetch a superset per type so cursor pages advance past earlier per-type
     # windows instead of silently dropping items on later pages.

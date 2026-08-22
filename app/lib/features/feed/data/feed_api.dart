@@ -31,20 +31,22 @@ class FeedApi implements FeedRepository {
 
   @override
   Future<List<FeedItem>> fetchMultiTypeFeed({
-    required double latitude,
-    required double longitude,
+    double? latitude,
+    double? longitude,
     double radiusKm = 5.0,
     String type = 'all',
     String? cursor,
     int limit = 20,
   }) async {
     final query = <String, dynamic>{
-      'latitude': latitude,
-      'longitude': longitude,
-      'radius_km': radiusKm,
       'type': type,
       'limit': limit,
     };
+    if (latitude != null && longitude != null) {
+      query['latitude'] = latitude;
+      query['longitude'] = longitude;
+      query['radius_km'] = radiusKm;
+    }
     if (cursor != null) query['cursor'] = cursor;
 
     final data = await _client.getJson('/feed', query: query);
