@@ -1,6 +1,6 @@
 # search-scale: Make `/api/v1/search` fast and index-backed
 
-Status: Open
+Status: Done (074522f)
 
 ## Summary
 
