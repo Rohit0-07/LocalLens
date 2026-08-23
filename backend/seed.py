@@ -131,9 +131,7 @@ def _sync_media_files(data: dict[str, list[dict[str, Any]]] | None = None) -> No
     """Sync sample media assets (seed/media + seed/images) to the upload dirs."""
     seed_media = _REPO_ROOT / "seed" / "media"
     upload_dirs = [
-        _REPO_ROOT / "uploads" / "media",
         _REPO_ROOT / "backend" / "uploads" / "media",
-        Path("uploads/media"),
     ]
 
     def _copy_tracked(filename: str, src_paths: list[Path]) -> None:

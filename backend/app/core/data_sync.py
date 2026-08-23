@@ -78,14 +78,14 @@ _MEDIA_REF_COLUMNS: dict[str, list[str]] = {
 def default_media_dirs() -> list[Path]:
     """Resolve the candidate upload folders media may live in.
 
-    Mirrors the fallback resolution used by ``app.features.media.service``.
+    Single canonical location: ``backend/uploads/media`` (Option B).
+    Seed media is also searched as a fallback for bundled assets.
+    Mirrors ``app.features.media.service.UPLOAD_DIR``.
     """
-    repo_root = Path(__file__).resolve().parent.parent.parent.parent
+    backend_dir = Path(__file__).resolve().parent.parent.parent
+    repo_root = backend_dir.parent
     return [
-        Path("uploads/media"),
-        Path("backend/uploads/media"),
-        repo_root / "uploads" / "media",
-        repo_root / "backend" / "uploads" / "media",
+        backend_dir / "uploads" / "media",
         repo_root / "seed" / "media",
     ]
 
@@ -339,7 +339,11 @@ async def apply_sync_file(
 
     restored: list[str] = []
     if bundle.is_dir():
-        dirs = media_dirs if media_dirs is not None else [d for d in default_media_dirs()]
+        if media_dirs is not None:
+            dirs = media_dirs
+        else:
+            # Only restore into the canonical upload dir — never into seed/media
+            dirs = [d for d in default_media_dirs() if "seed" not in d.parts]
         restored = _restore_media(bundle, dirs)
 
     if delete_on_success:

@@ -29,7 +29,7 @@ from sqlalchemy import select
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent.parent.parent
 SEED_DATA_DIR = REPO_ROOT / "seed" / "data"
 SEED_MEDIA_DIR = REPO_ROOT / "seed" / "media"
-UPLOADS_MEDIA_DIR = REPO_ROOT / "uploads" / "media"
+UPLOADS_MEDIA_DIR = REPO_ROOT / "backend" / "uploads" / "media"
 
 
 @pytest.fixture(autouse=True)
@@ -60,13 +60,13 @@ def media_seed_data() -> list[dict[str, Any]]:
 
 
 def test_seed_and_upload_media_directories_exist():
-    """Verify that seed/media and uploads/media directories are present."""
+    """Verify that seed/media and backend/uploads/media directories are present."""
     assert SEED_MEDIA_DIR.exists() and SEED_MEDIA_DIR.is_dir()
     assert UPLOADS_MEDIA_DIR.exists() and UPLOADS_MEDIA_DIR.is_dir()
 
 
 def test_demo_video_files_exist():
-    """Verify that all demo MP4 video assets exist in seed/media and uploads/media."""
+    """Verify that all demo MP4 video assets exist in seed/media and backend/uploads/media."""
     expected_videos = [
         "demo_traffic_pothole.mp4",
         "demo_stormwater_flow.mp4",

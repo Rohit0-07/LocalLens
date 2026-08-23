@@ -1,11 +1,15 @@
 from functools import lru_cache
+from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+_BACKEND_DIR = Path(__file__).resolve().parent.parent.parent
+_DEFAULT_DB_PATH = (_BACKEND_DIR / "locallens.db").as_posix()
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=str(_BACKEND_DIR / ".env"),
         env_prefix="LOCALLENS_",
         extra="ignore",
     )
@@ -15,7 +19,7 @@ class Settings(BaseSettings):
     environment: str = "development"
     debug: bool = False
 
-    database_url: str = "sqlite+aiosqlite:///./locallens.db"
+    database_url: str = f"sqlite+aiosqlite:///{_DEFAULT_DB_PATH}"
 
     jwt_secret: str = "dev-secret-change-me-before-production-32b-min"
     jwt_algorithm: str = "HS256"

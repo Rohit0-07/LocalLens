@@ -9,7 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.exceptions import AppError
 from app.features.media.models import Media
 
-UPLOAD_DIR = Path("uploads/media")
+_BACKEND_DIR = Path(__file__).resolve().parent.parent.parent.parent
+UPLOAD_DIR = _BACKEND_DIR / "uploads" / "media"
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 
@@ -21,12 +22,8 @@ def find_media_path(filename: str) -> Path | None:
 
     candidates = [
         UPLOAD_DIR / clean_name,
-        Path("uploads/media") / clean_name,
-        Path("backend/uploads/media") / clean_name,
-        Path(__file__).resolve().parent.parent.parent.parent / "uploads" / "media" / clean_name,
-        Path(__file__).resolve().parent.parent.parent / "uploads" / "media" / clean_name,
+        _BACKEND_DIR / "seed" / "media" / clean_name,
         Path(__file__).resolve().parent.parent.parent.parent / "seed" / "media" / clean_name,
-        Path(__file__).resolve().parent.parent.parent / "seed" / "media" / clean_name,
     ]
     for c in candidates:
         if c.exists() and c.is_file():
