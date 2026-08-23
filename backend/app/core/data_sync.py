@@ -38,7 +38,7 @@ from sqlalchemy import text
 logger = logging.getLogger("locallens.data_sync")
 
 #: repo/backend/data_migrations/ — the transient snapshot lives here.
-MIGRATIONS_DIR = Path(__file__).resolve().parent.parent / "data_migrations"
+MIGRATIONS_DIR = Path(__file__).resolve().parent.parent.parent / "data_migrations"
 SYNC_FILE = MIGRATIONS_DIR / "sync.sql"
 MEDIA_DIR = MIGRATIONS_DIR / "media"
 
