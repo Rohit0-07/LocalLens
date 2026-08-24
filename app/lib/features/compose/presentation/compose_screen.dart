@@ -329,9 +329,24 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
       } catch (_) {}
     }
 
-    final success = await ref
-        .read(composeControllerProvider.notifier)
-        .submit(media: _attachedMediaList.toList());
+    bool success = false;
+    String? errorMessage;
+    try {
+      success = await ref
+          .read(composeControllerProvider.notifier)
+          .submit(media: _attachedMediaList.toList());
+    } catch (e) {
+      if (!mounted) return;
+      errorMessage = e.toString().replaceFirst('Exception: ', '').replaceFirst('MediaUploadException', 'Upload');
+      // Validation failures are surfaced directly; never navigate to feed.
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errorMessage.isNotEmpty ? errorMessage : 'Failed to publish issue'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+      return;
+    }
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(

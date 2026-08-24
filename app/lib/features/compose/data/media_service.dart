@@ -79,6 +79,25 @@ class MediaUploadResult {
   }
 }
 
+class MediaUploadException implements Exception {
+  const MediaUploadException({
+    required this.statusCode,
+    required this.message,
+    this.code,
+  });
+
+  final int statusCode;
+  final String message;
+  final String? code;
+
+  /// True for permanent client-side validation failures (400 invalid_image,
+  /// 413 media_too_large, malformed base64) that will never succeed on retry.
+  bool get isValidationError => statusCode >= 400 && statusCode < 500;
+
+  @override
+  String toString() => 'MediaUploadException($statusCode, $code): $message';
+}
+
 class MediaDeleteException implements Exception {
   const MediaDeleteException({
     required this.statusCode,
@@ -164,7 +183,25 @@ class MediaService {
         response.data is String ? jsonDecode(response.data) : response.data,
       );
     } else {
-      throw Exception('Failed to upload media: ${response.statusMessage}');
+      String? code;
+      String message = 'Failed to upload media: ${response.statusMessage}';
+      try {
+        final body = response.data is String
+            ? jsonDecode(response.data)
+            : response.data;
+        if (body is Map) {
+          code = body['code'] as String?;
+          // Backend returns {detail: "..."} for AppError or HTTPException.
+          message = (body['detail'] as String?) ??
+              (body['message'] as String?) ??
+              message;
+        }
+      } catch (_) {}
+      throw MediaUploadException(
+        statusCode: response.statusCode ?? 0,
+        message: message,
+        code: code,
+      );
     }
   }
 

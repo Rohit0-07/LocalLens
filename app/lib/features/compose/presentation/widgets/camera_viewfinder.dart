@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
@@ -167,8 +168,15 @@ class _CameraViewfinderState extends State<CameraViewfinder> {
   Future<void> _triggerShutter() async {
     if (_controller == null || !_controller!.value.isInitialized) {
       if (widget.onPhotoCaptured != null) {
+        // Simulator / no-camera fallback: emit a valid 1×1 PNG so the backend's
+        // Pillow validation (validate_and_reencode_image) succeeds. The previous
+        // 8-byte PNG-signature stub ([137,80,78,71,…]) is not a decodable image
+        // and was rejected as `invalid_image`, causing every image issue on a
+        // simulator to be misclassified as offline and queued to the outbox.
+        const fallbackBase64 =
+            'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII=';
         widget.onPhotoCaptured!(
-          Uint8List.fromList([137, 80, 78, 71, 13, 10, 26, 10]),
+          base64Decode(fallbackBase64),
           _isGpsLocked ? _currentLat : null,
           _isGpsLocked ? _currentLng : null,
         );

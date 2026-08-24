@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/network/api_exceptions.dart';
 import '../../../core/storage/storage_providers.dart';
 import '../../feed/presentation/feed_providers.dart';
 import '../../geo/presentation/providers/geo_providers.dart';
@@ -151,7 +152,8 @@ class ComposeController extends Notifier<ComposeDraft> {
 
   /// Uploads the attached captured media (if any) and publishes the issue
   /// with the resulting media URLs. Falls back to the offline outbox on
-  /// failure.
+  /// failure. Permanent 4xx validation errors (invalid image, bad payload) are
+  /// surfaced directly instead of being queued — retries would never succeed.
   Future<bool> submit({
     List<CapturedMedia> media = const [],
   }) async {
@@ -201,7 +203,23 @@ class ComposeController extends Notifier<ComposeDraft> {
         mediaUrls: mediaUrls,
       );
       directSuccess = true;
-    } catch (_) {
+    } catch (e) {
+      if (_isValidationError(e)) {
+        // Roll back any media that were uploaded before the validation failure
+        // so orphan server rows don't leak, then surface the error to the
+        // caller instead of hiding it in the outbox.
+        for (final mediaId in uploadedMediaIds) {
+          try {
+            await mediaService?.deleteMedia(mediaId);
+          } catch (_) {}
+        }
+        if (current.id.isNotEmpty) {
+          await ref.read(draftStoreProvider).deleteItem(current.id);
+        }
+        await ref.read(draftStoreProvider).clear();
+        state = const ComposeDraft();
+        rethrow;
+      }
       // Roll back media that were uploaded but never linked to an issue, so
       // the outbox retry doesn't duplicate them server-side.
       for (final mediaId in uploadedMediaIds) {
@@ -221,6 +239,13 @@ class ComposeController extends Notifier<ComposeDraft> {
     await ref.read(draftStoreProvider).clear();
     state = const ComposeDraft();
     return directSuccess;
+  }
+
+  bool _isValidationError(Object e) {
+    if (e is MediaUploadException) return e.isValidationError;
+    if (e is ApiServerException) return e.statusCode >= 400 && e.statusCode < 500;
+    if (e is FormatException) return true;
+    return false;
   }
 }
 

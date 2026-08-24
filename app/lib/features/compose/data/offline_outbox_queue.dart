@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import '../../../core/network/api_exceptions.dart';
 import '../../../core/storage/local_store.dart';
 import '../../feed/domain/feed_repository.dart';
 import '../../feed/presentation/feed_providers.dart';
@@ -109,7 +110,16 @@ class OfflineOutboxQueue {
         uploads.remove(draft.id);
         attempts.remove(draft.id);
         successCount++;
-      } catch (_) {
+      } catch (e) {
+        // Permanent validation failures (invalid_image, media_too_large, 400
+        // base64) will never succeed on retry — drop immediately instead of
+        // burning the 5-attempt budget and misleading the user with lingering
+        // outbox entries.
+        if (_isValidationError(e)) {
+          await _deleteUnlinkedMedia(uploads.remove(draft.id) ?? <_UploadedMedia?>[]);
+          attempts.remove(draft.id);
+          continue;
+        }
         attempts[draft.id] = (attempts[draft.id] ?? 0) + 1;
         if ((attempts[draft.id] ?? 0) < _maxAttempts) {
           remaining.add(draft);
@@ -182,6 +192,13 @@ class OfflineOutboxQueue {
         await _mediaService.deleteMedia(id);
       } catch (_) {}
     }
+  }
+
+  bool _isValidationError(Object e) {
+    if (e is MediaUploadException) return e.isValidationError;
+    if (e is ApiServerException) return e.statusCode >= 400 && e.statusCode < 500;
+    if (e is FormatException) return true;
+    return false;
   }
 
   List<ComposeDraft> getPendingQueue() {
