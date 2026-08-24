@@ -74,6 +74,7 @@ async def get_multi_type_feed(
             limit=per_type_limit,
             offset=0,
             created_before=parsed_cursor[0] if parsed_cursor else None,
+            created_before_id=parsed_cursor[1] if parsed_cursor else None,
         )
         user_upvoted_ids = set()
         if user_id is not None and issues:
@@ -101,6 +102,7 @@ async def get_multi_type_feed(
             limit=per_type_limit,
             offset=0,
             created_before=parsed_cursor[0] if parsed_cursor else None,
+            created_before_id=parsed_cursor[1] if parsed_cursor else None,
         )
         for win in wins:
             win_out: Any = issues_service.to_win_out(win)
@@ -118,6 +120,7 @@ async def get_multi_type_feed(
             limit=per_type_limit,
             offset=0,
             created_before=parsed_cursor[0] if parsed_cursor else None,
+            created_before_id=parsed_cursor[1] if parsed_cursor else None,
         )
         for notice in notices:
             notice_out: Any = wards_service.to_notice_out(notice)
@@ -135,6 +138,7 @@ async def get_multi_type_feed(
             limit=per_type_limit,
             offset=0,
             created_before=parsed_cursor[0] if parsed_cursor else None,
+            created_before_id=parsed_cursor[1] if parsed_cursor else None,
         )
         for post in talk_posts:
             post_out: Any = wards_service.to_local_talk_post_out(post)
@@ -157,7 +161,10 @@ async def get_multi_type_feed(
             parsed = parsed.astimezone(UTC).replace(tzinfo=None)
         return parsed
 
-    items.sort(key=get_sort_key, reverse=True)
+    def _get_sort_tuple(item: dict[str, Any]) -> tuple[datetime, int]:
+        return (get_sort_key(item), int(item.get("id", 0)) if isinstance(item.get("id"), int) else 0)
+
+    items.sort(key=_get_sort_tuple, reverse=True)
 
     # Apply cursor pagination as a safety net (per-type queries already
     # advanced past the cursor). Compare (created_at, id) tuples so items

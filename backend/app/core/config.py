@@ -41,6 +41,8 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def _validate_production_secrets(self) -> Self:
         if self.environment != "production":
+            if self.otp_master_code is None:
+                self.otp_master_code = "000000"
             return self
         for name, value, dev_default in (
             ("jwt_secret", self.jwt_secret, _DEV_JWT_SECRET),

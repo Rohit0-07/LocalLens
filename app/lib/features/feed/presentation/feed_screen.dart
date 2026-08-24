@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -18,11 +19,28 @@ import 'widgets/local_talk_card.dart';
 import 'widgets/notice_card.dart';
 import 'widgets/win_card.dart';
 
-class FeedScreen extends ConsumerWidget {
+class FeedScreen extends ConsumerStatefulWidget {
   const FeedScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<FeedScreen> createState() => _FeedScreenState();
+}
+
+class _FeedScreenState extends ConsumerState<FeedScreen> {
+  bool _showHeader = true;
+
+  bool _onUserScroll(UserScrollNotification notification) {
+    final dir = notification.direction;
+    if (dir == ScrollDirection.reverse && _showHeader) {
+      setState(() => _showHeader = false);
+    } else if (dir == ScrollDirection.forward && !_showHeader) {
+      setState(() => _showHeader = true);
+    }
+    return false;
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final feedAsync = ref.watch(multiTypeFeedProvider);
     final selectedFilter = ref.watch(feedFilterProvider);
@@ -30,231 +48,262 @@ class FeedScreen extends ConsumerWidget {
     final pendingOutboxCount = ref.watch(offlineOutboxProvider).pendingCount;
     final unreadNotificationCount = ref.watch(unreadNotificationCountProvider);
 
-    return Scaffold(
-      appBar: AppBar(
-        titleSpacing: 16,
-        title: InkWell(
-          key: const Key('feedTitleTap'),
-          borderRadius: BorderRadius.circular(8),
-          onTap: () {
-            ref.invalidate(feedCoordinatesProvider);
-            ref.read(multiTypeFeedProvider.notifier).refresh();
-          },
-          child: Row(
-            children: [
-              Container(
-                width: 28,
-                height: 28,
-                margin: const EdgeInsets.only(right: 10),
-                decoration: BoxDecoration(
-                  color: AppColors.brand,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(
-                  Icons.lens_rounded,
-                  size: 16,
-                  color: Colors.white,
-                ),
-              ),
-              Text(
-                context.tr('feed_title'),
-                style: theme.textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.5,
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          if (pendingOutboxCount > 0)
-            IconButton(
-              key: const Key('feedOutboxButton'),
-              tooltip: context.tr('outbox_title'),
-              icon: Badge(
-                label: Text('$pendingOutboxCount'),
-                backgroundColor: AppColors.brand,
-                child: const Icon(Icons.cloud_upload_outlined),
-              ),
-              onPressed: () => context.push(RoutePaths.outbox),
-            ),
-          IconButton(
-            tooltip: context.tr('action_search'),
-            icon: const Icon(Icons.search),
-            onPressed: () => context.push(RoutePaths.search),
-          ),
-          IconButton(
-            key: const Key('feedNotificationButton'),
-            tooltip: context.tr('notifications_title'),
-            icon: Badge(
-              isLabelVisible: unreadNotificationCount > 0,
-              label: Text('$unreadNotificationCount'),
-              backgroundColor: AppColors.brand,
-              child: const Icon(Icons.notifications_outlined),
-            ),
-            onPressed: () => context.push(RoutePaths.notifications),
-          ),
-          const SizedBox(width: 4),
-        ],
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(84),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Align(
-                key: const Key('feedAreaLabel'),
-                alignment: Alignment.centerLeft,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: WardLocationChip(
-                    state: ref.watch(wardLocationProvider),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 4),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Row(
-                  children: [
-                    _buildScopeChip(
-                      context,
-                      ref,
-                      FeedScope.allWards,
-                      context.tr('feed_scope_all'),
-                      selectedScope,
-                      const Key('feedScopeChip_all'),
-                    ),
-                    const SizedBox(width: 8),
-                    _buildScopeChip(
-                      context,
-                      ref,
-                      FeedScope.myWard,
-                      context.tr('feed_scope_my_ward'),
-                      selectedScope,
-                      const Key('feedScopeChip_my_ward'),
-                    ),
-                    const SizedBox(width: 8),
-                    _buildFilterChip(
-                      context,
-                      ref,
-                      'all',
-                      context.tr('feed_filter_all'),
-                      selectedFilter,
-                      const Key('feedFilterChip_all'),
-                    ),
-                    const SizedBox(width: 8),
-                    _buildFilterChip(
-                      context,
-                      ref,
-                      'issue',
-                      context.tr('feed_filter_issues'),
-                      selectedFilter,
-                      const Key('feedFilterChip_issues'),
-                    ),
-                    const SizedBox(width: 8),
-                    _buildFilterChip(
-                      context,
-                      ref,
-                      'win',
-                      context.tr('feed_filter_wins'),
-                      selectedFilter,
-                      const Key('feedFilterChip_wins'),
-                    ),
-                    const SizedBox(width: 8),
-                    _buildFilterChip(
-                      context,
-                      ref,
-                      'notice',
-                      context.tr('feed_filter_notices'),
-                      selectedFilter,
-                      const Key('feedFilterChip_notices'),
-                    ),
-                    const SizedBox(width: 8),
-                    _buildFilterChip(
-                      context,
-                      ref,
-                      'local_talk',
-                      context.tr('feed_filter_talk'),
-                      selectedFilter,
-                      const Key('feedFilterChip_local_talk'),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 8),
-            ],
-          ),
-        ),
-      ),
-      body: feedAsync.when(
-        loading: () => const Padding(
-          padding: EdgeInsets.all(16),
-          child: FeedSkeletonList(key: Key('feedSkeleton'), itemCount: 4),
-        ),
-        error: (error, _) => Padding(
-          padding: const EdgeInsets.all(16),
-          child: FeedEmptyState(
-            icon: Icons.cloud_off_outlined,
-            title: context.tr('feed_unavailable'),
-            message: context.tr('feed_unavailable_msg'),
-            actionLabel: context.tr('action_retry'),
-            onAction: () => ref.read(multiTypeFeedProvider.notifier).refresh(),
-          ),
-        ),
-        data: (items) => items.isEmpty
-            ? ListView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(16),
+    final header = Container(
+      color: theme.scaffoldBackgroundColor,
+      child: SafeArea(
+        bottom: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Title + actions row
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
                 children: [
-                  FeedEmptyState(
-                    key: const Key('feedEmptyState'),
-                    icon: Icons.check_circle_outline,
-                    title: context.tr('feed_empty_title'),
-                    message: context.tr('feed_empty_msg'),
+                  InkWell(
+                    key: const Key('feedTitleTap'),
+                    borderRadius: BorderRadius.circular(8),
+                    onTap: () {
+                      ref.invalidate(feedCoordinatesProvider);
+                      ref.read(multiTypeFeedProvider.notifier).refresh();
+                    },
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 28,
+                          height: 28,
+                          margin: const EdgeInsets.only(right: 10),
+                          decoration: BoxDecoration(
+                            color: AppColors.brand,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(
+                            Icons.lens_rounded,
+                            size: 16,
+                            color: Colors.white,
+                          ),
+                        ),
+                        Text(
+                          context.tr('feed_title'),
+                          style: theme.textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Spacer(),
+                  if (pendingOutboxCount > 0)
+                    IconButton(
+                      key: const Key('feedOutboxButton'),
+                      tooltip: context.tr('outbox_title'),
+                      icon: Badge(
+                        label: Text('$pendingOutboxCount'),
+                        backgroundColor: AppColors.brand,
+                        child: const Icon(Icons.cloud_upload_outlined),
+                      ),
+                      onPressed: () => context.push(RoutePaths.outbox),
+                    ),
+                  IconButton(
+                    tooltip: context.tr('action_search'),
+                    icon: const Icon(Icons.search),
+                    onPressed: () => context.push(RoutePaths.search),
+                  ),
+                  IconButton(
+                    key: const Key('feedNotificationButton'),
+                    tooltip: context.tr('notifications_title'),
+                    icon: Badge(
+                      isLabelVisible: unreadNotificationCount > 0,
+                      label: Text('$unreadNotificationCount'),
+                      backgroundColor: AppColors.brand,
+                      child: const Icon(Icons.notifications_outlined),
+                    ),
+                    onPressed: () => context.push(RoutePaths.notifications),
                   ),
                 ],
-              )
-            : RefreshIndicator(
-                color: AppColors.brand,
-                onRefresh: () =>
-                    ref.read(multiTypeFeedProvider.notifier).refresh(),
-                child: ListView.separated(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                  itemCount: items.length + 1,
-                  separatorBuilder: (_, _) => const SizedBox(height: 16),
-                  itemBuilder: (context, index) {
-                    if (index == items.length) {
-                      return _buildEndOfFeedWidget(context);
-                    }
-                    final item = items[index];
-                    switch (item.itemType) {
-                      case FeedItemType.win:
-                        if (item.win != null) {
-                          return WinCard(win: item.win!);
-                        }
-                        break;
-                      case FeedItemType.notice:
-                        if (item.notice != null) {
-                          return NoticeCard(notice: item.notice!);
-                        }
-                        break;
-                      case FeedItemType.localTalk:
-                        if (item.localTalk != null) {
-                          return LocalTalkCard(post: item.localTalk!);
-                        }
-                        break;
-                      case FeedItemType.issue:
-                        if (item.issue != null) {
-                          return IssueCard(issue: item.issue!);
-                        }
-                        break;
-                    }
-                    return const SizedBox.shrink();
-                  },
+              ),
+            ),
+            // Ward chip + filters
+            Align(
+              key: const Key('feedAreaLabel'),
+              alignment: Alignment.centerLeft,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: WardLocationChip(
+                  state: ref.watch(wardLocationProvider),
                 ),
               ),
+            ),
+            const SizedBox(height: 4),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: [
+                  _buildScopeChip(
+                    context,
+                    ref,
+                    FeedScope.allWards,
+                    context.tr('feed_scope_all'),
+                    selectedScope,
+                    const Key('feedScopeChip_all'),
+                  ),
+                  const SizedBox(width: 8),
+                  _buildScopeChip(
+                    context,
+                    ref,
+                    FeedScope.myWard,
+                    context.tr('feed_scope_my_ward'),
+                    selectedScope,
+                    const Key('feedScopeChip_my_ward'),
+                  ),
+                  const SizedBox(width: 8),
+                  _buildFilterChip(
+                    context,
+                    ref,
+                    'all',
+                    context.tr('feed_filter_all'),
+                    selectedFilter,
+                    const Key('feedFilterChip_all'),
+                  ),
+                  const SizedBox(width: 8),
+                  _buildFilterChip(
+                    context,
+                    ref,
+                    'issue',
+                    context.tr('feed_filter_issues'),
+                    selectedFilter,
+                    const Key('feedFilterChip_issues'),
+                  ),
+                  const SizedBox(width: 8),
+                  _buildFilterChip(
+                    context,
+                    ref,
+                    'win',
+                    context.tr('feed_filter_wins'),
+                    selectedFilter,
+                    const Key('feedFilterChip_wins'),
+                  ),
+                  const SizedBox(width: 8),
+                  _buildFilterChip(
+                    context,
+                    ref,
+                    'notice',
+                    context.tr('feed_filter_notices'),
+                    selectedFilter,
+                    const Key('feedFilterChip_notices'),
+                  ),
+                  const SizedBox(width: 8),
+                  _buildFilterChip(
+                    context,
+                    ref,
+                    'local_talk',
+                    context.tr('feed_filter_talk'),
+                    selectedFilter,
+                    const Key('feedFilterChip_local_talk'),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Divider(height: 1, color: theme.dividerColor.withValues(alpha: 0.15)),
+          ],
+        ),
+      ),
+    );
+
+    return Scaffold(
+      body: Column(
+        children: [
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOut,
+            height: _showHeader ? null : 0,
+            child: ClipRect(
+              child: AnimatedSlide(
+                key: const Key('feedHeader'),
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOut,
+                offset: _showHeader ? Offset.zero : const Offset(0, -1.5),
+                child: header,
+              ),
+            ),
+          ),
+          Expanded(
+            child: NotificationListener<UserScrollNotification>(
+              onNotification: _onUserScroll,
+              child: feedAsync.when(
+                loading: () => const Padding(
+                  padding: EdgeInsets.all(16),
+                  child: FeedSkeletonList(key: Key('feedSkeleton'), itemCount: 4),
+                ),
+                error: (error, _) => Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: FeedEmptyState(
+                    icon: Icons.cloud_off_outlined,
+                    title: 'Unavailable',
+                    message: 'Feed unavailable',
+                    actionLabel: 'Retry',
+                    onAction: () => ref.read(multiTypeFeedProvider.notifier).refresh(),
+                  ),
+                ),
+                data: (items) => items.isEmpty
+                    ? ListView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: const EdgeInsets.all(16),
+                        children: [
+                          FeedEmptyState(
+                            key: const Key('feedEmptyState'),
+                            icon: Icons.check_circle_outline,
+                            title: context.tr('feed_empty_title'),
+                            message: context.tr('feed_empty_msg'),
+                          ),
+                        ],
+                      )
+                    : RefreshIndicator(
+                        color: AppColors.brand,
+                        onRefresh: () => ref.read(multiTypeFeedProvider.notifier).refresh(),
+                        child: ListView.separated(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                          itemCount: items.length + 1,
+                          separatorBuilder: (_, _) => const SizedBox(height: 16),
+                          itemBuilder: (context, index) {
+                            if (index == items.length) {
+                              return _buildEndOfFeedWidget(context);
+                            }
+                            final item = items[index];
+                            switch (item.itemType) {
+                              case FeedItemType.win:
+                                if (item.win != null) {
+                                  return WinCard(win: item.win!);
+                                }
+                                break;
+                              case FeedItemType.notice:
+                                if (item.notice != null) {
+                                  return NoticeCard(notice: item.notice!);
+                                }
+                                break;
+                              case FeedItemType.localTalk:
+                                if (item.localTalk != null) {
+                                  return LocalTalkCard(post: item.localTalk!);
+                                }
+                                break;
+                              case FeedItemType.issue:
+                                if (item.issue != null) {
+                                  return IssueCard(issue: item.issue!);
+                                }
+                                break;
+                            }
+                            return const SizedBox.shrink();
+                          },
+                        ),
+                      ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

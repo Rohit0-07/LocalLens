@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -22,11 +23,24 @@ class ReelsScreen extends ConsumerStatefulWidget {
 
 class _ReelsScreenState extends ConsumerState<ReelsScreen> {
   final PageController _pageController = PageController();
+  bool _showHeader = true;
 
   @override
   void dispose() {
     _pageController.dispose();
     super.dispose();
+  }
+
+  bool _handleScrollNotification(ScrollNotification notification) {
+    if (notification is UserScrollNotification) {
+      final direction = notification.direction;
+      if (direction == ScrollDirection.reverse && _showHeader) {
+        setState(() => _showHeader = false);
+      } else if (direction == ScrollDirection.forward && !_showHeader) {
+        setState(() => _showHeader = true);
+      }
+    }
+    return false;
   }
 
   void _maybeLoadMore(int index, ReelsState state) {
@@ -89,59 +103,68 @@ class _ReelsScreenState extends ConsumerState<ReelsScreen> {
             );
           }
 
-          return Stack(
-            children: [
-              PageView.builder(
-                controller: _pageController,
-                scrollDirection: Axis.vertical,
-                itemCount: state.items.length,
-                onPageChanged: (index) => _maybeLoadMore(index, state),
-                itemBuilder: (context, index) {
-                  final issue = state.items[index].issue!;
-                  return _ReelPage(issue: issue, index: index);
-                },
-              ),
-              // Header
-              Positioned(
-                top: MediaQuery.of(context).padding.top + 8,
-                left: 16,
-                right: 16,
-                child: Row(
-                  children: [
-                    Container(
-                      width: 28,
-                      height: 28,
-                      decoration: BoxDecoration(
-                        color: AppColors.brand,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Icon(
-                        Icons.lens_rounded,
-                        size: 16,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    const Text(
-                      'Reels',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const Spacer(),
-                    IconButton(
-                      key: const Key('reelsRefreshButton'),
-                      icon: const Icon(Icons.refresh_rounded,
-                          color: Colors.white70),
-                      onPressed: () =>
-                          ref.read(reelsProvider.notifier).refresh(),
-                    ),
-                  ],
+          return NotificationListener<UserScrollNotification>(
+            onNotification: _handleScrollNotification,
+            child: Stack(
+              children: [
+                PageView.builder(
+                  controller: _pageController,
+                  scrollDirection: Axis.vertical,
+                  itemCount: state.items.length,
+                  onPageChanged: (index) => _maybeLoadMore(index, state),
+                  itemBuilder: (context, index) {
+                    final issue = state.items[index].issue!;
+                    return _ReelPage(issue: issue, index: index);
+                  },
                 ),
-              ),
-            ],
+                // Header — hide on scroll down, show on scroll up
+                Positioned(
+                  top: MediaQuery.of(context).padding.top + 8,
+                  left: 16,
+                  right: 16,
+                  child: AnimatedSlide(
+                    key: const Key('reelsHeader'),
+                    duration: const Duration(milliseconds: 220),
+                    curve: Curves.easeOut,
+                    offset: _showHeader ? Offset.zero : const Offset(0, -1.5),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 28,
+                          height: 28,
+                          decoration: BoxDecoration(
+                            color: AppColors.brand,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(
+                            Icons.lens_rounded,
+                            size: 16,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        const Text(
+                          'Reels',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const Spacer(),
+                        IconButton(
+                          key: const Key('reelsRefreshButton'),
+                          icon: const Icon(Icons.refresh_rounded,
+                              color: Colors.white70),
+                          onPressed: () =>
+                              ref.read(reelsProvider.notifier).refresh(),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
           );
         },
       ),

@@ -79,4 +79,23 @@ class FeedItem {
         return localTalk?.id ?? 0;
     }
   }
+
+  DateTime? get createdAt {
+    switch (itemType) {
+      case FeedItemType.issue:
+        return issue?.createdAt;
+      case FeedItemType.win:
+        return win?.createdAt;
+      case FeedItemType.notice:
+        return notice?.createdAt;
+      case FeedItemType.localTalk:
+        return localTalk?.createdAt;
+    }
+  }
+
+  String? get cursor {
+    final dt = createdAt;
+    if (dt == null) return null;
+    return '${dt.toIso8601String()}|$id';
+  }
 }

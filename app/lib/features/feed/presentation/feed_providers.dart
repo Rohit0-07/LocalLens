@@ -131,6 +131,31 @@ class MultiTypeFeedController extends AsyncNotifier<List<FeedItem>> {
     state = await AsyncValue.guard(build);
   }
 
+  Future<void> loadMore() async {
+    final current = state.value;
+    if (current == null || current.isEmpty) return;
+    final last = current.last;
+    final cursor = last.cursor;
+    if (cursor == null) return;
+    final repository = ref.read(feedRepositoryProvider);
+    final filter = ref.read(feedFilterProvider);
+    final scope = ref.read(feedScopeProvider);
+    List<FeedItem> next;
+    if (scope == FeedScope.myWard) {
+      final coords = await _feedCoords(ref);
+      next = await repository.fetchMultiTypeFeed(
+        latitude: coords.lat,
+        longitude: coords.lng,
+        type: filter,
+        cursor: cursor,
+      );
+    } else {
+      next = await repository.fetchMultiTypeFeed(type: filter, cursor: cursor);
+    }
+    if (next.isEmpty) return;
+    state = AsyncData([...current, ...next]);
+  }
+
   Future<void> toggleUpvote(
     int issueId,
     double latitude,

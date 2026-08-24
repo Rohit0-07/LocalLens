@@ -20,7 +20,7 @@ Status legend: `[ ]` pending · `[~]` in progress · `[x]` done · `[-]` skipped
 
 - [x] **B-H1** MissingGreenlet 500 on acknowledge/resolve for non-reporter users — eagerly load `User.representative_profile` in `get_current_user` or check `role` instead of the lazy property (`issues/router.py:205`, `api/deps.py:58`, `auth/models.py:46`)
 - [x] **B-H2** Client sends issue's own coords as voter location — use device location with explicit failure state when unavailable (quorum vote + upvote) (`app/lib/features/issue_detail/presentation/screens/issue_detail_screen.dart:476`, `feed/presentation/widgets/issue_card.dart:483`, `win_card.dart:396`)
-- [ ] **B-H3** Duplicate votes possible — add UniqueConstraint(issue_id, user_id) on Upvote + QuorumVote with Alembic migration; atomic counter increment instead of read-modify-write (`issues/models.py:157-178`, `issues/service.py:546,786`)
+- [x] **B-H3** Duplicate votes possible — add UniqueConstraint(issue_id, user_id) on Upvote + QuorumVote with Alembic migration; atomic counter increment instead of read-modify-write (`issues/models.py:157-178`, `issues/service.py:546,786`) — DONE: constraints in `models.py:170,185` + migration `f0a1b2c3d4e5`, atomic `UPDATE ... SET count+1` + `IntegrityError->400` in `service.py:562,829`, tests `test_vote_dedup.py` 4/4 green
 - [x] **B-H4** Double-offset pagination skips rows in GET /issues — fetch (offset+limit)*overfetch with offset=0, filter, slice once (mirror search pattern) (`issues/service.py:392-413`)
 
 ## HIGH — Performance
@@ -39,7 +39,7 @@ Status legend: `[ ]` pending · `[~]` in progress · `[x]` done · `[-]` skipped
 ## MEDIUM — Bugs
 
 - [x] **B-M1** Gamification badge unlocks rolled back — commit after evaluate_and_unlock_badges or persist only in mutation paths (`gamification/service.py:172-173,232-238`)
-- [ ] **B-M2** Feed cursor strict `<` drops items sharing cursor timestamp — keyset on (created_at, id) (`feed/service.py:147-149`)
+- [x] **B-M2** Feed cursor strict `<` drops items sharing cursor timestamp — keyset on (created_at, id) (`feed/service.py:147-149`) — DONE: `feed/service.py:10` `_parse_cursor` with `|id` tie-breaker, `issues/service.py:399` + `wards/service.py:381,409` + `issues/service.py:699` keyset `or_(created_at < cursor, created_at==cursor & id<cursor_id)`, `feed/service.py:66` propagates `created_before_id`, `feed_item.dart:cursor` + `feed_providers.dart:loadMore()`, tests `test_feed_cursor.py` + `feed_cursor_test.dart` green
 - [x] **B-M3** Outbox retry re-uploads media causing duplicate rows — reuse uploaded URLs on retry (`app/lib/features/compose/data/offline_outbox_queue.dart:50-56`)
 - [x] **B-M4** Win before-image queries reporter's oldest media ever instead of issue's media (`issues/service.py:616-630`)
 - [x] **B-M5** Timeline countdown constants contradict backend cadence (+3d vs 7d quorum, 72h vs 24h escalation) (`audit_timeline_card.dart:47-59`)

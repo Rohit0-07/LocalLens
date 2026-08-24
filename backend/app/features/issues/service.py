@@ -390,18 +390,27 @@ async def list_issues_near(
     limit: int,
     offset: int,
     created_before: datetime | None = None,
+    created_before_id: int | None = None,
 ) -> list[Issue]:
     statement = await bbox_statement(latitude, longitude, radius_km)
     statement = statement.where(Issue.is_hidden.is_(False))
     if status_filter:
         statement = statement.where(Issue.status == status_filter)
     if created_before is not None:
-        statement = statement.where(Issue.created_at <= created_before)
+        if created_before_id is not None and created_before_id != -1:
+            statement = statement.where(
+                or_(
+                    Issue.created_at < created_before,
+                    (Issue.created_at == created_before) & (Issue.id < created_before_id),
+                )
+            )
+        else:
+            statement = statement.where(Issue.created_at < created_before)
     statement = statement.options(
         selectinload(Issue.reporter),
         selectinload(Issue.assigned_representative).selectinload(RepresentativeProfile.user),
     )
-    statement = statement.order_by(Issue.created_at.desc()).limit(
+    statement = statement.order_by(Issue.created_at.desc(), Issue.id.desc()).limit(
         (offset + limit) * _GEO_OVERFETCH_FACTOR
     )
     result = await session.execute(statement)
@@ -695,11 +704,20 @@ async def list_wins_near(
     limit: int = 20,
     offset: int = 0,
     created_before: datetime | None = None,
+    created_before_id: int | None = None,
 ) -> list[Win]:
     stmt = select(Win)
     if created_before is not None:
-        stmt = stmt.where(Win.created_at <= created_before)
-    stmt = stmt.order_by(Win.created_at.desc()).limit(limit * 6)
+        if created_before_id is not None and created_before_id != -1:
+            stmt = stmt.where(
+                or_(
+                    Win.created_at < created_before,
+                    (Win.created_at == created_before) & (Win.id < created_before_id),
+                )
+            )
+        else:
+            stmt = stmt.where(Win.created_at < created_before)
+    stmt = stmt.order_by(Win.created_at.desc(), Win.id.desc()).limit(limit * 6)
     result = await session.execute(stmt)
     wins = list(result.scalars().all())
 

@@ -2,7 +2,7 @@ import datetime
 import re
 import urllib.parse
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -375,11 +375,21 @@ async def list_all_talk_posts_near(
     limit: int = 20,
     offset: int = 0,
     created_before: datetime.datetime | None = None,
+    created_before_id: int | None = None,
 ) -> list[LocalTalkPost]:
     stmt = select(LocalTalkPost)
     if created_before is not None:
-        stmt = stmt.where(LocalTalkPost.created_at <= created_before)
-    stmt = stmt.order_by(LocalTalkPost.created_at.desc()).limit(
+        if created_before_id is not None and created_before_id != -1:
+            stmt = stmt.where(
+                or_(
+                    LocalTalkPost.created_at < created_before,
+                    (LocalTalkPost.created_at == created_before)
+                    & (LocalTalkPost.id < created_before_id),
+                )
+            )
+        else:
+            stmt = stmt.where(LocalTalkPost.created_at < created_before)
+    stmt = stmt.order_by(LocalTalkPost.created_at.desc(), LocalTalkPost.id.desc()).limit(
         (offset + limit) * _GEO_OVERFETCH_FACTOR
     )
     res = await session.execute(stmt)
@@ -403,11 +413,20 @@ async def list_notices_near(
     limit: int = 20,
     offset: int = 0,
     created_before: datetime.datetime | None = None,
+    created_before_id: int | None = None,
 ) -> list[Notice]:
     stmt = select(Notice)
     if created_before is not None:
-        stmt = stmt.where(Notice.created_at <= created_before)
-    stmt = stmt.order_by(Notice.created_at.desc()).limit(
+        if created_before_id is not None and created_before_id != -1:
+            stmt = stmt.where(
+                or_(
+                    Notice.created_at < created_before,
+                    (Notice.created_at == created_before) & (Notice.id < created_before_id),
+                )
+            )
+        else:
+            stmt = stmt.where(Notice.created_at < created_before)
+    stmt = stmt.order_by(Notice.created_at.desc(), Notice.id.desc()).limit(
         (offset + limit) * _GEO_OVERFETCH_FACTOR
     )
     res = await session.execute(stmt)
