@@ -1,7 +1,28 @@
 from datetime import UTC, datetime, timedelta
 
 import httpx
+import pytest_asyncio
 from app.features.issues.models import Issue
+from fastapi import FastAPI
+from sqlalchemy import text
+
+
+@pytest_asyncio.fixture
+async def admin_headers(client: httpx.AsyncClient, app: FastAPI) -> dict[str, str]:
+    """Authentication headers for an admin user (see tests/features/issues/test_flagging.py)."""
+    admin_phone = "+919999900009"
+    await client.post("/api/v1/auth/otp/request", json={"phone": admin_phone})
+    res = await client.post(
+        "/api/v1/auth/otp/verify", json={"phone": admin_phone, "code": "000000"}
+    )
+    token = res.json()["access_token"]
+    async with app.state.database.session_factory() as session:
+        await session.execute(
+            text("UPDATE users SET is_admin = 1, role = 'admin' WHERE phone = :phone"),
+            {"phone": admin_phone},
+        )
+        await session.commit()
+    return {"Authorization": f"Bearer {token}"}
 
 
 async def test_quorum_resolution_confirmation_threshold(
@@ -178,7 +199,7 @@ async def test_quorum_duplicate_vote_prevention(
 
 
 async def test_quorum_expiration_fallback(
-    app, client: httpx.AsyncClient, auth_headers: dict[str, str]
+    app, client: httpx.AsyncClient, auth_headers: dict[str, str], admin_headers: dict[str, str]
 ) -> None:
     create_res = await client.post(
         "/api/v1/issues",
@@ -206,7 +227,17 @@ async def test_quorum_expiration_fallback(
         issue.quorum_expires_at = datetime.now(UTC).replace(tzinfo=None) - timedelta(days=1)
         await session.commit()
 
-    # Trigger check
-    check_res = await client.post(f"/api/v1/issues/{issue_id}/check-quorum-status")
+    # Missing token -> 401; authenticated non-admin -> 403 (admin/moderator only)
+    anon_check = await client.post(f"/api/v1/issues/{issue_id}/check-quorum-status")
+    assert anon_check.status_code == 401
+    citizen_check = await client.post(
+        f"/api/v1/issues/{issue_id}/check-quorum-status", headers=auth_headers
+    )
+    assert citizen_check.status_code == 403
+    assert citizen_check.json()["error_code"] == "admin_required"
+
+    check_res = await client.post(
+        f"/api/v1/issues/{issue_id}/check-quorum-status", headers=admin_headers
+    )
     assert check_res.status_code == 200
     assert check_res.json()["status"] == "disputed"

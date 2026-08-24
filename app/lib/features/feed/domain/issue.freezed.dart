@@ -306,7 +306,7 @@ as String?,
 /// @nodoc
 mixin _$QuorumVoter {
 
-@JsonKey(name: 'user_id') int get userId; String? get username;@JsonKey(name: 'display_name') String? get displayName; String get vote; String? get reason;@JsonKey(name: 'is_verified_nearby') bool get isVerifiedNearby;@JsonKey(name: 'created_at') DateTime get createdAt;
+@JsonKey(name: 'user_id') int get userId; String? get username;@JsonKey(name: 'display_name') String? get displayName; String get vote; String? get reason;@JsonKey(name: 'is_nearby') bool get isVerifiedNearby;@JsonKey(name: 'created_at') DateTime get createdAt;
 /// Create a copy of QuorumVoter
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -339,7 +339,7 @@ abstract mixin class $QuorumVoterCopyWith<$Res>  {
   factory $QuorumVoterCopyWith(QuorumVoter value, $Res Function(QuorumVoter) _then) = _$QuorumVoterCopyWithImpl;
 @useResult
 $Res call({
-@JsonKey(name: 'user_id') int userId, String? username,@JsonKey(name: 'display_name') String? displayName, String vote, String? reason,@JsonKey(name: 'is_verified_nearby') bool isVerifiedNearby,@JsonKey(name: 'created_at') DateTime createdAt
+@JsonKey(name: 'user_id') int userId, String? username,@JsonKey(name: 'display_name') String? displayName, String vote, String? reason,@JsonKey(name: 'is_nearby') bool isVerifiedNearby,@JsonKey(name: 'created_at') DateTime createdAt
 });
 
 
@@ -450,7 +450,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'user_id')  int userId,  String? username, @JsonKey(name: 'display_name')  String? displayName,  String vote,  String? reason, @JsonKey(name: 'is_verified_nearby')  bool isVerifiedNearby, @JsonKey(name: 'created_at')  DateTime createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'user_id')  int userId,  String? username, @JsonKey(name: 'display_name')  String? displayName,  String vote,  String? reason, @JsonKey(name: 'is_nearby')  bool isVerifiedNearby, @JsonKey(name: 'created_at')  DateTime createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _QuorumVoter() when $default != null:
 return $default(_that.userId,_that.username,_that.displayName,_that.vote,_that.reason,_that.isVerifiedNearby,_that.createdAt);case _:
@@ -471,7 +471,7 @@ return $default(_that.userId,_that.username,_that.displayName,_that.vote,_that.r
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'user_id')  int userId,  String? username, @JsonKey(name: 'display_name')  String? displayName,  String vote,  String? reason, @JsonKey(name: 'is_verified_nearby')  bool isVerifiedNearby, @JsonKey(name: 'created_at')  DateTime createdAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'user_id')  int userId,  String? username, @JsonKey(name: 'display_name')  String? displayName,  String vote,  String? reason, @JsonKey(name: 'is_nearby')  bool isVerifiedNearby, @JsonKey(name: 'created_at')  DateTime createdAt)  $default,) {final _that = this;
 switch (_that) {
 case _QuorumVoter():
 return $default(_that.userId,_that.username,_that.displayName,_that.vote,_that.reason,_that.isVerifiedNearby,_that.createdAt);case _:
@@ -491,7 +491,7 @@ return $default(_that.userId,_that.username,_that.displayName,_that.vote,_that.r
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'user_id')  int userId,  String? username, @JsonKey(name: 'display_name')  String? displayName,  String vote,  String? reason, @JsonKey(name: 'is_verified_nearby')  bool isVerifiedNearby, @JsonKey(name: 'created_at')  DateTime createdAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'user_id')  int userId,  String? username, @JsonKey(name: 'display_name')  String? displayName,  String vote,  String? reason, @JsonKey(name: 'is_nearby')  bool isVerifiedNearby, @JsonKey(name: 'created_at')  DateTime createdAt)?  $default,) {final _that = this;
 switch (_that) {
 case _QuorumVoter() when $default != null:
 return $default(_that.userId,_that.username,_that.displayName,_that.vote,_that.reason,_that.isVerifiedNearby,_that.createdAt);case _:
@@ -506,7 +506,7 @@ return $default(_that.userId,_that.username,_that.displayName,_that.vote,_that.r
 @JsonSerializable()
 
 class _QuorumVoter implements QuorumVoter {
-  const _QuorumVoter({@JsonKey(name: 'user_id') required this.userId, this.username, @JsonKey(name: 'display_name') this.displayName, required this.vote, this.reason, @JsonKey(name: 'is_verified_nearby') this.isVerifiedNearby = true, @JsonKey(name: 'created_at') required this.createdAt});
+  const _QuorumVoter({@JsonKey(name: 'user_id') required this.userId, this.username, @JsonKey(name: 'display_name') this.displayName, required this.vote, this.reason, @JsonKey(name: 'is_nearby') this.isVerifiedNearby = true, @JsonKey(name: 'created_at') required this.createdAt});
   factory _QuorumVoter.fromJson(Map<String, dynamic> json) => _$QuorumVoterFromJson(json);
 
 @override@JsonKey(name: 'user_id') final  int userId;
@@ -514,7 +514,7 @@ class _QuorumVoter implements QuorumVoter {
 @override@JsonKey(name: 'display_name') final  String? displayName;
 @override final  String vote;
 @override final  String? reason;
-@override@JsonKey(name: 'is_verified_nearby') final  bool isVerifiedNearby;
+@override@JsonKey(name: 'is_nearby') final  bool isVerifiedNearby;
 @override@JsonKey(name: 'created_at') final  DateTime createdAt;
 
 /// Create a copy of QuorumVoter
@@ -550,7 +550,7 @@ abstract mixin class _$QuorumVoterCopyWith<$Res> implements $QuorumVoterCopyWith
   factory _$QuorumVoterCopyWith(_QuorumVoter value, $Res Function(_QuorumVoter) _then) = __$QuorumVoterCopyWithImpl;
 @override @useResult
 $Res call({
-@JsonKey(name: 'user_id') int userId, String? username,@JsonKey(name: 'display_name') String? displayName, String vote, String? reason,@JsonKey(name: 'is_verified_nearby') bool isVerifiedNearby,@JsonKey(name: 'created_at') DateTime createdAt
+@JsonKey(name: 'user_id') int userId, String? username,@JsonKey(name: 'display_name') String? displayName, String vote, String? reason,@JsonKey(name: 'is_nearby') bool isVerifiedNearby,@JsonKey(name: 'created_at') DateTime createdAt
 });
 
 
@@ -587,7 +587,7 @@ as DateTime,
 /// @nodoc
 mixin _$IssueTimelineEvent {
 
-@JsonKey(name: 'event_type') String get eventType; String get title; String get description; DateTime get timestamp; String? get actor;@JsonKey(name: 'actor_role') String? get actorRole;@JsonKey(name: 'media_url') String? get mediaUrl; Map<String, dynamic>? get metadata;
+@JsonKey(name: 'event_type') String get eventType; String get title; String? get description;@JsonKey(name: 'created_at') DateTime get createdAt;@JsonKey(name: 'actor_name') String? get actorName;@JsonKey(name: 'actor_handle') String? get actorHandle;@JsonKey(name: 'actor_role') String? get actorRole;@JsonKey(name: 'is_unclaimed') bool get isUnclaimed;@JsonKey(name: 'media_url') String? get mediaUrl;
 /// Create a copy of IssueTimelineEvent
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -600,16 +600,16 @@ $IssueTimelineEventCopyWith<IssueTimelineEvent> get copyWith => _$IssueTimelineE
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is IssueTimelineEvent&&(identical(other.eventType, eventType) || other.eventType == eventType)&&(identical(other.title, title) || other.title == title)&&(identical(other.description, description) || other.description == description)&&(identical(other.timestamp, timestamp) || other.timestamp == timestamp)&&(identical(other.actor, actor) || other.actor == actor)&&(identical(other.actorRole, actorRole) || other.actorRole == actorRole)&&(identical(other.mediaUrl, mediaUrl) || other.mediaUrl == mediaUrl)&&const DeepCollectionEquality().equals(other.metadata, metadata));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is IssueTimelineEvent&&(identical(other.eventType, eventType) || other.eventType == eventType)&&(identical(other.title, title) || other.title == title)&&(identical(other.description, description) || other.description == description)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.actorName, actorName) || other.actorName == actorName)&&(identical(other.actorHandle, actorHandle) || other.actorHandle == actorHandle)&&(identical(other.actorRole, actorRole) || other.actorRole == actorRole)&&(identical(other.isUnclaimed, isUnclaimed) || other.isUnclaimed == isUnclaimed)&&(identical(other.mediaUrl, mediaUrl) || other.mediaUrl == mediaUrl));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,eventType,title,description,timestamp,actor,actorRole,mediaUrl,const DeepCollectionEquality().hash(metadata));
+int get hashCode => Object.hash(runtimeType,eventType,title,description,createdAt,actorName,actorHandle,actorRole,isUnclaimed,mediaUrl);
 
 @override
 String toString() {
-  return 'IssueTimelineEvent(eventType: $eventType, title: $title, description: $description, timestamp: $timestamp, actor: $actor, actorRole: $actorRole, mediaUrl: $mediaUrl, metadata: $metadata)';
+  return 'IssueTimelineEvent(eventType: $eventType, title: $title, description: $description, createdAt: $createdAt, actorName: $actorName, actorHandle: $actorHandle, actorRole: $actorRole, isUnclaimed: $isUnclaimed, mediaUrl: $mediaUrl)';
 }
 
 
@@ -620,7 +620,7 @@ abstract mixin class $IssueTimelineEventCopyWith<$Res>  {
   factory $IssueTimelineEventCopyWith(IssueTimelineEvent value, $Res Function(IssueTimelineEvent) _then) = _$IssueTimelineEventCopyWithImpl;
 @useResult
 $Res call({
-@JsonKey(name: 'event_type') String eventType, String title, String description, DateTime timestamp, String? actor,@JsonKey(name: 'actor_role') String? actorRole,@JsonKey(name: 'media_url') String? mediaUrl, Map<String, dynamic>? metadata
+@JsonKey(name: 'event_type') String eventType, String title, String? description,@JsonKey(name: 'created_at') DateTime createdAt,@JsonKey(name: 'actor_name') String? actorName,@JsonKey(name: 'actor_handle') String? actorHandle,@JsonKey(name: 'actor_role') String? actorRole,@JsonKey(name: 'is_unclaimed') bool isUnclaimed,@JsonKey(name: 'media_url') String? mediaUrl
 });
 
 
@@ -637,17 +637,18 @@ class _$IssueTimelineEventCopyWithImpl<$Res>
 
 /// Create a copy of IssueTimelineEvent
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? eventType = null,Object? title = null,Object? description = null,Object? timestamp = null,Object? actor = freezed,Object? actorRole = freezed,Object? mediaUrl = freezed,Object? metadata = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? eventType = null,Object? title = null,Object? description = freezed,Object? createdAt = null,Object? actorName = freezed,Object? actorHandle = freezed,Object? actorRole = freezed,Object? isUnclaimed = null,Object? mediaUrl = freezed,}) {
   return _then(IssueTimelineEvent(
 eventType: null == eventType ? _self.eventType : eventType // ignore: cast_nullable_to_non_nullable
 as String,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
-as String,description: null == description ? _self.description : description // ignore: cast_nullable_to_non_nullable
-as String,timestamp: null == timestamp ? _self.timestamp : timestamp // ignore: cast_nullable_to_non_nullable
-as DateTime,actor: freezed == actor ? _self.actor : actor // ignore: cast_nullable_to_non_nullable
+as String,description: freezed == description ? _self.description : description // ignore: cast_nullable_to_non_nullable
+as String?,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as DateTime,actorName: freezed == actorName ? _self.actorName : actorName // ignore: cast_nullable_to_non_nullable
+as String?,actorHandle: freezed == actorHandle ? _self.actorHandle : actorHandle // ignore: cast_nullable_to_non_nullable
 as String?,actorRole: freezed == actorRole ? _self.actorRole : actorRole // ignore: cast_nullable_to_non_nullable
-as String?,mediaUrl: freezed == mediaUrl ? _self.mediaUrl : mediaUrl // ignore: cast_nullable_to_non_nullable
-as String?,metadata: freezed == metadata ? _self.metadata : metadata // ignore: cast_nullable_to_non_nullable
-as Map<String, dynamic>?,
+as String?,isUnclaimed: null == isUnclaimed ? _self.isUnclaimed : isUnclaimed // ignore: cast_nullable_to_non_nullable
+as bool,mediaUrl: freezed == mediaUrl ? _self.mediaUrl : mediaUrl // ignore: cast_nullable_to_non_nullable
+as String?,
   ));
 }
 
@@ -732,10 +733,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'event_type')  String eventType,  String title,  String description,  DateTime timestamp,  String? actor, @JsonKey(name: 'actor_role')  String? actorRole, @JsonKey(name: 'media_url')  String? mediaUrl,  Map<String, dynamic>? metadata)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'event_type')  String eventType,  String title,  String? description, @JsonKey(name: 'created_at')  DateTime createdAt, @JsonKey(name: 'actor_name')  String? actorName, @JsonKey(name: 'actor_handle')  String? actorHandle, @JsonKey(name: 'actor_role')  String? actorRole, @JsonKey(name: 'is_unclaimed')  bool isUnclaimed, @JsonKey(name: 'media_url')  String? mediaUrl)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _IssueTimelineEvent() when $default != null:
-return $default(_that.eventType,_that.title,_that.description,_that.timestamp,_that.actor,_that.actorRole,_that.mediaUrl,_that.metadata);case _:
+return $default(_that.eventType,_that.title,_that.description,_that.createdAt,_that.actorName,_that.actorHandle,_that.actorRole,_that.isUnclaimed,_that.mediaUrl);case _:
   return orElse();
 
 }
@@ -753,10 +754,10 @@ return $default(_that.eventType,_that.title,_that.description,_that.timestamp,_t
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'event_type')  String eventType,  String title,  String description,  DateTime timestamp,  String? actor, @JsonKey(name: 'actor_role')  String? actorRole, @JsonKey(name: 'media_url')  String? mediaUrl,  Map<String, dynamic>? metadata)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'event_type')  String eventType,  String title,  String? description, @JsonKey(name: 'created_at')  DateTime createdAt, @JsonKey(name: 'actor_name')  String? actorName, @JsonKey(name: 'actor_handle')  String? actorHandle, @JsonKey(name: 'actor_role')  String? actorRole, @JsonKey(name: 'is_unclaimed')  bool isUnclaimed, @JsonKey(name: 'media_url')  String? mediaUrl)  $default,) {final _that = this;
 switch (_that) {
 case _IssueTimelineEvent():
-return $default(_that.eventType,_that.title,_that.description,_that.timestamp,_that.actor,_that.actorRole,_that.mediaUrl,_that.metadata);case _:
+return $default(_that.eventType,_that.title,_that.description,_that.createdAt,_that.actorName,_that.actorHandle,_that.actorRole,_that.isUnclaimed,_that.mediaUrl);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -773,10 +774,10 @@ return $default(_that.eventType,_that.title,_that.description,_that.timestamp,_t
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'event_type')  String eventType,  String title,  String description,  DateTime timestamp,  String? actor, @JsonKey(name: 'actor_role')  String? actorRole, @JsonKey(name: 'media_url')  String? mediaUrl,  Map<String, dynamic>? metadata)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'event_type')  String eventType,  String title,  String? description, @JsonKey(name: 'created_at')  DateTime createdAt, @JsonKey(name: 'actor_name')  String? actorName, @JsonKey(name: 'actor_handle')  String? actorHandle, @JsonKey(name: 'actor_role')  String? actorRole, @JsonKey(name: 'is_unclaimed')  bool isUnclaimed, @JsonKey(name: 'media_url')  String? mediaUrl)?  $default,) {final _that = this;
 switch (_that) {
 case _IssueTimelineEvent() when $default != null:
-return $default(_that.eventType,_that.title,_that.description,_that.timestamp,_that.actor,_that.actorRole,_that.mediaUrl,_that.metadata);case _:
+return $default(_that.eventType,_that.title,_that.description,_that.createdAt,_that.actorName,_that.actorHandle,_that.actorRole,_that.isUnclaimed,_that.mediaUrl);case _:
   return null;
 
 }
@@ -788,25 +789,18 @@ return $default(_that.eventType,_that.title,_that.description,_that.timestamp,_t
 @JsonSerializable()
 
 class _IssueTimelineEvent implements IssueTimelineEvent {
-  const _IssueTimelineEvent({@JsonKey(name: 'event_type') required this.eventType, required this.title, required this.description, required this.timestamp, this.actor, @JsonKey(name: 'actor_role') this.actorRole, @JsonKey(name: 'media_url') this.mediaUrl,  Map<String, dynamic>? metadata}): _metadata = metadata;
+  const _IssueTimelineEvent({@JsonKey(name: 'event_type') required this.eventType, required this.title, this.description, @JsonKey(name: 'created_at') required this.createdAt, @JsonKey(name: 'actor_name') this.actorName, @JsonKey(name: 'actor_handle') this.actorHandle, @JsonKey(name: 'actor_role') this.actorRole, @JsonKey(name: 'is_unclaimed') this.isUnclaimed = false, @JsonKey(name: 'media_url') this.mediaUrl});
   factory _IssueTimelineEvent.fromJson(Map<String, dynamic> json) => _$IssueTimelineEventFromJson(json);
 
 @override@JsonKey(name: 'event_type') final  String eventType;
 @override final  String title;
-@override final  String description;
-@override final  DateTime timestamp;
-@override final  String? actor;
+@override final  String? description;
+@override@JsonKey(name: 'created_at') final  DateTime createdAt;
+@override@JsonKey(name: 'actor_name') final  String? actorName;
+@override@JsonKey(name: 'actor_handle') final  String? actorHandle;
 @override@JsonKey(name: 'actor_role') final  String? actorRole;
+@override@JsonKey(name: 'is_unclaimed') final  bool isUnclaimed;
 @override@JsonKey(name: 'media_url') final  String? mediaUrl;
- final  Map<String, dynamic>? _metadata;
-@override Map<String, dynamic>? get metadata {
-  final value = _metadata;
-  if (value == null) return null;
-  if (_metadata is EqualUnmodifiableMapView) return _metadata;
-  // ignore: implicit_dynamic_type
-  return EqualUnmodifiableMapView(value);
-}
-
 
 /// Create a copy of IssueTimelineEvent
 /// with the given fields replaced by the non-null parameter values.
@@ -821,16 +815,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _IssueTimelineEvent&&(identical(other.eventType, eventType) || other.eventType == eventType)&&(identical(other.title, title) || other.title == title)&&(identical(other.description, description) || other.description == description)&&(identical(other.timestamp, timestamp) || other.timestamp == timestamp)&&(identical(other.actor, actor) || other.actor == actor)&&(identical(other.actorRole, actorRole) || other.actorRole == actorRole)&&(identical(other.mediaUrl, mediaUrl) || other.mediaUrl == mediaUrl)&&const DeepCollectionEquality().equals(other._metadata, _metadata));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _IssueTimelineEvent&&(identical(other.eventType, eventType) || other.eventType == eventType)&&(identical(other.title, title) || other.title == title)&&(identical(other.description, description) || other.description == description)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.actorName, actorName) || other.actorName == actorName)&&(identical(other.actorHandle, actorHandle) || other.actorHandle == actorHandle)&&(identical(other.actorRole, actorRole) || other.actorRole == actorRole)&&(identical(other.isUnclaimed, isUnclaimed) || other.isUnclaimed == isUnclaimed)&&(identical(other.mediaUrl, mediaUrl) || other.mediaUrl == mediaUrl));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,eventType,title,description,timestamp,actor,actorRole,mediaUrl,const DeepCollectionEquality().hash(_metadata));
+int get hashCode => Object.hash(runtimeType,eventType,title,description,createdAt,actorName,actorHandle,actorRole,isUnclaimed,mediaUrl);
 
 @override
 String toString() {
-  return 'IssueTimelineEvent(eventType: $eventType, title: $title, description: $description, timestamp: $timestamp, actor: $actor, actorRole: $actorRole, mediaUrl: $mediaUrl, metadata: $metadata)';
+  return 'IssueTimelineEvent(eventType: $eventType, title: $title, description: $description, createdAt: $createdAt, actorName: $actorName, actorHandle: $actorHandle, actorRole: $actorRole, isUnclaimed: $isUnclaimed, mediaUrl: $mediaUrl)';
 }
 
 
@@ -841,7 +835,7 @@ abstract mixin class _$IssueTimelineEventCopyWith<$Res> implements $IssueTimelin
   factory _$IssueTimelineEventCopyWith(_IssueTimelineEvent value, $Res Function(_IssueTimelineEvent) _then) = __$IssueTimelineEventCopyWithImpl;
 @override @useResult
 $Res call({
-@JsonKey(name: 'event_type') String eventType, String title, String description, DateTime timestamp, String? actor,@JsonKey(name: 'actor_role') String? actorRole,@JsonKey(name: 'media_url') String? mediaUrl, Map<String, dynamic>? metadata
+@JsonKey(name: 'event_type') String eventType, String title, String? description,@JsonKey(name: 'created_at') DateTime createdAt,@JsonKey(name: 'actor_name') String? actorName,@JsonKey(name: 'actor_handle') String? actorHandle,@JsonKey(name: 'actor_role') String? actorRole,@JsonKey(name: 'is_unclaimed') bool isUnclaimed,@JsonKey(name: 'media_url') String? mediaUrl
 });
 
 
@@ -858,17 +852,18 @@ class __$IssueTimelineEventCopyWithImpl<$Res>
 
 /// Create a copy of IssueTimelineEvent
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? eventType = null,Object? title = null,Object? description = null,Object? timestamp = null,Object? actor = freezed,Object? actorRole = freezed,Object? mediaUrl = freezed,Object? metadata = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? eventType = null,Object? title = null,Object? description = freezed,Object? createdAt = null,Object? actorName = freezed,Object? actorHandle = freezed,Object? actorRole = freezed,Object? isUnclaimed = null,Object? mediaUrl = freezed,}) {
   return _then(_IssueTimelineEvent(
 eventType: null == eventType ? _self.eventType : eventType // ignore: cast_nullable_to_non_nullable
 as String,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
-as String,description: null == description ? _self.description : description // ignore: cast_nullable_to_non_nullable
-as String,timestamp: null == timestamp ? _self.timestamp : timestamp // ignore: cast_nullable_to_non_nullable
-as DateTime,actor: freezed == actor ? _self.actor : actor // ignore: cast_nullable_to_non_nullable
+as String,description: freezed == description ? _self.description : description // ignore: cast_nullable_to_non_nullable
+as String?,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as DateTime,actorName: freezed == actorName ? _self.actorName : actorName // ignore: cast_nullable_to_non_nullable
+as String?,actorHandle: freezed == actorHandle ? _self.actorHandle : actorHandle // ignore: cast_nullable_to_non_nullable
 as String?,actorRole: freezed == actorRole ? _self.actorRole : actorRole // ignore: cast_nullable_to_non_nullable
-as String?,mediaUrl: freezed == mediaUrl ? _self.mediaUrl : mediaUrl // ignore: cast_nullable_to_non_nullable
-as String?,metadata: freezed == metadata ? _self._metadata : metadata // ignore: cast_nullable_to_non_nullable
-as Map<String, dynamic>?,
+as String?,isUnclaimed: null == isUnclaimed ? _self.isUnclaimed : isUnclaimed // ignore: cast_nullable_to_non_nullable
+as bool,mediaUrl: freezed == mediaUrl ? _self.mediaUrl : mediaUrl // ignore: cast_nullable_to_non_nullable
+as String?,
   ));
 }
 
@@ -1172,7 +1167,7 @@ as List<QuorumVoter>,
 /// @nodoc
 mixin _$Issue {
 
- int get id; String get title; String get description; String get category; String get status; double get latitude; double get longitude; String? get geohash; String get ward;@JsonKey(name: 'is_anonymous') bool get isAnonymous;@JsonKey(name: 'is_fuzzed') bool get isFuzzed;@JsonKey(name: 'is_shielded') bool get isShielded;@JsonKey(name: 'reporter_label') String get reporterLabel;@JsonKey(name: 'reporter_name') String? get reporterName;@JsonKey(name: 'reporter_photo_url') String? get reporterPhotoUrl;@JsonKey(name: 'created_at') DateTime get createdAt;@JsonKey(name: 'acknowledged_at') DateTime? get acknowledgedAt;@JsonKey(name: 'resolved_at') DateTime? get resolvedAt;@JsonKey(name: 'resolution_proof') String? get resolutionProof;@JsonKey(name: 'resolution_notes') String? get resolutionNotes;@JsonKey(name: 'upvotes_count') int get upvotesCount;@JsonKey(name: 'confirmations_count') int get confirmationsCount;@JsonKey(name: 'disputes_count') int get disputesCount;@JsonKey(name: 'has_upvoted') bool get hasUpvoted;@JsonKey(name: 'media_urls') List<String> get mediaUrls;@JsonKey(name: 'video_url') String? get videoUrl;@JsonKey(name: 'reporter_id') int? get reporterId;@JsonKey(name: 'assigned_representative') AssignedAuthority? get assignedRepresentative;@JsonKey(name: 'resolved_by') String? get resolvedBy;@JsonKey(name: 'resolution_type') String? get resolutionType;
+ int get id; String get title; String get description; String get category; String get status; double get latitude; double get longitude; String? get geohash; String get ward;@JsonKey(name: 'is_anonymous') bool get isAnonymous;@JsonKey(name: 'is_fuzzed') bool get isFuzzed;@JsonKey(name: 'is_shielded') bool get isShielded;@JsonKey(name: 'reporter_label') String get reporterLabel;@JsonKey(name: 'reporter_name') String? get reporterName;@JsonKey(name: 'reporter_photo_url') String? get reporterPhotoUrl;@JsonKey(name: 'created_at') DateTime get createdAt;@JsonKey(name: 'acknowledged_at') DateTime? get acknowledgedAt;@JsonKey(name: 'resolved_at') DateTime? get resolvedAt;@JsonKey(name: 'resolution_proof') String? get resolutionProof;@JsonKey(name: 'resolution_notes') String? get resolutionNotes;@JsonKey(name: 'upvotes_count') int get upvotesCount;@JsonKey(name: 'comments_count') int get commentsCount;@JsonKey(name: 'confirmations_count') int get confirmationsCount;@JsonKey(name: 'disputes_count') int get disputesCount;@JsonKey(name: 'has_upvoted') bool get hasUpvoted;@JsonKey(name: 'media_urls') List<String> get mediaUrls;@JsonKey(name: 'video_url') String? get videoUrl;@JsonKey(name: 'reporter_id') int? get reporterId;@JsonKey(name: 'assigned_representative') AssignedAuthority? get assignedRepresentative;@JsonKey(name: 'resolved_by') String? get resolvedBy;@JsonKey(name: 'resolution_type') String? get resolutionType;
 /// Create a copy of Issue
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -1185,16 +1180,16 @@ $IssueCopyWith<Issue> get copyWith => _$IssueCopyWithImpl<Issue>(this as Issue, 
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is Issue&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.description, description) || other.description == description)&&(identical(other.category, category) || other.category == category)&&(identical(other.status, status) || other.status == status)&&(identical(other.latitude, latitude) || other.latitude == latitude)&&(identical(other.longitude, longitude) || other.longitude == longitude)&&(identical(other.geohash, geohash) || other.geohash == geohash)&&(identical(other.ward, ward) || other.ward == ward)&&(identical(other.isAnonymous, isAnonymous) || other.isAnonymous == isAnonymous)&&(identical(other.isFuzzed, isFuzzed) || other.isFuzzed == isFuzzed)&&(identical(other.isShielded, isShielded) || other.isShielded == isShielded)&&(identical(other.reporterLabel, reporterLabel) || other.reporterLabel == reporterLabel)&&(identical(other.reporterName, reporterName) || other.reporterName == reporterName)&&(identical(other.reporterPhotoUrl, reporterPhotoUrl) || other.reporterPhotoUrl == reporterPhotoUrl)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.acknowledgedAt, acknowledgedAt) || other.acknowledgedAt == acknowledgedAt)&&(identical(other.resolvedAt, resolvedAt) || other.resolvedAt == resolvedAt)&&(identical(other.resolutionProof, resolutionProof) || other.resolutionProof == resolutionProof)&&(identical(other.resolutionNotes, resolutionNotes) || other.resolutionNotes == resolutionNotes)&&(identical(other.upvotesCount, upvotesCount) || other.upvotesCount == upvotesCount)&&(identical(other.confirmationsCount, confirmationsCount) || other.confirmationsCount == confirmationsCount)&&(identical(other.disputesCount, disputesCount) || other.disputesCount == disputesCount)&&(identical(other.hasUpvoted, hasUpvoted) || other.hasUpvoted == hasUpvoted)&&const DeepCollectionEquality().equals(other.mediaUrls, mediaUrls)&&(identical(other.videoUrl, videoUrl) || other.videoUrl == videoUrl)&&(identical(other.reporterId, reporterId) || other.reporterId == reporterId)&&(identical(other.assignedRepresentative, assignedRepresentative) || other.assignedRepresentative == assignedRepresentative)&&(identical(other.resolvedBy, resolvedBy) || other.resolvedBy == resolvedBy)&&(identical(other.resolutionType, resolutionType) || other.resolutionType == resolutionType));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Issue&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.description, description) || other.description == description)&&(identical(other.category, category) || other.category == category)&&(identical(other.status, status) || other.status == status)&&(identical(other.latitude, latitude) || other.latitude == latitude)&&(identical(other.longitude, longitude) || other.longitude == longitude)&&(identical(other.geohash, geohash) || other.geohash == geohash)&&(identical(other.ward, ward) || other.ward == ward)&&(identical(other.isAnonymous, isAnonymous) || other.isAnonymous == isAnonymous)&&(identical(other.isFuzzed, isFuzzed) || other.isFuzzed == isFuzzed)&&(identical(other.isShielded, isShielded) || other.isShielded == isShielded)&&(identical(other.reporterLabel, reporterLabel) || other.reporterLabel == reporterLabel)&&(identical(other.reporterName, reporterName) || other.reporterName == reporterName)&&(identical(other.reporterPhotoUrl, reporterPhotoUrl) || other.reporterPhotoUrl == reporterPhotoUrl)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.acknowledgedAt, acknowledgedAt) || other.acknowledgedAt == acknowledgedAt)&&(identical(other.resolvedAt, resolvedAt) || other.resolvedAt == resolvedAt)&&(identical(other.resolutionProof, resolutionProof) || other.resolutionProof == resolutionProof)&&(identical(other.resolutionNotes, resolutionNotes) || other.resolutionNotes == resolutionNotes)&&(identical(other.upvotesCount, upvotesCount) || other.upvotesCount == upvotesCount)&&(identical(other.commentsCount, commentsCount) || other.commentsCount == commentsCount)&&(identical(other.confirmationsCount, confirmationsCount) || other.confirmationsCount == confirmationsCount)&&(identical(other.disputesCount, disputesCount) || other.disputesCount == disputesCount)&&(identical(other.hasUpvoted, hasUpvoted) || other.hasUpvoted == hasUpvoted)&&const DeepCollectionEquality().equals(other.mediaUrls, mediaUrls)&&(identical(other.videoUrl, videoUrl) || other.videoUrl == videoUrl)&&(identical(other.reporterId, reporterId) || other.reporterId == reporterId)&&(identical(other.assignedRepresentative, assignedRepresentative) || other.assignedRepresentative == assignedRepresentative)&&(identical(other.resolvedBy, resolvedBy) || other.resolvedBy == resolvedBy)&&(identical(other.resolutionType, resolutionType) || other.resolutionType == resolutionType));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hashAll([runtimeType,id,title,description,category,status,latitude,longitude,geohash,ward,isAnonymous,isFuzzed,isShielded,reporterLabel,reporterName,reporterPhotoUrl,createdAt,acknowledgedAt,resolvedAt,resolutionProof,resolutionNotes,upvotesCount,confirmationsCount,disputesCount,hasUpvoted,const DeepCollectionEquality().hash(mediaUrls),videoUrl,reporterId,assignedRepresentative,resolvedBy,resolutionType]);
+int get hashCode => Object.hashAll([runtimeType,id,title,description,category,status,latitude,longitude,geohash,ward,isAnonymous,isFuzzed,isShielded,reporterLabel,reporterName,reporterPhotoUrl,createdAt,acknowledgedAt,resolvedAt,resolutionProof,resolutionNotes,upvotesCount,commentsCount,confirmationsCount,disputesCount,hasUpvoted,const DeepCollectionEquality().hash(mediaUrls),videoUrl,reporterId,assignedRepresentative,resolvedBy,resolutionType]);
 
 @override
 String toString() {
-  return 'Issue(id: $id, title: $title, description: $description, category: $category, status: $status, latitude: $latitude, longitude: $longitude, geohash: $geohash, ward: $ward, isAnonymous: $isAnonymous, isFuzzed: $isFuzzed, isShielded: $isShielded, reporterLabel: $reporterLabel, reporterName: $reporterName, reporterPhotoUrl: $reporterPhotoUrl, createdAt: $createdAt, acknowledgedAt: $acknowledgedAt, resolvedAt: $resolvedAt, resolutionProof: $resolutionProof, resolutionNotes: $resolutionNotes, upvotesCount: $upvotesCount, confirmationsCount: $confirmationsCount, disputesCount: $disputesCount, hasUpvoted: $hasUpvoted, mediaUrls: $mediaUrls, videoUrl: $videoUrl, reporterId: $reporterId, assignedRepresentative: $assignedRepresentative, resolvedBy: $resolvedBy, resolutionType: $resolutionType)';
+  return 'Issue(id: $id, title: $title, description: $description, category: $category, status: $status, latitude: $latitude, longitude: $longitude, geohash: $geohash, ward: $ward, isAnonymous: $isAnonymous, isFuzzed: $isFuzzed, isShielded: $isShielded, reporterLabel: $reporterLabel, reporterName: $reporterName, reporterPhotoUrl: $reporterPhotoUrl, createdAt: $createdAt, acknowledgedAt: $acknowledgedAt, resolvedAt: $resolvedAt, resolutionProof: $resolutionProof, resolutionNotes: $resolutionNotes, upvotesCount: $upvotesCount, commentsCount: $commentsCount, confirmationsCount: $confirmationsCount, disputesCount: $disputesCount, hasUpvoted: $hasUpvoted, mediaUrls: $mediaUrls, videoUrl: $videoUrl, reporterId: $reporterId, assignedRepresentative: $assignedRepresentative, resolvedBy: $resolvedBy, resolutionType: $resolutionType)';
 }
 
 
@@ -1205,7 +1200,7 @@ abstract mixin class $IssueCopyWith<$Res>  {
   factory $IssueCopyWith(Issue value, $Res Function(Issue) _then) = _$IssueCopyWithImpl;
 @useResult
 $Res call({
- int id, String title, String description, String category, String status, double latitude, double longitude, String? geohash, String ward,@JsonKey(name: 'is_anonymous') bool isAnonymous,@JsonKey(name: 'is_fuzzed') bool isFuzzed,@JsonKey(name: 'is_shielded') bool isShielded,@JsonKey(name: 'reporter_label') String reporterLabel,@JsonKey(name: 'reporter_name') String? reporterName,@JsonKey(name: 'reporter_photo_url') String? reporterPhotoUrl,@JsonKey(name: 'created_at') DateTime createdAt,@JsonKey(name: 'acknowledged_at') DateTime? acknowledgedAt,@JsonKey(name: 'resolved_at') DateTime? resolvedAt,@JsonKey(name: 'resolution_proof') String? resolutionProof,@JsonKey(name: 'resolution_notes') String? resolutionNotes,@JsonKey(name: 'upvotes_count') int upvotesCount,@JsonKey(name: 'confirmations_count') int confirmationsCount,@JsonKey(name: 'disputes_count') int disputesCount,@JsonKey(name: 'has_upvoted') bool hasUpvoted,@JsonKey(name: 'media_urls') List<String> mediaUrls,@JsonKey(name: 'video_url') String? videoUrl,@JsonKey(name: 'reporter_id') int? reporterId,@JsonKey(name: 'assigned_representative') AssignedAuthority? assignedRepresentative,@JsonKey(name: 'resolved_by') String? resolvedBy,@JsonKey(name: 'resolution_type') String? resolutionType
+ int id, String title, String description, String category, String status, double latitude, double longitude, String? geohash, String ward,@JsonKey(name: 'is_anonymous') bool isAnonymous,@JsonKey(name: 'is_fuzzed') bool isFuzzed,@JsonKey(name: 'is_shielded') bool isShielded,@JsonKey(name: 'reporter_label') String reporterLabel,@JsonKey(name: 'reporter_name') String? reporterName,@JsonKey(name: 'reporter_photo_url') String? reporterPhotoUrl,@JsonKey(name: 'created_at') DateTime createdAt,@JsonKey(name: 'acknowledged_at') DateTime? acknowledgedAt,@JsonKey(name: 'resolved_at') DateTime? resolvedAt,@JsonKey(name: 'resolution_proof') String? resolutionProof,@JsonKey(name: 'resolution_notes') String? resolutionNotes,@JsonKey(name: 'upvotes_count') int upvotesCount,@JsonKey(name: 'comments_count') int commentsCount,@JsonKey(name: 'confirmations_count') int confirmationsCount,@JsonKey(name: 'disputes_count') int disputesCount,@JsonKey(name: 'has_upvoted') bool hasUpvoted,@JsonKey(name: 'media_urls') List<String> mediaUrls,@JsonKey(name: 'video_url') String? videoUrl,@JsonKey(name: 'reporter_id') int? reporterId,@JsonKey(name: 'assigned_representative') AssignedAuthority? assignedRepresentative,@JsonKey(name: 'resolved_by') String? resolvedBy,@JsonKey(name: 'resolution_type') String? resolutionType
 });
 
 
@@ -1222,7 +1217,7 @@ class _$IssueCopyWithImpl<$Res>
 
 /// Create a copy of Issue
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? title = null,Object? description = null,Object? category = null,Object? status = null,Object? latitude = null,Object? longitude = null,Object? geohash = freezed,Object? ward = null,Object? isAnonymous = null,Object? isFuzzed = null,Object? isShielded = null,Object? reporterLabel = null,Object? reporterName = freezed,Object? reporterPhotoUrl = freezed,Object? createdAt = null,Object? acknowledgedAt = freezed,Object? resolvedAt = freezed,Object? resolutionProof = freezed,Object? resolutionNotes = freezed,Object? upvotesCount = null,Object? confirmationsCount = null,Object? disputesCount = null,Object? hasUpvoted = null,Object? mediaUrls = null,Object? videoUrl = freezed,Object? reporterId = freezed,Object? assignedRepresentative = freezed,Object? resolvedBy = freezed,Object? resolutionType = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? title = null,Object? description = null,Object? category = null,Object? status = null,Object? latitude = null,Object? longitude = null,Object? geohash = freezed,Object? ward = null,Object? isAnonymous = null,Object? isFuzzed = null,Object? isShielded = null,Object? reporterLabel = null,Object? reporterName = freezed,Object? reporterPhotoUrl = freezed,Object? createdAt = null,Object? acknowledgedAt = freezed,Object? resolvedAt = freezed,Object? resolutionProof = freezed,Object? resolutionNotes = freezed,Object? upvotesCount = null,Object? commentsCount = null,Object? confirmationsCount = null,Object? disputesCount = null,Object? hasUpvoted = null,Object? mediaUrls = null,Object? videoUrl = freezed,Object? reporterId = freezed,Object? assignedRepresentative = freezed,Object? resolvedBy = freezed,Object? resolutionType = freezed,}) {
   return _then(Issue(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as int,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
@@ -1245,6 +1240,7 @@ as DateTime?,resolvedAt: freezed == resolvedAt ? _self.resolvedAt : resolvedAt /
 as DateTime?,resolutionProof: freezed == resolutionProof ? _self.resolutionProof : resolutionProof // ignore: cast_nullable_to_non_nullable
 as String?,resolutionNotes: freezed == resolutionNotes ? _self.resolutionNotes : resolutionNotes // ignore: cast_nullable_to_non_nullable
 as String?,upvotesCount: null == upvotesCount ? _self.upvotesCount : upvotesCount // ignore: cast_nullable_to_non_nullable
+as int,commentsCount: null == commentsCount ? _self.commentsCount : commentsCount // ignore: cast_nullable_to_non_nullable
 as int,confirmationsCount: null == confirmationsCount ? _self.confirmationsCount : confirmationsCount // ignore: cast_nullable_to_non_nullable
 as int,disputesCount: null == disputesCount ? _self.disputesCount : disputesCount // ignore: cast_nullable_to_non_nullable
 as int,hasUpvoted: null == hasUpvoted ? _self.hasUpvoted : hasUpvoted // ignore: cast_nullable_to_non_nullable
@@ -1351,10 +1347,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  String title,  String description,  String category,  String status,  double latitude,  double longitude,  String? geohash,  String ward, @JsonKey(name: 'is_anonymous')  bool isAnonymous, @JsonKey(name: 'is_fuzzed')  bool isFuzzed, @JsonKey(name: 'is_shielded')  bool isShielded, @JsonKey(name: 'reporter_label')  String reporterLabel, @JsonKey(name: 'reporter_name')  String? reporterName, @JsonKey(name: 'reporter_photo_url')  String? reporterPhotoUrl, @JsonKey(name: 'created_at')  DateTime createdAt, @JsonKey(name: 'acknowledged_at')  DateTime? acknowledgedAt, @JsonKey(name: 'resolved_at')  DateTime? resolvedAt, @JsonKey(name: 'resolution_proof')  String? resolutionProof, @JsonKey(name: 'resolution_notes')  String? resolutionNotes, @JsonKey(name: 'upvotes_count')  int upvotesCount, @JsonKey(name: 'confirmations_count')  int confirmationsCount, @JsonKey(name: 'disputes_count')  int disputesCount, @JsonKey(name: 'has_upvoted')  bool hasUpvoted, @JsonKey(name: 'media_urls')  List<String> mediaUrls, @JsonKey(name: 'video_url')  String? videoUrl, @JsonKey(name: 'reporter_id')  int? reporterId, @JsonKey(name: 'assigned_representative')  AssignedAuthority? assignedRepresentative, @JsonKey(name: 'resolved_by')  String? resolvedBy, @JsonKey(name: 'resolution_type')  String? resolutionType)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  String title,  String description,  String category,  String status,  double latitude,  double longitude,  String? geohash,  String ward, @JsonKey(name: 'is_anonymous')  bool isAnonymous, @JsonKey(name: 'is_fuzzed')  bool isFuzzed, @JsonKey(name: 'is_shielded')  bool isShielded, @JsonKey(name: 'reporter_label')  String reporterLabel, @JsonKey(name: 'reporter_name')  String? reporterName, @JsonKey(name: 'reporter_photo_url')  String? reporterPhotoUrl, @JsonKey(name: 'created_at')  DateTime createdAt, @JsonKey(name: 'acknowledged_at')  DateTime? acknowledgedAt, @JsonKey(name: 'resolved_at')  DateTime? resolvedAt, @JsonKey(name: 'resolution_proof')  String? resolutionProof, @JsonKey(name: 'resolution_notes')  String? resolutionNotes, @JsonKey(name: 'upvotes_count')  int upvotesCount, @JsonKey(name: 'comments_count')  int commentsCount, @JsonKey(name: 'confirmations_count')  int confirmationsCount, @JsonKey(name: 'disputes_count')  int disputesCount, @JsonKey(name: 'has_upvoted')  bool hasUpvoted, @JsonKey(name: 'media_urls')  List<String> mediaUrls, @JsonKey(name: 'video_url')  String? videoUrl, @JsonKey(name: 'reporter_id')  int? reporterId, @JsonKey(name: 'assigned_representative')  AssignedAuthority? assignedRepresentative, @JsonKey(name: 'resolved_by')  String? resolvedBy, @JsonKey(name: 'resolution_type')  String? resolutionType)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Issue() when $default != null:
-return $default(_that.id,_that.title,_that.description,_that.category,_that.status,_that.latitude,_that.longitude,_that.geohash,_that.ward,_that.isAnonymous,_that.isFuzzed,_that.isShielded,_that.reporterLabel,_that.reporterName,_that.reporterPhotoUrl,_that.createdAt,_that.acknowledgedAt,_that.resolvedAt,_that.resolutionProof,_that.resolutionNotes,_that.upvotesCount,_that.confirmationsCount,_that.disputesCount,_that.hasUpvoted,_that.mediaUrls,_that.videoUrl,_that.reporterId,_that.assignedRepresentative,_that.resolvedBy,_that.resolutionType);case _:
+return $default(_that.id,_that.title,_that.description,_that.category,_that.status,_that.latitude,_that.longitude,_that.geohash,_that.ward,_that.isAnonymous,_that.isFuzzed,_that.isShielded,_that.reporterLabel,_that.reporterName,_that.reporterPhotoUrl,_that.createdAt,_that.acknowledgedAt,_that.resolvedAt,_that.resolutionProof,_that.resolutionNotes,_that.upvotesCount,_that.commentsCount,_that.confirmationsCount,_that.disputesCount,_that.hasUpvoted,_that.mediaUrls,_that.videoUrl,_that.reporterId,_that.assignedRepresentative,_that.resolvedBy,_that.resolutionType);case _:
   return orElse();
 
 }
@@ -1372,10 +1368,10 @@ return $default(_that.id,_that.title,_that.description,_that.category,_that.stat
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  String title,  String description,  String category,  String status,  double latitude,  double longitude,  String? geohash,  String ward, @JsonKey(name: 'is_anonymous')  bool isAnonymous, @JsonKey(name: 'is_fuzzed')  bool isFuzzed, @JsonKey(name: 'is_shielded')  bool isShielded, @JsonKey(name: 'reporter_label')  String reporterLabel, @JsonKey(name: 'reporter_name')  String? reporterName, @JsonKey(name: 'reporter_photo_url')  String? reporterPhotoUrl, @JsonKey(name: 'created_at')  DateTime createdAt, @JsonKey(name: 'acknowledged_at')  DateTime? acknowledgedAt, @JsonKey(name: 'resolved_at')  DateTime? resolvedAt, @JsonKey(name: 'resolution_proof')  String? resolutionProof, @JsonKey(name: 'resolution_notes')  String? resolutionNotes, @JsonKey(name: 'upvotes_count')  int upvotesCount, @JsonKey(name: 'confirmations_count')  int confirmationsCount, @JsonKey(name: 'disputes_count')  int disputesCount, @JsonKey(name: 'has_upvoted')  bool hasUpvoted, @JsonKey(name: 'media_urls')  List<String> mediaUrls, @JsonKey(name: 'video_url')  String? videoUrl, @JsonKey(name: 'reporter_id')  int? reporterId, @JsonKey(name: 'assigned_representative')  AssignedAuthority? assignedRepresentative, @JsonKey(name: 'resolved_by')  String? resolvedBy, @JsonKey(name: 'resolution_type')  String? resolutionType)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  String title,  String description,  String category,  String status,  double latitude,  double longitude,  String? geohash,  String ward, @JsonKey(name: 'is_anonymous')  bool isAnonymous, @JsonKey(name: 'is_fuzzed')  bool isFuzzed, @JsonKey(name: 'is_shielded')  bool isShielded, @JsonKey(name: 'reporter_label')  String reporterLabel, @JsonKey(name: 'reporter_name')  String? reporterName, @JsonKey(name: 'reporter_photo_url')  String? reporterPhotoUrl, @JsonKey(name: 'created_at')  DateTime createdAt, @JsonKey(name: 'acknowledged_at')  DateTime? acknowledgedAt, @JsonKey(name: 'resolved_at')  DateTime? resolvedAt, @JsonKey(name: 'resolution_proof')  String? resolutionProof, @JsonKey(name: 'resolution_notes')  String? resolutionNotes, @JsonKey(name: 'upvotes_count')  int upvotesCount, @JsonKey(name: 'comments_count')  int commentsCount, @JsonKey(name: 'confirmations_count')  int confirmationsCount, @JsonKey(name: 'disputes_count')  int disputesCount, @JsonKey(name: 'has_upvoted')  bool hasUpvoted, @JsonKey(name: 'media_urls')  List<String> mediaUrls, @JsonKey(name: 'video_url')  String? videoUrl, @JsonKey(name: 'reporter_id')  int? reporterId, @JsonKey(name: 'assigned_representative')  AssignedAuthority? assignedRepresentative, @JsonKey(name: 'resolved_by')  String? resolvedBy, @JsonKey(name: 'resolution_type')  String? resolutionType)  $default,) {final _that = this;
 switch (_that) {
 case _Issue():
-return $default(_that.id,_that.title,_that.description,_that.category,_that.status,_that.latitude,_that.longitude,_that.geohash,_that.ward,_that.isAnonymous,_that.isFuzzed,_that.isShielded,_that.reporterLabel,_that.reporterName,_that.reporterPhotoUrl,_that.createdAt,_that.acknowledgedAt,_that.resolvedAt,_that.resolutionProof,_that.resolutionNotes,_that.upvotesCount,_that.confirmationsCount,_that.disputesCount,_that.hasUpvoted,_that.mediaUrls,_that.videoUrl,_that.reporterId,_that.assignedRepresentative,_that.resolvedBy,_that.resolutionType);case _:
+return $default(_that.id,_that.title,_that.description,_that.category,_that.status,_that.latitude,_that.longitude,_that.geohash,_that.ward,_that.isAnonymous,_that.isFuzzed,_that.isShielded,_that.reporterLabel,_that.reporterName,_that.reporterPhotoUrl,_that.createdAt,_that.acknowledgedAt,_that.resolvedAt,_that.resolutionProof,_that.resolutionNotes,_that.upvotesCount,_that.commentsCount,_that.confirmationsCount,_that.disputesCount,_that.hasUpvoted,_that.mediaUrls,_that.videoUrl,_that.reporterId,_that.assignedRepresentative,_that.resolvedBy,_that.resolutionType);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -1392,10 +1388,10 @@ return $default(_that.id,_that.title,_that.description,_that.category,_that.stat
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  String title,  String description,  String category,  String status,  double latitude,  double longitude,  String? geohash,  String ward, @JsonKey(name: 'is_anonymous')  bool isAnonymous, @JsonKey(name: 'is_fuzzed')  bool isFuzzed, @JsonKey(name: 'is_shielded')  bool isShielded, @JsonKey(name: 'reporter_label')  String reporterLabel, @JsonKey(name: 'reporter_name')  String? reporterName, @JsonKey(name: 'reporter_photo_url')  String? reporterPhotoUrl, @JsonKey(name: 'created_at')  DateTime createdAt, @JsonKey(name: 'acknowledged_at')  DateTime? acknowledgedAt, @JsonKey(name: 'resolved_at')  DateTime? resolvedAt, @JsonKey(name: 'resolution_proof')  String? resolutionProof, @JsonKey(name: 'resolution_notes')  String? resolutionNotes, @JsonKey(name: 'upvotes_count')  int upvotesCount, @JsonKey(name: 'confirmations_count')  int confirmationsCount, @JsonKey(name: 'disputes_count')  int disputesCount, @JsonKey(name: 'has_upvoted')  bool hasUpvoted, @JsonKey(name: 'media_urls')  List<String> mediaUrls, @JsonKey(name: 'video_url')  String? videoUrl, @JsonKey(name: 'reporter_id')  int? reporterId, @JsonKey(name: 'assigned_representative')  AssignedAuthority? assignedRepresentative, @JsonKey(name: 'resolved_by')  String? resolvedBy, @JsonKey(name: 'resolution_type')  String? resolutionType)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  String title,  String description,  String category,  String status,  double latitude,  double longitude,  String? geohash,  String ward, @JsonKey(name: 'is_anonymous')  bool isAnonymous, @JsonKey(name: 'is_fuzzed')  bool isFuzzed, @JsonKey(name: 'is_shielded')  bool isShielded, @JsonKey(name: 'reporter_label')  String reporterLabel, @JsonKey(name: 'reporter_name')  String? reporterName, @JsonKey(name: 'reporter_photo_url')  String? reporterPhotoUrl, @JsonKey(name: 'created_at')  DateTime createdAt, @JsonKey(name: 'acknowledged_at')  DateTime? acknowledgedAt, @JsonKey(name: 'resolved_at')  DateTime? resolvedAt, @JsonKey(name: 'resolution_proof')  String? resolutionProof, @JsonKey(name: 'resolution_notes')  String? resolutionNotes, @JsonKey(name: 'upvotes_count')  int upvotesCount, @JsonKey(name: 'comments_count')  int commentsCount, @JsonKey(name: 'confirmations_count')  int confirmationsCount, @JsonKey(name: 'disputes_count')  int disputesCount, @JsonKey(name: 'has_upvoted')  bool hasUpvoted, @JsonKey(name: 'media_urls')  List<String> mediaUrls, @JsonKey(name: 'video_url')  String? videoUrl, @JsonKey(name: 'reporter_id')  int? reporterId, @JsonKey(name: 'assigned_representative')  AssignedAuthority? assignedRepresentative, @JsonKey(name: 'resolved_by')  String? resolvedBy, @JsonKey(name: 'resolution_type')  String? resolutionType)?  $default,) {final _that = this;
 switch (_that) {
 case _Issue() when $default != null:
-return $default(_that.id,_that.title,_that.description,_that.category,_that.status,_that.latitude,_that.longitude,_that.geohash,_that.ward,_that.isAnonymous,_that.isFuzzed,_that.isShielded,_that.reporterLabel,_that.reporterName,_that.reporterPhotoUrl,_that.createdAt,_that.acknowledgedAt,_that.resolvedAt,_that.resolutionProof,_that.resolutionNotes,_that.upvotesCount,_that.confirmationsCount,_that.disputesCount,_that.hasUpvoted,_that.mediaUrls,_that.videoUrl,_that.reporterId,_that.assignedRepresentative,_that.resolvedBy,_that.resolutionType);case _:
+return $default(_that.id,_that.title,_that.description,_that.category,_that.status,_that.latitude,_that.longitude,_that.geohash,_that.ward,_that.isAnonymous,_that.isFuzzed,_that.isShielded,_that.reporterLabel,_that.reporterName,_that.reporterPhotoUrl,_that.createdAt,_that.acknowledgedAt,_that.resolvedAt,_that.resolutionProof,_that.resolutionNotes,_that.upvotesCount,_that.commentsCount,_that.confirmationsCount,_that.disputesCount,_that.hasUpvoted,_that.mediaUrls,_that.videoUrl,_that.reporterId,_that.assignedRepresentative,_that.resolvedBy,_that.resolutionType);case _:
   return null;
 
 }
@@ -1407,7 +1403,7 @@ return $default(_that.id,_that.title,_that.description,_that.category,_that.stat
 @JsonSerializable()
 
 class _Issue extends Issue {
-  const _Issue({required this.id, required this.title, required this.description, required this.category, required this.status, required this.latitude, required this.longitude, this.geohash, this.ward = 'Ward 45, Urban Central', @JsonKey(name: 'is_anonymous') required this.isAnonymous, @JsonKey(name: 'is_fuzzed') this.isFuzzed = false, @JsonKey(name: 'is_shielded') this.isShielded = false, @JsonKey(name: 'reporter_label') required this.reporterLabel, @JsonKey(name: 'reporter_name') this.reporterName, @JsonKey(name: 'reporter_photo_url') this.reporterPhotoUrl, @JsonKey(name: 'created_at') required this.createdAt, @JsonKey(name: 'acknowledged_at') this.acknowledgedAt, @JsonKey(name: 'resolved_at') this.resolvedAt, @JsonKey(name: 'resolution_proof') this.resolutionProof, @JsonKey(name: 'resolution_notes') this.resolutionNotes, @JsonKey(name: 'upvotes_count') this.upvotesCount = 0, @JsonKey(name: 'confirmations_count') this.confirmationsCount = 0, @JsonKey(name: 'disputes_count') this.disputesCount = 0, @JsonKey(name: 'has_upvoted') this.hasUpvoted = false, @JsonKey(name: 'media_urls')  List<String> mediaUrls = const <String>[], @JsonKey(name: 'video_url') this.videoUrl, @JsonKey(name: 'reporter_id') this.reporterId, @JsonKey(name: 'assigned_representative') this.assignedRepresentative, @JsonKey(name: 'resolved_by') this.resolvedBy, @JsonKey(name: 'resolution_type') this.resolutionType}): _mediaUrls = mediaUrls,super._();
+  const _Issue({required this.id, required this.title, required this.description, required this.category, required this.status, required this.latitude, required this.longitude, this.geohash, this.ward = 'Ward 45, Urban Central', @JsonKey(name: 'is_anonymous') required this.isAnonymous, @JsonKey(name: 'is_fuzzed') this.isFuzzed = false, @JsonKey(name: 'is_shielded') this.isShielded = false, @JsonKey(name: 'reporter_label') required this.reporterLabel, @JsonKey(name: 'reporter_name') this.reporterName, @JsonKey(name: 'reporter_photo_url') this.reporterPhotoUrl, @JsonKey(name: 'created_at') required this.createdAt, @JsonKey(name: 'acknowledged_at') this.acknowledgedAt, @JsonKey(name: 'resolved_at') this.resolvedAt, @JsonKey(name: 'resolution_proof') this.resolutionProof, @JsonKey(name: 'resolution_notes') this.resolutionNotes, @JsonKey(name: 'upvotes_count') this.upvotesCount = 0, @JsonKey(name: 'comments_count') this.commentsCount = 0, @JsonKey(name: 'confirmations_count') this.confirmationsCount = 0, @JsonKey(name: 'disputes_count') this.disputesCount = 0, @JsonKey(name: 'has_upvoted') this.hasUpvoted = false, @JsonKey(name: 'media_urls')  List<String> mediaUrls = const <String>[], @JsonKey(name: 'video_url') this.videoUrl, @JsonKey(name: 'reporter_id') this.reporterId, @JsonKey(name: 'assigned_representative') this.assignedRepresentative, @JsonKey(name: 'resolved_by') this.resolvedBy, @JsonKey(name: 'resolution_type') this.resolutionType}): _mediaUrls = mediaUrls,super._();
   factory _Issue.fromJson(Map<String, dynamic> json) => _$IssueFromJson(json);
 
 @override final  int id;
@@ -1431,6 +1427,7 @@ class _Issue extends Issue {
 @override@JsonKey(name: 'resolution_proof') final  String? resolutionProof;
 @override@JsonKey(name: 'resolution_notes') final  String? resolutionNotes;
 @override@JsonKey(name: 'upvotes_count') final  int upvotesCount;
+@override@JsonKey(name: 'comments_count') final  int commentsCount;
 @override@JsonKey(name: 'confirmations_count') final  int confirmationsCount;
 @override@JsonKey(name: 'disputes_count') final  int disputesCount;
 @override@JsonKey(name: 'has_upvoted') final  bool hasUpvoted;
@@ -1460,16 +1457,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Issue&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.description, description) || other.description == description)&&(identical(other.category, category) || other.category == category)&&(identical(other.status, status) || other.status == status)&&(identical(other.latitude, latitude) || other.latitude == latitude)&&(identical(other.longitude, longitude) || other.longitude == longitude)&&(identical(other.geohash, geohash) || other.geohash == geohash)&&(identical(other.ward, ward) || other.ward == ward)&&(identical(other.isAnonymous, isAnonymous) || other.isAnonymous == isAnonymous)&&(identical(other.isFuzzed, isFuzzed) || other.isFuzzed == isFuzzed)&&(identical(other.isShielded, isShielded) || other.isShielded == isShielded)&&(identical(other.reporterLabel, reporterLabel) || other.reporterLabel == reporterLabel)&&(identical(other.reporterName, reporterName) || other.reporterName == reporterName)&&(identical(other.reporterPhotoUrl, reporterPhotoUrl) || other.reporterPhotoUrl == reporterPhotoUrl)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.acknowledgedAt, acknowledgedAt) || other.acknowledgedAt == acknowledgedAt)&&(identical(other.resolvedAt, resolvedAt) || other.resolvedAt == resolvedAt)&&(identical(other.resolutionProof, resolutionProof) || other.resolutionProof == resolutionProof)&&(identical(other.resolutionNotes, resolutionNotes) || other.resolutionNotes == resolutionNotes)&&(identical(other.upvotesCount, upvotesCount) || other.upvotesCount == upvotesCount)&&(identical(other.confirmationsCount, confirmationsCount) || other.confirmationsCount == confirmationsCount)&&(identical(other.disputesCount, disputesCount) || other.disputesCount == disputesCount)&&(identical(other.hasUpvoted, hasUpvoted) || other.hasUpvoted == hasUpvoted)&&const DeepCollectionEquality().equals(other._mediaUrls, _mediaUrls)&&(identical(other.videoUrl, videoUrl) || other.videoUrl == videoUrl)&&(identical(other.reporterId, reporterId) || other.reporterId == reporterId)&&(identical(other.assignedRepresentative, assignedRepresentative) || other.assignedRepresentative == assignedRepresentative)&&(identical(other.resolvedBy, resolvedBy) || other.resolvedBy == resolvedBy)&&(identical(other.resolutionType, resolutionType) || other.resolutionType == resolutionType));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Issue&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.description, description) || other.description == description)&&(identical(other.category, category) || other.category == category)&&(identical(other.status, status) || other.status == status)&&(identical(other.latitude, latitude) || other.latitude == latitude)&&(identical(other.longitude, longitude) || other.longitude == longitude)&&(identical(other.geohash, geohash) || other.geohash == geohash)&&(identical(other.ward, ward) || other.ward == ward)&&(identical(other.isAnonymous, isAnonymous) || other.isAnonymous == isAnonymous)&&(identical(other.isFuzzed, isFuzzed) || other.isFuzzed == isFuzzed)&&(identical(other.isShielded, isShielded) || other.isShielded == isShielded)&&(identical(other.reporterLabel, reporterLabel) || other.reporterLabel == reporterLabel)&&(identical(other.reporterName, reporterName) || other.reporterName == reporterName)&&(identical(other.reporterPhotoUrl, reporterPhotoUrl) || other.reporterPhotoUrl == reporterPhotoUrl)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.acknowledgedAt, acknowledgedAt) || other.acknowledgedAt == acknowledgedAt)&&(identical(other.resolvedAt, resolvedAt) || other.resolvedAt == resolvedAt)&&(identical(other.resolutionProof, resolutionProof) || other.resolutionProof == resolutionProof)&&(identical(other.resolutionNotes, resolutionNotes) || other.resolutionNotes == resolutionNotes)&&(identical(other.upvotesCount, upvotesCount) || other.upvotesCount == upvotesCount)&&(identical(other.commentsCount, commentsCount) || other.commentsCount == commentsCount)&&(identical(other.confirmationsCount, confirmationsCount) || other.confirmationsCount == confirmationsCount)&&(identical(other.disputesCount, disputesCount) || other.disputesCount == disputesCount)&&(identical(other.hasUpvoted, hasUpvoted) || other.hasUpvoted == hasUpvoted)&&const DeepCollectionEquality().equals(other._mediaUrls, _mediaUrls)&&(identical(other.videoUrl, videoUrl) || other.videoUrl == videoUrl)&&(identical(other.reporterId, reporterId) || other.reporterId == reporterId)&&(identical(other.assignedRepresentative, assignedRepresentative) || other.assignedRepresentative == assignedRepresentative)&&(identical(other.resolvedBy, resolvedBy) || other.resolvedBy == resolvedBy)&&(identical(other.resolutionType, resolutionType) || other.resolutionType == resolutionType));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hashAll([runtimeType,id,title,description,category,status,latitude,longitude,geohash,ward,isAnonymous,isFuzzed,isShielded,reporterLabel,reporterName,reporterPhotoUrl,createdAt,acknowledgedAt,resolvedAt,resolutionProof,resolutionNotes,upvotesCount,confirmationsCount,disputesCount,hasUpvoted,const DeepCollectionEquality().hash(_mediaUrls),videoUrl,reporterId,assignedRepresentative,resolvedBy,resolutionType]);
+int get hashCode => Object.hashAll([runtimeType,id,title,description,category,status,latitude,longitude,geohash,ward,isAnonymous,isFuzzed,isShielded,reporterLabel,reporterName,reporterPhotoUrl,createdAt,acknowledgedAt,resolvedAt,resolutionProof,resolutionNotes,upvotesCount,commentsCount,confirmationsCount,disputesCount,hasUpvoted,const DeepCollectionEquality().hash(_mediaUrls),videoUrl,reporterId,assignedRepresentative,resolvedBy,resolutionType]);
 
 @override
 String toString() {
-  return 'Issue(id: $id, title: $title, description: $description, category: $category, status: $status, latitude: $latitude, longitude: $longitude, geohash: $geohash, ward: $ward, isAnonymous: $isAnonymous, isFuzzed: $isFuzzed, isShielded: $isShielded, reporterLabel: $reporterLabel, reporterName: $reporterName, reporterPhotoUrl: $reporterPhotoUrl, createdAt: $createdAt, acknowledgedAt: $acknowledgedAt, resolvedAt: $resolvedAt, resolutionProof: $resolutionProof, resolutionNotes: $resolutionNotes, upvotesCount: $upvotesCount, confirmationsCount: $confirmationsCount, disputesCount: $disputesCount, hasUpvoted: $hasUpvoted, mediaUrls: $mediaUrls, videoUrl: $videoUrl, reporterId: $reporterId, assignedRepresentative: $assignedRepresentative, resolvedBy: $resolvedBy, resolutionType: $resolutionType)';
+  return 'Issue(id: $id, title: $title, description: $description, category: $category, status: $status, latitude: $latitude, longitude: $longitude, geohash: $geohash, ward: $ward, isAnonymous: $isAnonymous, isFuzzed: $isFuzzed, isShielded: $isShielded, reporterLabel: $reporterLabel, reporterName: $reporterName, reporterPhotoUrl: $reporterPhotoUrl, createdAt: $createdAt, acknowledgedAt: $acknowledgedAt, resolvedAt: $resolvedAt, resolutionProof: $resolutionProof, resolutionNotes: $resolutionNotes, upvotesCount: $upvotesCount, commentsCount: $commentsCount, confirmationsCount: $confirmationsCount, disputesCount: $disputesCount, hasUpvoted: $hasUpvoted, mediaUrls: $mediaUrls, videoUrl: $videoUrl, reporterId: $reporterId, assignedRepresentative: $assignedRepresentative, resolvedBy: $resolvedBy, resolutionType: $resolutionType)';
 }
 
 
@@ -1480,7 +1477,7 @@ abstract mixin class _$IssueCopyWith<$Res> implements $IssueCopyWith<$Res> {
   factory _$IssueCopyWith(_Issue value, $Res Function(_Issue) _then) = __$IssueCopyWithImpl;
 @override @useResult
 $Res call({
- int id, String title, String description, String category, String status, double latitude, double longitude, String? geohash, String ward,@JsonKey(name: 'is_anonymous') bool isAnonymous,@JsonKey(name: 'is_fuzzed') bool isFuzzed,@JsonKey(name: 'is_shielded') bool isShielded,@JsonKey(name: 'reporter_label') String reporterLabel,@JsonKey(name: 'reporter_name') String? reporterName,@JsonKey(name: 'reporter_photo_url') String? reporterPhotoUrl,@JsonKey(name: 'created_at') DateTime createdAt,@JsonKey(name: 'acknowledged_at') DateTime? acknowledgedAt,@JsonKey(name: 'resolved_at') DateTime? resolvedAt,@JsonKey(name: 'resolution_proof') String? resolutionProof,@JsonKey(name: 'resolution_notes') String? resolutionNotes,@JsonKey(name: 'upvotes_count') int upvotesCount,@JsonKey(name: 'confirmations_count') int confirmationsCount,@JsonKey(name: 'disputes_count') int disputesCount,@JsonKey(name: 'has_upvoted') bool hasUpvoted,@JsonKey(name: 'media_urls') List<String> mediaUrls,@JsonKey(name: 'video_url') String? videoUrl,@JsonKey(name: 'reporter_id') int? reporterId,@JsonKey(name: 'assigned_representative') AssignedAuthority? assignedRepresentative,@JsonKey(name: 'resolved_by') String? resolvedBy,@JsonKey(name: 'resolution_type') String? resolutionType
+ int id, String title, String description, String category, String status, double latitude, double longitude, String? geohash, String ward,@JsonKey(name: 'is_anonymous') bool isAnonymous,@JsonKey(name: 'is_fuzzed') bool isFuzzed,@JsonKey(name: 'is_shielded') bool isShielded,@JsonKey(name: 'reporter_label') String reporterLabel,@JsonKey(name: 'reporter_name') String? reporterName,@JsonKey(name: 'reporter_photo_url') String? reporterPhotoUrl,@JsonKey(name: 'created_at') DateTime createdAt,@JsonKey(name: 'acknowledged_at') DateTime? acknowledgedAt,@JsonKey(name: 'resolved_at') DateTime? resolvedAt,@JsonKey(name: 'resolution_proof') String? resolutionProof,@JsonKey(name: 'resolution_notes') String? resolutionNotes,@JsonKey(name: 'upvotes_count') int upvotesCount,@JsonKey(name: 'comments_count') int commentsCount,@JsonKey(name: 'confirmations_count') int confirmationsCount,@JsonKey(name: 'disputes_count') int disputesCount,@JsonKey(name: 'has_upvoted') bool hasUpvoted,@JsonKey(name: 'media_urls') List<String> mediaUrls,@JsonKey(name: 'video_url') String? videoUrl,@JsonKey(name: 'reporter_id') int? reporterId,@JsonKey(name: 'assigned_representative') AssignedAuthority? assignedRepresentative,@JsonKey(name: 'resolved_by') String? resolvedBy,@JsonKey(name: 'resolution_type') String? resolutionType
 });
 
 
@@ -1497,7 +1494,7 @@ class __$IssueCopyWithImpl<$Res>
 
 /// Create a copy of Issue
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? title = null,Object? description = null,Object? category = null,Object? status = null,Object? latitude = null,Object? longitude = null,Object? geohash = freezed,Object? ward = null,Object? isAnonymous = null,Object? isFuzzed = null,Object? isShielded = null,Object? reporterLabel = null,Object? reporterName = freezed,Object? reporterPhotoUrl = freezed,Object? createdAt = null,Object? acknowledgedAt = freezed,Object? resolvedAt = freezed,Object? resolutionProof = freezed,Object? resolutionNotes = freezed,Object? upvotesCount = null,Object? confirmationsCount = null,Object? disputesCount = null,Object? hasUpvoted = null,Object? mediaUrls = null,Object? videoUrl = freezed,Object? reporterId = freezed,Object? assignedRepresentative = freezed,Object? resolvedBy = freezed,Object? resolutionType = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? title = null,Object? description = null,Object? category = null,Object? status = null,Object? latitude = null,Object? longitude = null,Object? geohash = freezed,Object? ward = null,Object? isAnonymous = null,Object? isFuzzed = null,Object? isShielded = null,Object? reporterLabel = null,Object? reporterName = freezed,Object? reporterPhotoUrl = freezed,Object? createdAt = null,Object? acknowledgedAt = freezed,Object? resolvedAt = freezed,Object? resolutionProof = freezed,Object? resolutionNotes = freezed,Object? upvotesCount = null,Object? commentsCount = null,Object? confirmationsCount = null,Object? disputesCount = null,Object? hasUpvoted = null,Object? mediaUrls = null,Object? videoUrl = freezed,Object? reporterId = freezed,Object? assignedRepresentative = freezed,Object? resolvedBy = freezed,Object? resolutionType = freezed,}) {
   return _then(_Issue(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as int,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
@@ -1520,6 +1517,7 @@ as DateTime?,resolvedAt: freezed == resolvedAt ? _self.resolvedAt : resolvedAt /
 as DateTime?,resolutionProof: freezed == resolutionProof ? _self.resolutionProof : resolutionProof // ignore: cast_nullable_to_non_nullable
 as String?,resolutionNotes: freezed == resolutionNotes ? _self.resolutionNotes : resolutionNotes // ignore: cast_nullable_to_non_nullable
 as String?,upvotesCount: null == upvotesCount ? _self.upvotesCount : upvotesCount // ignore: cast_nullable_to_non_nullable
+as int,commentsCount: null == commentsCount ? _self.commentsCount : commentsCount // ignore: cast_nullable_to_non_nullable
 as int,confirmationsCount: null == confirmationsCount ? _self.confirmationsCount : confirmationsCount // ignore: cast_nullable_to_non_nullable
 as int,disputesCount: null == disputesCount ? _self.disputesCount : disputesCount // ignore: cast_nullable_to_non_nullable
 as int,hasUpvoted: null == hasUpvoted ? _self.hasUpvoted : hasUpvoted // ignore: cast_nullable_to_non_nullable

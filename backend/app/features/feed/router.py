@@ -29,6 +29,6 @@ async def get_feed_endpoint(
         feed_type=type,
         cursor=cursor,
         limit=limit,
-        jwt_secret=settings.jwt_secret,
+        anon_hmac_secret=settings.anon_hmac_secret,
         user_id=user_id,
     )

@@ -26,7 +26,11 @@ _ALLOWED_STATUSES = {
 
 async def _rate_limit_search(request: Request, user: OptionalUser = None) -> None:
     limiter: SlidingWindowRateLimiter = request.app.state.search_rate_limiter
-    key = str(user.id) if (user is not None and not getattr(user, "is_guest", False)) else "anon"
+    if user is not None and not getattr(user, "is_guest", False):
+        key = str(user.id)
+    else:
+        client_ip = request.client.host if request.client else "unknown"
+        key = f"anon:{client_ip}"
     if not limiter.allow(key):
         raise AppError("Search rate limit exceeded", status_code=429, code="rate_limited")
 
@@ -137,7 +141,7 @@ async def search_issues_endpoint(
     return [
         issues_service.to_issue_out(
             issue,
-            settings.jwt_secret,
+            settings.anon_hmac_secret,
             user_id=user.id if user else None,
             user_upvoted_ids=user_upvoted_ids,
         )

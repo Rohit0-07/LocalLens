@@ -1,8 +1,6 @@
-from datetime import datetime
-
-from pydantic import BaseModel, ConfigDict
 
 from app.core.fields import UTCDateTime
+from pydantic import BaseModel, ConfigDict
 
 
 class NotificationOut(BaseModel):

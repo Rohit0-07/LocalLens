@@ -30,7 +30,7 @@ abstract class QuorumVoter with _$QuorumVoter {
     @JsonKey(name: 'display_name') String? displayName,
     required String vote,
     String? reason,
-    @JsonKey(name: 'is_verified_nearby') @Default(true) bool isVerifiedNearby,
+    @JsonKey(name: 'is_nearby') @Default(true) bool isVerifiedNearby,
     @JsonKey(name: 'created_at') required DateTime createdAt,
   }) = _QuorumVoter;
 
@@ -43,12 +43,13 @@ abstract class IssueTimelineEvent with _$IssueTimelineEvent {
   const factory IssueTimelineEvent({
     @JsonKey(name: 'event_type') required String eventType,
     required String title,
-    required String description,
-    required DateTime timestamp,
-    String? actor,
+    String? description,
+    @JsonKey(name: 'created_at') required DateTime createdAt,
+    @JsonKey(name: 'actor_name') String? actorName,
+    @JsonKey(name: 'actor_handle') String? actorHandle,
     @JsonKey(name: 'actor_role') String? actorRole,
+    @JsonKey(name: 'is_unclaimed') @Default(false) bool isUnclaimed,
     @JsonKey(name: 'media_url') String? mediaUrl,
-    Map<String, dynamic>? metadata,
   }) = _IssueTimelineEvent;
 
   factory IssueTimelineEvent.fromJson(Map<String, Object?> json) =>
@@ -93,6 +94,7 @@ abstract class Issue with _$Issue {
     @JsonKey(name: 'resolution_proof') String? resolutionProof,
     @JsonKey(name: 'resolution_notes') String? resolutionNotes,
     @JsonKey(name: 'upvotes_count') @Default(0) int upvotesCount,
+    @JsonKey(name: 'comments_count') @Default(0) int commentsCount,
     @JsonKey(name: 'confirmations_count') @Default(0) int confirmationsCount,
     @JsonKey(name: 'disputes_count') @Default(0) int disputesCount,
     @JsonKey(name: 'has_upvoted') @Default(false) bool hasUpvoted,

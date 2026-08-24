@@ -7,6 +7,7 @@ from sqlalchemy import (
     DateTime,
     Float,
     ForeignKey,
+    Index,
     Integer,
     String,
     Text,
@@ -24,6 +25,10 @@ if TYPE_CHECKING:
 
 class Issue(Base):
     __tablename__ = "issues"
+
+    __table_args__ = (
+        Index("ix_issues_latitude_longitude", "latitude", "longitude"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     title: Mapped[str] = mapped_column(String(100))
@@ -109,7 +114,7 @@ class Flag(Base):
         Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
     )
     anon_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
-    category: Mapped[str] = mapped_column(String(32), nullable=False)
+    category: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
     details: Mapped[str | None] = mapped_column(String(500), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
@@ -141,6 +146,10 @@ class ModerationAudit(Base):
 class Comment(Base):
     __tablename__ = "comments"
 
+    __table_args__ = (
+        Index("ix_comments_author_id_created_at", "author_id", "created_at"),
+    )
+
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     issue_id: Mapped[int] = mapped_column(ForeignKey("issues.id"), index=True)
     parent_id: Mapped[str | None] = mapped_column(
@@ -157,6 +166,10 @@ class Comment(Base):
 class Upvote(Base):
     __tablename__ = "upvotes"
 
+    __table_args__ = (
+        UniqueConstraint("issue_id", "user_id", name="uq_upvotes_issue_user"),
+    )
+
     id: Mapped[int] = mapped_column(primary_key=True)
     issue_id: Mapped[int] = mapped_column(ForeignKey("issues.id"), index=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
@@ -167,6 +180,10 @@ class Upvote(Base):
 
 class QuorumVote(Base):
     __tablename__ = "quorum_votes"
+
+    __table_args__ = (
+        UniqueConstraint("issue_id", "user_id", name="uq_quorum_votes_issue_user"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     issue_id: Mapped[int] = mapped_column(ForeignKey("issues.id"), index=True)
@@ -182,6 +199,10 @@ class QuorumVote(Base):
 
 class UpvoteRateLimit(Base):
     __tablename__ = "upvote_rate_limits"
+
+    __table_args__ = (
+        Index("ix_upvote_rate_limits_user_id_created_at", "user_id", "created_at"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)

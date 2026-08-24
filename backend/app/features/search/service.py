@@ -9,13 +9,8 @@ from app.core.exceptions import AppError
 from app.features.auth.models import User
 from app.features.issues.geo import bbox_statement, haversine_km
 from app.features.issues.models import Issue
-from app.features.issues.service import evaluate_escalation
 from app.features.representatives.models import RepresentativeProfile
 from app.features.wards.models import Ward
-
-
-def _utc_now() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _escape_like(q: str) -> str:
@@ -178,30 +173,13 @@ async def search_issues(
         # discarded afterwards.
         result = await session.execute(statement.limit((offset + limit) * _GEO_OVERFETCH_FACTOR))
         issues = list(result.scalars().all())
-        now = _utc_now()
-        modified = False
         page: list[Issue] = []
         assert latitude is not None and longitude is not None
         for issue in issues:
-            if evaluate_escalation(issue, now):
-                modified = True
             if haversine_km(latitude, longitude, issue.latitude, issue.longitude) <= radius_km:
                 page.append(issue)
-        if modified:
-            await session.commit()
         return page[offset : offset + limit]
 
     statement = statement.limit(limit).offset(offset)
     result = await session.execute(statement)
-    issues = list(result.scalars().all())
-
-    now = _utc_now()
-    modified = False
-    for issue in issues:
-        if evaluate_escalation(issue, now):
-            modified = True
-
-    if modified:
-        await session.commit()
-
-    return issues
+    return list(result.scalars().all())

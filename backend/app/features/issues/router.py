@@ -62,7 +62,7 @@ async def list_nearby_issues(
     return [
         service.to_issue_out(
             issue,
-            settings.jwt_secret,
+            settings.anon_hmac_secret,
             user_id=user.id if user else None,
             user_upvoted_ids=user_upvoted_ids,
         )
@@ -90,7 +90,16 @@ async def get_near_duplicates(
 
 
 @router.post("/evaluate-escalations", status_code=status.HTTP_200_OK)
-async def trigger_escalation_evaluation(session: SessionDep) -> dict[str, int]:
+async def trigger_escalation_evaluation(session: SessionDep, user: CurrentUser) -> dict[str, int]:
+    if not (
+        getattr(user, "is_admin", False)
+        or getattr(user, "role", "") in ("admin", "moderator")
+    ):
+        raise AppError(
+            status_code=403,
+            error_code="admin_required",
+            detail="Administrative privileges required.",
+        )
     updated_count = await service.evaluate_all_escalations(session)
     return {"updated": updated_count}
 
@@ -121,7 +130,7 @@ async def get_my_issues_endpoint(
     return [
         service.to_issue_out(
             issue,
-            settings.jwt_secret,
+            settings.anon_hmac_secret,
             user_id=user.id,
             user_upvoted_ids=user_upvoted_ids,
         )
@@ -138,7 +147,7 @@ async def create_issue(
             "Sign in required to create issues", status_code=403, code="guest_restricted"
         )
     issue = await service.create_issue(session, payload, reporter_id=user.id)
-    return service.to_issue_out(issue, settings.jwt_secret, user_id=user.id)
+    return service.to_issue_out(issue, settings.anon_hmac_secret, user_id=user.id)
 
 
 @router.get("/{issue_id}", response_model=IssueOut)
@@ -156,7 +165,7 @@ async def get_single_issue(
         user_upvoted_ids = await service.get_user_upvoted_issue_ids(session, user.id, [issue.id])
     return service.to_issue_out(
         issue,
-        settings.jwt_secret,
+        settings.anon_hmac_secret,
         user_id=user.id if user else None,
         user_upvoted_ids=user_upvoted_ids,
     )
@@ -186,23 +195,32 @@ async def delete_issue_endpoint(
     return {"success": True}
 
 
-def _is_authorized_for_issue(user: CurrentUser, issue: Issue) -> bool:
+def _ward_matches(a: str | None, b: str | None) -> bool:
+    """Case-insensitive ward match allowing substring variants of the label."""
+    if not a or not b:
+        return False
+    a_norm = a.strip().lower()
+    b_norm = b.strip().lower()
+    return a_norm == b_norm or a_norm in b_norm or b_norm in a_norm
+
+
+async def _is_authorized_for_issue(session: SessionDep, user: CurrentUser, issue: Issue) -> bool:
     """Whether a user may act on an issue (acknowledge / resolve).
 
-    Allowed for the issue reporter, admins, moderators, and ward
-    representatives. Guests are always denied.
+    Allowed for the issue reporter, admins, moderators, and representatives
+    whose profile ward covers the issue's ward. Guests are always denied.
     """
     if getattr(user, "is_guest", False):
         return False
     if issue.reporter_id is not None and user.id == issue.reporter_id:
         return True
-    if getattr(user, "is_admin", False) or getattr(user, "role", "") in (
-        "admin",
-        "moderator",
-        "representative",
-    ):
+    if getattr(user, "is_admin", False) or getattr(user, "role", "") in ("admin", "moderator"):
         return True
-    return getattr(user, "is_representative", False)
+    # get_current_user eager-loads representative_profile (see api/deps.py).
+    profile = getattr(user, "representative_profile", None)
+    if profile is None:
+        return False
+    return _ward_matches(profile.ward, issue.ward)
 
 
 @router.post("/{issue_id}/acknowledge", response_model=IssueOut)
@@ -212,14 +230,14 @@ async def acknowledge_issue(
     issue = await session.get(Issue, issue_id)
     if issue is None or getattr(issue, "is_hidden", False):
         raise HTTPException(status_code=404, detail="Issue not found")
-    if not _is_authorized_for_issue(user, issue):
+    if not await _is_authorized_for_issue(session, user, issue):
         raise AppError(
             "Not authorized to acknowledge this issue",
             status_code=403,
             code="forbidden",
         )
     issue = await service.acknowledge_issue(session, issue_id)
-    return service.to_issue_out(issue, settings.jwt_secret)
+    return service.to_issue_out(issue, settings.anon_hmac_secret)
 
 
 @router.post("/{issue_id}/resolve", response_model=IssueOut)
@@ -233,7 +251,7 @@ async def submit_resolution(
     issue = await session.get(Issue, issue_id)
     if issue is None or getattr(issue, "is_hidden", False):
         raise HTTPException(status_code=404, detail="Issue not found")
-    if not _is_authorized_for_issue(user, issue):
+    if not await _is_authorized_for_issue(session, user, issue):
         raise AppError(
             "Not authorized to resolve this issue",
             status_code=403,
@@ -242,7 +260,7 @@ async def submit_resolution(
     issue = await service.submit_resolution(
         session, issue_id, proof_url=payload.resolution_proof, notes=payload.notes
     )
-    return service.to_issue_out(issue, settings.jwt_secret)
+    return service.to_issue_out(issue, settings.anon_hmac_secret)
 
 
 @router.post("/{issue_id}/quorum-vote", response_model=IssueOut)
@@ -266,39 +284,46 @@ async def vote_quorum(
         longitude=payload.longitude,
         reason=payload.reason,
     )
-    return service.to_issue_out(issue, settings.jwt_secret)
+    return service.to_issue_out(issue, settings.anon_hmac_secret)
 
 
 @router.post("/{issue_id}/check-quorum-status", response_model=IssueOut)
 async def check_quorum_status(
-    issue_id: int, session: SessionDep, settings: SettingsDep
+    issue_id: int, session: SessionDep, settings: SettingsDep, user: CurrentUser
 ) -> IssueOut:
+    if not (
+        getattr(user, "is_admin", False)
+        or getattr(user, "role", "") in ("admin", "moderator")
+    ):
+        raise AppError(
+            status_code=403,
+            error_code="admin_required",
+            detail="Administrative privileges required.",
+        )
     issue = await service.check_quorum_expiration(session, issue_id)
-    return service.to_issue_out(issue, settings.jwt_secret)
+    return service.to_issue_out(issue, settings.anon_hmac_secret)
 
 
 @router.post("/{issue_id}/upvote", response_model=IssueOut)
 async def upvote_issue(
     issue_id: int,
+    payload: UpvoteRequest,
     session: SessionDep,
     user: CurrentUser,
     settings: SettingsDep,
-    payload: UpvoteRequest | None = None,
 ) -> IssueOut:
     if getattr(user, "is_guest", False):
         raise AppError("Sign in required to upvote", status_code=403, code="guest_restricted")
-    lat = payload.latitude if payload else 0.0
-    lon = payload.longitude if payload else 0.0
     issue = await service.upvote_issue(
         session,
         issue_id=issue_id,
         user_id=user.id,
-        latitude=lat,
-        longitude=lon,
+        latitude=payload.latitude,
+        longitude=payload.longitude,
     )
     return service.to_issue_out(
         issue,
-        settings.jwt_secret,
+        settings.anon_hmac_secret,
         user_id=user.id,
         user_upvoted_ids={issue.id},
     )
@@ -320,7 +345,7 @@ async def remove_upvote_issue(
     )
     return service.to_issue_out(
         issue,
-        settings.jwt_secret,
+        settings.anon_hmac_secret,
         user_id=user.id,
         user_upvoted_ids=set(),
     )
@@ -343,7 +368,7 @@ async def post_comment(
         issue_id=issue_id,
         user=user,
         payload=payload,
-        secret=settings.jwt_secret,
+        secret=settings.anon_hmac_secret,
     )
 
 
@@ -382,7 +407,7 @@ async def flag_issue_endpoint(
         issue_id=issue_id,
         flag_in=flag_in,
         current_user=current_user,
-        secret=settings.jwt_secret,
+        secret=settings.anon_hmac_secret,
     )
 
 
@@ -443,7 +468,7 @@ async def admin_reassign_endpoint(
         assigned_representative_id=payload.assigned_representative_id,
         reason=payload.reason,
     )
-    return service.to_issue_out(issue, settings.jwt_secret, user_id=current_user.id)
+    return service.to_issue_out(issue, settings.anon_hmac_secret, user_id=current_user.id)
 
 
 @admin_router.get("/flagged-issues", response_model=FlaggedQueueResponse)

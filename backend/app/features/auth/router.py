@@ -3,10 +3,11 @@ from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
 import jwt
-from fastapi import APIRouter, Query, Response, status
+from fastapi import APIRouter, Query, Request, Response, status
 
 from app.api.deps import CurrentUser, SessionDep, SettingsDep
 from app.core.exceptions import AppError
+from app.core.ratelimit import SlidingWindowRateLimiter
 from app.core.security import create_access_token, derive_anonymous_identity
 from app.features.auth import service
 from app.features.auth.schemas import (
@@ -25,16 +26,38 @@ from app.features.issues.schemas import IssueOut
 router = APIRouter()
 
 
+def _check_otp_request_rate_limit(request: Request, key: str) -> None:
+    if not hasattr(request.app.state, "otp_request_rate_limiter"):
+        request.app.state.otp_request_rate_limiter = SlidingWindowRateLimiter(
+            max_requests=3, window_seconds=600
+        )
+    limiter: SlidingWindowRateLimiter = request.app.state.otp_request_rate_limiter
+    if not limiter.allow(key):
+        raise AppError("Too many attempts, try again later", status_code=429, code="rate_limited")
+
+
+def _check_otp_verify_rate_limit(request: Request, key: str) -> None:
+    if not hasattr(request.app.state, "otp_verify_rate_limiter"):
+        request.app.state.otp_verify_rate_limiter = SlidingWindowRateLimiter(
+            max_requests=10, window_seconds=600
+        )
+    limiter: SlidingWindowRateLimiter = request.app.state.otp_verify_rate_limiter
+    if not limiter.allow(key):
+        raise AppError("Too many attempts, try again later", status_code=429, code="rate_limited")
+
+
 @router.post("/otp/request", status_code=status.HTTP_204_NO_CONTENT)
-async def request_otp(payload: OtpRequest, session: SessionDep, settings: SettingsDep) -> Response:
+async def request_otp(payload: OtpRequest, request: Request, session: SessionDep, settings: SettingsDep) -> Response:
+    _check_otp_request_rate_limit(request, payload.phone)
     await service.request_otp(session, settings, payload.phone)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.post("/email/request-otp", status_code=status.HTTP_204_NO_CONTENT)
 async def request_email_otp(
-    payload: EmailOtpRequest, session: SessionDep, settings: SettingsDep
+    payload: EmailOtpRequest, request: Request, session: SessionDep, settings: SettingsDep
 ) -> Response:
+    _check_otp_request_rate_limit(request, payload.email)
     await service.request_email_otp(session, settings, payload.email)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
@@ -42,11 +65,12 @@ async def request_email_otp(
 @router.post("/otp/verify", response_model=TokenResponse)
 @router.post("/verify-otp", response_model=TokenResponse)
 async def verify_otp(
-    payload: OtpVerify, session: SessionDep, settings: SettingsDep
+    payload: OtpVerify, request: Request, session: SessionDep, settings: SettingsDep
 ) -> TokenResponse:
+    _check_otp_verify_rate_limit(request, f"verify:{payload.phone}")
     user = await service.verify_otp(session, settings, payload.phone, payload.code)
     token = create_access_token(str(user.id), settings)
-    anon = derive_anonymous_identity(user.id, settings.jwt_secret)
+    anon = derive_anonymous_identity(user.id, settings.anon_hmac_secret)
     return TokenResponse(
         access_token=token, user_id=user.id, anonymous_identity=anon, anon_id=anon, is_guest=False
     )
@@ -54,11 +78,12 @@ async def verify_otp(
 
 @router.post("/email/verify-otp", response_model=TokenResponse)
 async def verify_email_otp(
-    payload: EmailOtpVerify, session: SessionDep, settings: SettingsDep
+    payload: EmailOtpVerify, request: Request, session: SessionDep, settings: SettingsDep
 ) -> TokenResponse:
+    _check_otp_verify_rate_limit(request, f"verify:{payload.email}")
     user = await service.verify_email_otp(session, settings, payload.email, payload.code)
     token = create_access_token(str(user.id), settings)
-    anon = derive_anonymous_identity(user.id, settings.jwt_secret)
+    anon = derive_anonymous_identity(user.id, settings.anon_hmac_secret)
     return TokenResponse(
         access_token=token, user_id=user.id, anonymous_identity=anon, anon_id=anon, is_guest=False
     )
@@ -105,7 +130,7 @@ async def get_current_user_profile(
             quorum_votes_count=0,
         )
     stats = await service.get_user_stats(session, user.id)
-    anon = derive_anonymous_identity(user.id, settings.jwt_secret)
+    anon = derive_anonymous_identity(user.id, settings.anon_hmac_secret)
     return UserOut(
         id=user.id,
         phone=user.phone,
@@ -154,7 +179,7 @@ async def update_current_user_profile(
         bio=payload.bio,
     )
     stats = await service.get_user_stats(session, user.id)
-    anon = derive_anonymous_identity(user.id, settings.jwt_secret)
+    anon = derive_anonymous_identity(user.id, settings.anon_hmac_secret)
     return UserOut(
         id=user.id,
         phone=user.phone,
@@ -208,7 +233,7 @@ async def get_my_issues(
     return [
         issues_service.to_issue_out(
             issue,
-            settings.jwt_secret,
+            settings.anon_hmac_secret,
             user_id=user.id,
             user_upvoted_ids=user_upvoted_ids,
         )
@@ -225,5 +250,5 @@ async def get_public_user_profile(
     return await service.get_public_user_profile(
         session,
         user_id=user_id,
-        secret=settings.jwt_secret,
+        secret=settings.anon_hmac_secret,
     )

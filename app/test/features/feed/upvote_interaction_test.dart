@@ -9,6 +9,8 @@ import 'package:local_lens/features/feed/presentation/widgets/issue_card.dart';
 
 import 'package:local_lens/features/feed/domain/feed_item.dart';
 
+import '../../helpers.dart';
+
 class UpvoteTestFeedRepository implements FeedRepository {
   UpvoteTestFeedRepository({
     required this.issues,
@@ -217,7 +219,10 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [feedRepositoryProvider.overrideWithValue(repo)],
+          overrides: [
+            fakeVoterLocationOverride,
+            feedRepositoryProvider.overrideWithValue(repo),
+          ],
           child: MaterialApp(
             home: Scaffold(
               body: IssueCard(issue: issue),
@@ -247,7 +252,10 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [feedRepositoryProvider.overrideWithValue(repo)],
+          overrides: [
+            fakeVoterLocationOverride,
+            feedRepositoryProvider.overrideWithValue(repo),
+          ],
           child: MaterialApp(
             home: Scaffold(
               body: IssueCard(issue: issue),
@@ -278,7 +286,10 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [feedRepositoryProvider.overrideWithValue(repo)],
+          overrides: [
+            fakeVoterLocationOverride,
+            feedRepositoryProvider.overrideWithValue(repo),
+          ],
           child: MaterialApp(
             home: Scaffold(
               body: IssueCard(issue: issue),
@@ -316,7 +327,10 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [feedRepositoryProvider.overrideWithValue(repo)],
+          overrides: [
+            fakeVoterLocationOverride,
+            feedRepositoryProvider.overrideWithValue(repo),
+          ],
           child: MaterialApp(
             home: Scaffold(
               body: IssueCard(issue: issue),
@@ -358,7 +372,10 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [feedRepositoryProvider.overrideWithValue(repo)],
+          overrides: [
+            fakeVoterLocationOverride,
+            feedRepositoryProvider.overrideWithValue(repo),
+          ],
           child: MaterialApp(
             home: Scaffold(
               body: IssueCard(issue: issue),

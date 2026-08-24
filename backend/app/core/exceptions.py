@@ -1,7 +1,10 @@
+from app.core.logging import get_logger
 from fastapi import Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+
+logger = get_logger("locallens.errors")
 
 
 class AppError(Exception):
@@ -24,10 +27,23 @@ class AppError(Exception):
 
 
 async def app_error_handler(request: Request, exc: Exception) -> JSONResponse:
-    error = exc if isinstance(exc, AppError) else AppError(str(exc))
+    if isinstance(exc, AppError):
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={
+                "detail": exc.message,
+                "code": exc.code,
+                "error_code": exc.error_code,
+            },
+        )
+    logger.exception("Unhandled exception on %s %s", request.method, request.url.path)
     return JSONResponse(
-        status_code=error.status_code,
-        content={"detail": error.message, "code": error.code, "error_code": error.error_code},
+        status_code=500,
+        content={
+            "detail": "Internal server error",
+            "code": "internal_error",
+            "error_code": "internal_error",
+        },
     )
 
 

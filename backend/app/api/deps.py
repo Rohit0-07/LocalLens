@@ -4,9 +4,12 @@ from typing import Annotated, Any, cast
 import jwt
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.core.config import Settings
+from app.core.exceptions import AppError
 from app.features.auth.models import User
 
 _bearer_scheme = HTTPBearer(auto_error=False)
@@ -55,9 +58,16 @@ async def get_current_user(
             detail="Invalid token subject",
         ) from None
 
-    user = await session.get(User, user_id)
+    result = await session.execute(
+        select(User)
+        .where(User.id == user_id)
+        .options(selectinload(User.representative_profile))
+    )
+    user = result.scalar_one_or_none()
     if user is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+    if user.is_banned:
+        raise AppError("Account is banned", status_code=403, code="account_banned")
     cast(Any, user).is_guest = False
     return user
 

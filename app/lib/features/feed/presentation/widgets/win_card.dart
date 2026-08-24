@@ -389,14 +389,26 @@ class _WinCardState extends ConsumerState<WinCard> {
                         : Colors.transparent,
                     label: Text('$upvotesCount'),
                     onTap: () async {
+                      final coords = await ref.read(voterLocationProvider)();
+                      if (coords == null) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content:
+                                  Text(context.tr('location_unavailable')),
+                            ),
+                          );
+                        }
+                        return;
+                      }
                       setState(() => _localHasUpvoted = !hasUpvoted);
                       try {
                         await ref
                             .read(multiTypeFeedProvider.notifier)
                             .toggleUpvote(
                               win.issueId,
-                              win.latitude,
-                              win.longitude,
+                              coords.lat,
+                              coords.lng,
                               currentlyUpvoted: hasUpvoted,
                             );
                       } catch (err) {

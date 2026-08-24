@@ -4,6 +4,7 @@ import '../../../core/feedback/app_messenger.dart';
 import '../../../core/feedback/error_copy.dart';
 import '../../../core/network/api_exceptions.dart';
 import '../../../core/network/network_providers.dart';
+import '../../../core/services/location_service.dart';
 import '../../geo/presentation/providers/geo_providers.dart';
 import '../data/feed_api.dart';
 import '../domain/feed_repository.dart';
@@ -44,6 +45,20 @@ String upvoteErrorMessage(Object err) {
 final feedRepositoryProvider = Provider<FeedRepository>(
   (ref) => FeedApi(ref.watch(apiClientProvider)),
 );
+
+/// Resolves the VOTER's own device location for proximity-checked actions
+/// (upvotes, quorum votes). Returns null when location is unavailable or
+/// permission is denied — callers must NOT fall back to the issue coordinates.
+typedef VoterLocationFetcher = Future<({double lat, double lng})?> Function();
+
+final voterLocationProvider = Provider<VoterLocationFetcher>((ref) {
+  final locationService = ref.watch(locationServiceProvider);
+  return () async {
+    final position = await locationService.getCurrentPosition();
+    if (position == null) return null;
+    return (lat: position.latitude, lng: position.longitude);
+  };
+});
 
 /// Spatial scope of the feed: all wards (unscoped) or the device's own ward
 /// (radius query around the current location).

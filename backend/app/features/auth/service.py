@@ -1,3 +1,4 @@
+import asyncio
 from datetime import UTC, date, datetime, timedelta
 
 from sqlalchemy import delete, func, select
@@ -18,9 +19,13 @@ from app.features.gamification.service import (
     get_or_create_user_gamification,
 )
 from app.features.issues.models import Issue, QuorumVote, Upvote
-from app.features.issues.service import evaluate_escalation, to_issue_out
+from app.features.issues.service import to_issue_out
 
 logger = get_logger("locallens.auth")
+
+_MAX_OTP_FAILED_ATTEMPTS = 5
+#: Cap on issues embedded in a public profile so the payload stays bounded.
+_MAX_PUBLIC_PROFILE_ISSUES = 100
 
 
 def _utc_now() -> datetime:
@@ -50,13 +55,13 @@ async def request_otp(session: AsyncSession, settings: Settings, phone: str) -> 
     session.add(
         OtpCode(
             phone=phone,
-            code_hash=hash_secret(code),
+            code_hash=await asyncio.to_thread(hash_secret, code),
             expires_at=_utc_now() + timedelta(minutes=settings.otp_ttl_minutes),
         )
     )
     await session.commit()
     if settings.environment != "production":
-        logger.info("otp for %s is %s", phone, code)
+        logger.debug("otp for %s is %s", phone, code)
 
 
 async def _default_username(
@@ -105,7 +110,11 @@ async def verify_otp(session: AsyncSession, settings: Settings, phone: str, code
     otp = otp_result.scalar_one_or_none()
     if otp is None or otp.expires_at < _utc_now():
         raise AppError("OTP is invalid or expired", code="otp_invalid")
-    if not verify_secret(code, otp.code_hash):
+    if not await asyncio.to_thread(verify_secret, code, otp.code_hash):
+        otp.failed_attempts = (otp.failed_attempts or 0) + 1
+        if otp.failed_attempts >= _MAX_OTP_FAILED_ATTEMPTS:
+            await session.execute(delete(OtpCode).where(OtpCode.id == otp.id))
+        await session.commit()
         raise AppError("OTP is invalid or expired", code="otp_invalid")
     await session.execute(delete(OtpCode).where(OtpCode.id == otp.id))
 
@@ -126,13 +135,13 @@ async def request_email_otp(session: AsyncSession, settings: Settings, email: st
     session.add(
         OtpCode(
             email=email,
-            code_hash=hash_secret(code),
+            code_hash=await asyncio.to_thread(hash_secret, code),
             expires_at=_utc_now() + timedelta(minutes=settings.otp_ttl_minutes),
         )
     )
     await session.commit()
     if settings.environment != "production":
-        logger.info("otp for %s is %s", email, code)
+        logger.debug("otp for %s is %s", email, code)
 
 
 async def verify_email_otp(
@@ -144,7 +153,11 @@ async def verify_email_otp(
     otp = otp_result.scalar_one_or_none()
     if otp is None or otp.expires_at < _utc_now():
         raise AppError("OTP is invalid or expired", code="otp_invalid")
-    if not verify_secret(code, otp.code_hash):
+    if not await asyncio.to_thread(verify_secret, code, otp.code_hash):
+        otp.failed_attempts = (otp.failed_attempts or 0) + 1
+        if otp.failed_attempts >= _MAX_OTP_FAILED_ATTEMPTS:
+            await session.execute(delete(OtpCode).where(OtpCode.id == otp.id))
+        await session.commit()
         raise AppError("OTP is invalid or expired", code="otp_invalid")
     await session.execute(delete(OtpCode).where(OtpCode.id == otp.id))
 
@@ -247,17 +260,7 @@ async def get_user_issues(
         stmt = stmt.where(Issue.status == status_filter)
     stmt = stmt.order_by(Issue.created_at.desc(), Issue.id.desc()).limit(limit).offset(offset)
     result = await session.execute(stmt)
-    issues = list(result.scalars().all())
-
-    now = _utc_now()
-    modified = False
-    for issue in issues:
-        if evaluate_escalation(issue, now):
-            modified = True
-    if modified:
-        await session.commit()
-
-    return issues
+    return list(result.scalars().all())
 
 
 async def get_public_user_profile(
@@ -304,6 +307,7 @@ async def get_public_user_profile(
             Issue.is_hidden.is_(False),
         )
         .order_by(Issue.created_at.desc(), Issue.id.desc())
+        .limit(_MAX_PUBLIC_PROFILE_ISSUES)
     )
     public_issues_res = await session.execute(public_issues_stmt)
     public_issues = list(public_issues_res.scalars().all())

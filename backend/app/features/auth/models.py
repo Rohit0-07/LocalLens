@@ -54,6 +54,9 @@ class OtpCode(Base):
     phone: Mapped[str | None] = mapped_column(String(20), index=True, nullable=True)
     email: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
     code_hash: Mapped[str] = mapped_column(String(128))
+    failed_attempts: Mapped[int] = mapped_column(
+        Integer, default=0, server_default="0", nullable=False
+    )
     expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), nullable=False

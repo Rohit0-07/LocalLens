@@ -74,3 +74,63 @@ async def test_verify_otp_rejects_malformed_code(client: AsyncClient) -> None:
 async def test_otp_payload_validation(client: AsyncClient, payload: dict) -> None:
     response = await client.post("/api/v1/auth/otp/request", json=payload)
     assert response.status_code == 422
+
+
+async def test_otp_invalidated_after_five_failed_attempts(client: AsyncClient) -> None:
+    phone = "+919876543300"
+    await client.post("/api/v1/auth/otp/request", json={"phone": phone})
+    for _ in range(5):
+        response = await client.post(
+            "/api/v1/auth/otp/verify", json={"phone": phone, "code": "999999"}
+        )
+        assert response.status_code == 400
+    # Even the correct code is rejected once the OTP is invalidated.
+    response = await client.post(
+        "/api/v1/auth/otp/verify", json={"phone": phone, "code": "000000"}
+    )
+    assert response.status_code == 400
+    assert response.json()["code"] == "otp_invalid"
+
+
+async def test_otp_request_rate_limited_per_phone(client: AsyncClient) -> None:
+    phone = "+919876543301"
+    for _ in range(3):
+        response = await client.post("/api/v1/auth/otp/request", json={"phone": phone})
+        assert response.status_code == 204
+    response = await client.post("/api/v1/auth/otp/request", json={"phone": phone})
+    assert response.status_code == 429
+    assert response.json()["code"] == "rate_limited"
+
+
+async def test_otp_verify_rate_limited_per_phone(client: AsyncClient) -> None:
+    phone = "+919876543302"
+    await client.post("/api/v1/auth/otp/request", json={"phone": phone})
+    wrong = {"phone": phone, "code": "999999"}
+    for _ in range(10):
+        response = await client.post("/api/v1/auth/otp/verify", json=wrong)
+        assert response.status_code == 400
+    response = await client.post("/api/v1/auth/otp/verify", json=wrong)
+    assert response.status_code == 429
+    assert response.json()["code"] == "rate_limited"
+
+
+async def test_banned_user_rejected_on_authenticated_endpoints(
+    app, client: AsyncClient
+) -> None:
+    from app.features.auth.models import User
+    from sqlalchemy import update
+
+    phone = "+919876543303"
+    await client.post("/api/v1/auth/otp/request", json={"phone": phone})
+    verify_res = await client.post(
+        "/api/v1/auth/otp/verify", json={"phone": phone, "code": "000000"}
+    )
+    headers = {"Authorization": f"Bearer {verify_res.json()['access_token']}"}
+
+    async with app.state.database.session_factory() as session:
+        await session.execute(update(User).where(User.phone == phone).values(is_banned=True))
+        await session.commit()
+
+    response = await client.get("/api/v1/auth/me", headers=headers)
+    assert response.status_code == 403
+    assert response.json()["code"] == "account_banned"

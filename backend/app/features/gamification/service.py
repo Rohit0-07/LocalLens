@@ -171,7 +171,6 @@ async def evaluate_and_unlock_badges(
 
     if badges_to_unlock:
         await db.flush()
-
     all_user_badges = existing_badges + new_badge_objs
     res: list[UserBadgeOut] = []
     for b in all_user_badges:
@@ -189,6 +188,10 @@ async def evaluate_and_unlock_badges(
                     unlocked_at=b.unlocked_at,
                 )
             )
+    # Persist unlocks: callers include GET paths (profile endpoints) where
+    # nothing else commits, so without this the flush would be rolled back.
+    if badges_to_unlock:
+        await db.commit()
     return res
 
 

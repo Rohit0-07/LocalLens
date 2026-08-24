@@ -1,7 +1,7 @@
+from app.features.auth.models import User
 from fastapi import FastAPI
 from httpx import AsyncClient
 from sqlalchemy import update
-from app.features.auth.models import User
 
 _PAYLOAD: dict = {
     "title": "Deep pothole near the bus stop",
@@ -58,6 +58,32 @@ async def test_radius_filter_excludes_far_issue(
         params={"latitude": 19.1136, "longitude": 72.8697, "radius_km": 5.0},
     )
     assert len(response.json()) == 1
+
+
+async def test_list_pagination_offset_no_double_skip(
+    client: AsyncClient, auth_headers: dict[str, str]
+) -> None:
+    """Offset pages must not skip rows when radius filtering happens in Python."""
+    created = [await _create(client, auth_headers) for _ in range(5)]
+    all_ids = [item["id"] for item in created]
+
+    fetched: list[int] = []
+    for offset in range(0, 5, 2):
+        response = await client.get(
+            "/api/v1/issues",
+            params={
+                "latitude": 19.1136,
+                "longitude": 72.8697,
+                "radius_km": 5.0,
+                "limit": 2,
+                "offset": offset,
+            },
+        )
+        assert response.status_code == 200
+        fetched.extend(item["id"] for item in response.json())
+
+    # Every issue appears exactly once across the pages (no skips/dupes).
+    assert sorted(fetched) == sorted(all_ids)
 
 
 async def test_status_filter(client: AsyncClient, auth_headers: dict[str, str]) -> None:

@@ -90,6 +90,7 @@ Future<void> _pumpWinCard(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        fakeVoterLocationOverride,
         if (feedRepo != null)
           feedRepositoryProvider.overrideWithValue(feedRepo),
         ...overrides,

@@ -7,6 +7,8 @@ import 'package:local_lens/features/feed/domain/feed_repository.dart';
 import 'package:local_lens/features/feed/domain/issue.dart';
 import 'package:local_lens/features/feed/domain/win.dart';
 import 'package:local_lens/features/feed/presentation/feed_providers.dart';
+
+import '../../helpers.dart';
 import 'package:local_lens/features/feed/presentation/widgets/local_talk_card.dart';
 import 'package:local_lens/features/feed/presentation/widgets/win_card.dart';
 import 'package:local_lens/features/issue_detail/presentation/screens/issue_detail_screen.dart';
@@ -316,6 +318,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            fakeVoterLocationOverride,
             feedRepositoryProvider.overrideWithValue(
               _FakeFeedRepository(issues: []),
             ),
@@ -395,6 +398,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            fakeVoterLocationOverride,
             feedRepositoryProvider.overrideWithValue(repo),
           ],
           child: const MaterialApp(
@@ -422,6 +426,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            fakeVoterLocationOverride,
             feedRepositoryProvider.overrideWithValue(repo),
           ],
           child: const MaterialApp(
@@ -455,6 +460,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            fakeVoterLocationOverride,
             feedRepositoryProvider.overrideWithValue(repo),
           ],
           child: const MaterialApp(

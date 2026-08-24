@@ -1,6 +1,7 @@
 import pytest
 from httpx import AsyncClient
 
+
 @pytest.mark.asyncio
 async def test_get_map_pins_returns_empty_list(client: AsyncClient):
     res = await client.get("/api/v1/geo/map-pins?min_lat=10.0&min_lng=70.0&max_lat=20.0&max_lng=80.0")

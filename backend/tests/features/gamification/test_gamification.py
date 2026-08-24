@@ -88,37 +88,44 @@ async def _seed_user_activities(
                 )
                 await session.commit()
 
-        # 2. Seed upvotes (create a dummy issue owned by user 9999 to upvote)
+        # 2. Seed upvotes (create dummy issues owned by user 9999 to upvote;
+        # uq_upvotes_issue_user allows one upvote per user per issue, so each
+        # upvote needs its own dummy issue)
         if upvotes_cast > 0:
-            try:
-                from app.features.issues.models import Issue
+            dummy_issue_ids: list[int] = []
+            for _i in range(upvotes_cast):
+                try:
+                    from app.features.issues.models import Issue
 
-                dummy_issue = Issue(
-                    reporter_id=9999,
-                    title="Dummy Upvote Issue",
-                    description="Desc",
-                    category="road",
-                    latitude=19.1136,
-                    longitude=72.8697,
-                    geohash="te7u8x",
-                    ward="Ward 1",
-                    is_anonymous=False,
-                    status="open",
-                )
-                session.add(dummy_issue)
-                await session.commit()
-                await session.refresh(dummy_issue)
-                dummy_issue_id = dummy_issue.id
-            except Exception:
-                res = await session.execute(
-                    text(
-                        "INSERT INTO issues (reporter_id, title, description, category, latitude, longitude, geohash, ward, is_anonymous, status, created_at) "
-                        "VALUES (9999, 'Dummy Upvote Issue', 'Desc', 'road', 19.1136, 72.8697, 'te7u8x', 'Ward 1', 0, 'open', :now) RETURNING id"
-                    ),
-                    {"now": datetime.now(UTC).isoformat()},
-                )
-                await session.commit()
-                dummy_issue_id = res.fetchone()[0]
+                    dummy_issue = Issue(
+                        reporter_id=9999,
+                        title=f"Dummy Upvote Issue {_i + 1}",
+                        description="Desc",
+                        category="road",
+                        latitude=19.1136,
+                        longitude=72.8697,
+                        geohash="te7u8x",
+                        ward="Ward 1",
+                        is_anonymous=False,
+                        status="open",
+                    )
+                    session.add(dummy_issue)
+                    await session.commit()
+                    await session.refresh(dummy_issue)
+                    dummy_issue_ids.append(dummy_issue.id)
+                except Exception:
+                    res = await session.execute(
+                        text(
+                            "INSERT INTO issues (reporter_id, title, description, category, latitude, longitude, geohash, ward, is_anonymous, status, created_at) "
+                            "VALUES (9999, :title, 'Desc', 'road', 19.1136, 72.8697, 'te7u8x', 'Ward 1', 0, 'open', :now) RETURNING id"
+                        ),
+                        {
+                            "title": f"Dummy Upvote Issue {_i + 1}",
+                            "now": datetime.now(UTC).isoformat(),
+                        },
+                    )
+                    await session.commit()
+                    dummy_issue_ids.append(res.fetchone()[0])
 
             for _i in range(upvotes_cast):
                 try:
@@ -128,7 +135,7 @@ async def _seed_user_activities(
                             "VALUES (:issue_id, :user_id, :now)"
                         ),
                         {
-                            "issue_id": dummy_issue_id,
+                            "issue_id": dummy_issue_ids[_i],
                             "user_id": user_id,
                             "now": datetime.now(UTC).isoformat(),
                         },
@@ -141,7 +148,7 @@ async def _seed_user_activities(
                                 "VALUES (:issue_id, :user_id, 19.1136, 72.8697, :now)"
                             ),
                             {
-                                "issue_id": dummy_issue_id,
+                                "issue_id": dummy_issue_ids[_i],
                                 "user_id": user_id,
                                 "now": datetime.now(UTC).isoformat(),
                             },
@@ -149,37 +156,43 @@ async def _seed_user_activities(
                     except Exception:
                         pass
 
-        # 3. Seed quorum votes
+        # 3. Seed quorum votes (one vote per user per issue, so each vote
+        # needs its own dummy issue)
         if quorum_votes_cast > 0:
-            try:
-                from app.features.issues.models import Issue
+            dummy_q_ids: list[int] = []
+            for _i in range(quorum_votes_cast):
+                try:
+                    from app.features.issues.models import Issue
 
-                dummy_q = Issue(
-                    reporter_id=9999,
-                    title="Dummy Quorum Issue",
-                    description="Desc",
-                    category="road",
-                    latitude=19.1136,
-                    longitude=72.8697,
-                    geohash="te7u8x",
-                    ward="Ward 1",
-                    is_anonymous=False,
-                    status="pending_quorum",
-                )
-                session.add(dummy_q)
-                await session.commit()
-                await session.refresh(dummy_q)
-                dummy_q_id = dummy_q.id
-            except Exception:
-                res_q = await session.execute(
-                    text(
-                        "INSERT INTO issues (reporter_id, title, description, category, latitude, longitude, geohash, ward, is_anonymous, status, created_at) "
-                        "VALUES (9999, 'Dummy Quorum Issue', 'Desc', 'road', 19.1136, 72.8697, 'te7u8x', 'Ward 1', 0, 'pending_quorum', :now) RETURNING id"
-                    ),
-                    {"now": datetime.now(UTC).isoformat()},
-                )
-                await session.commit()
-                dummy_q_id = res_q.fetchone()[0]
+                    dummy_q = Issue(
+                        reporter_id=9999,
+                        title=f"Dummy Quorum Issue {_i + 1}",
+                        description="Desc",
+                        category="road",
+                        latitude=19.1136,
+                        longitude=72.8697,
+                        geohash="te7u8x",
+                        ward="Ward 1",
+                        is_anonymous=False,
+                        status="pending_quorum",
+                    )
+                    session.add(dummy_q)
+                    await session.commit()
+                    await session.refresh(dummy_q)
+                    dummy_q_ids.append(dummy_q.id)
+                except Exception:
+                    res_q = await session.execute(
+                        text(
+                            "INSERT INTO issues (reporter_id, title, description, category, latitude, longitude, geohash, ward, is_anonymous, status, created_at) "
+                            "VALUES (9999, :title, 'Desc', 'road', 19.1136, 72.8697, 'te7u8x', 'Ward 1', 0, 'pending_quorum', :now) RETURNING id"
+                        ),
+                        {
+                            "title": f"Dummy Quorum Issue {_i + 1}",
+                            "now": datetime.now(UTC).isoformat(),
+                        },
+                    )
+                    await session.commit()
+                    dummy_q_ids.append(res_q.fetchone()[0])
 
             for _i in range(quorum_votes_cast):
                 try:
@@ -189,7 +202,7 @@ async def _seed_user_activities(
                             "VALUES (:issue_id, :user_id, 'confirm', :now)"
                         ),
                         {
-                            "issue_id": dummy_q_id,
+                            "issue_id": dummy_q_ids[_i],
                             "user_id": user_id,
                             "now": datetime.now(UTC).isoformat(),
                         },

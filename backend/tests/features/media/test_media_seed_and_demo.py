@@ -257,7 +257,7 @@ def test_issues_seed_data_richness(issues_seed_data: list[dict[str, Any]]):
             vname = issue["video_url"].replace("/api/v1/media/files/", "")
             assert find_media_path(vname) is not None, f"Video {vname} not found on disk"
 
-        if "resolution_proof" in issue and issue["resolution_proof"]:
+        if issue.get("resolution_proof"):
             proof_url = issue["resolution_proof"]
             if proof_url.startswith("/api/v1/media/files/"):
                 pname = proof_url.replace("/api/v1/media/files/", "")

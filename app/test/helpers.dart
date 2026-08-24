@@ -13,12 +13,19 @@ List<Override> mockOverrides({
   FeedRepository? feedRepository,
 }) {
   return [
+    fakeVoterLocationOverride,
     if (authRepository != null)
       authRepositoryProvider.overrideWithValue(authRepository),
     if (feedRepository != null)
       feedRepositoryProvider.overrideWithValue(feedRepository),
   ];
 }
+
+/// Provides a deterministic device location so proximity-checked votes
+/// (upvote / quorum) go through without platform location services.
+final fakeVoterLocationOverride = voterLocationProvider.overrideWithValue(
+  () async => (lat: defaultLatitude, lng: defaultLongitude),
+);
 
 
 

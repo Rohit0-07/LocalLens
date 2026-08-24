@@ -44,7 +44,7 @@ from app.features.media.models import Media
 from app.features.notifications.models import Notification
 from app.features.representatives.models import OfficialResponse, RepresentativeProfile
 from app.features.wards.models import Ward
-from sqlalchemy import delete, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 #: tables touched by the seeder (deleted first when --clear is used, children first)

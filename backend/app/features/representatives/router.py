@@ -79,7 +79,7 @@ async def get_ward_issues(
     return await service.list_ward_issues(
         session,
         rep,
-        secret=settings.jwt_secret,
+        secret=settings.anon_hmac_secret,
         filter=filter,
         limit=limit,
         offset=offset,

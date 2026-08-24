@@ -12,12 +12,20 @@ Covers `DELETE /api/v1/media/{media_id}`:
 
 import base64
 import uuid
+from io import BytesIO
 
 import httpx
 import pytest
 from app.features.media.models import Media
+from PIL import Image
 
 pytestmark = pytest.mark.asyncio
+
+
+def _make_jpeg_bytes() -> bytes:
+    buffer = BytesIO()
+    Image.new("RGB", (64, 64), color=(40, 90, 130)).save(buffer, format="JPEG")
+    return buffer.getvalue()
 
 
 async def _upload_media(
@@ -29,7 +37,7 @@ async def _upload_media(
     is_in_app_camera: bool = True,
 ) -> dict:
     """Upload a media item the same way the in-app camera flow does."""
-    b64 = base64.b64encode(b"soft_delete_test_media_bytes").decode("utf-8")
+    b64 = base64.b64encode(_make_jpeg_bytes()).decode("utf-8")
     payload: dict = {"base64_payload": b64, "is_in_app_camera": is_in_app_camera}
     if lat is not None:
         payload["captured_lat"] = lat

@@ -1,14 +1,22 @@
 import base64
+from io import BytesIO
 
 import pytest
 from app.features.media.service import derive_media_hash, process_location, validate_verification
 from httpx import AsyncClient
+from PIL import Image
+
+
+def _make_jpeg_bytes() -> bytes:
+    buffer = BytesIO()
+    Image.new("RGB", (64, 64), color=(90, 130, 60)).save(buffer, format="JPEG")
+    return buffer.getvalue()
 
 
 @pytest.mark.asyncio
 async def test_in_app_camera_media_verification(client: AsyncClient, auth_headers: dict[str, str]):
     """In-app camera capture with GPS lock sets is_verified=True and watermark 'LocalLens Verified'."""
-    sample_bytes = b"in_app_camera_photo_data_with_gps_lock"
+    sample_bytes = _make_jpeg_bytes()
     b64_str = base64.b64encode(sample_bytes).decode("utf-8")
 
     payload = {
@@ -36,7 +44,7 @@ async def test_in_app_camera_media_verification(client: AsyncClient, auth_header
 @pytest.mark.asyncio
 async def test_gallery_media_unverified(client: AsyncClient, auth_headers: dict[str, str]):
     """Gallery upload / missing GPS sets is_verified=False and watermark 'User Uploaded - Unverified'."""
-    sample_bytes = b"gallery_picker_image_data"
+    sample_bytes = _make_jpeg_bytes()
     b64_str = base64.b64encode(sample_bytes).decode("utf-8")
 
     # Case 1: Gallery pick (is_in_app_camera = False) with GPS present
@@ -100,7 +108,7 @@ async def test_media_cryptographic_hash():
 
 
 @pytest.mark.asyncio
-async def test_media_location_fuzzing(client: AsyncClient):
+async def test_media_location_fuzzing(client: AsyncClient, auth_headers: dict[str, str]):
     """Verify when is_fuzzed=True, latitude and longitude are rounded to 2 decimal places (~1.1 km precision)."""
     # Unit check
     lat_fuzzed, lng_fuzzed = process_location(12.9715987, 77.5945627, is_fuzzed=True)
@@ -112,8 +120,7 @@ async def test_media_location_fuzzing(client: AsyncClient):
     assert lng_exact == 77.5945627
 
     # Endpoint check with is_fuzzed = True
-    sample_bytes = b"fuzzed_media_location_content"
-    b64_str = base64.b64encode(sample_bytes).decode("utf-8")
+    b64_str = base64.b64encode(_make_jpeg_bytes()).decode("utf-8")
 
     res_fuzzed = await client.post(
         "/api/v1/media/upload",
@@ -124,6 +131,7 @@ async def test_media_location_fuzzing(client: AsyncClient):
             "captured_lng": 77.591234,
             "is_fuzzed": True,
         },
+        headers=auth_headers,
     )
     assert res_fuzzed.status_code == 201
     data = res_fuzzed.json()
@@ -133,10 +141,12 @@ async def test_media_location_fuzzing(client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_media_upload_invalid_format(client: AsyncClient):
+async def test_media_upload_invalid_format(
+    client: AsyncClient, auth_headers: dict[str, str]
+):
     """Test 400 error on non-image file uploads or corrupted payload."""
     # Empty request
-    res_empty = await client.post("/api/v1/media/upload", json={})
+    res_empty = await client.post("/api/v1/media/upload", json={}, headers=auth_headers)
     assert res_empty.status_code == 400
     assert "No media file or base64 payload provided" in res_empty.json()["detail"]
 
@@ -144,16 +154,26 @@ async def test_media_upload_invalid_format(client: AsyncClient):
     res_corrupt = await client.post(
         "/api/v1/media/upload",
         json={"base64_payload": "!!!invalid_base64_data!!!"},
+        headers=auth_headers,
     )
     assert res_corrupt.status_code == 400
     assert "Invalid base64 payload" in res_corrupt.json()["detail"]
+
+    # Valid base64 but not an image
+    not_image = base64.b64encode(b"plain_text_not_an_image").decode("utf-8")
+    res_non_image = await client.post(
+        "/api/v1/media/upload",
+        json={"base64_payload": not_image},
+        headers=auth_headers,
+    )
+    assert res_non_image.status_code == 400
+    assert res_non_image.json().get("code") == "invalid_image"
 
 
 @pytest.mark.asyncio
 async def test_media_guest_access_restriction(client: AsyncClient, auth_headers: dict[str, str]):
     """Test upload rules for guest vs authenticated users."""
-    sample_bytes = b"test_guest_vs_auth_media_content"
-    b64_str = base64.b64encode(sample_bytes).decode("utf-8")
+    b64_str = base64.b64encode(_make_jpeg_bytes()).decode("utf-8")
 
     # 1. Authenticated User upload
     res_auth = await client.post(
@@ -190,7 +210,7 @@ async def test_media_guest_access_restriction(client: AsyncClient, auth_headers:
     guest_data = res_guest.json()
     assert guest_data["id"] is not None
 
-    # 3. Unauthenticated upload (no token provided)
+    # 3. Unauthenticated upload (no token provided) is rejected with 401
     res_no_auth = await client.post(
         "/api/v1/media/upload",
         json={
@@ -200,6 +220,4 @@ async def test_media_guest_access_restriction(client: AsyncClient, auth_headers:
             "captured_lng": 77.59,
         },
     )
-    assert res_no_auth.status_code == 201
-    no_auth_data = res_no_auth.json()
-    assert no_auth_data["id"] is not None
+    assert res_no_auth.status_code == 401

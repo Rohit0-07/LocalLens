@@ -27,6 +27,8 @@ import 'package:local_lens/features/feed/domain/issue.dart';
 import 'package:local_lens/features/feed/domain/notice.dart';
 import 'package:local_lens/features/feed/domain/win.dart';
 import 'package:local_lens/features/feed/presentation/feed_providers.dart';
+
+import '../../helpers.dart';
 import 'package:local_lens/features/feed/presentation/feed_screen.dart';
 import 'package:local_lens/features/ward/data/repositories/ward_repository.dart';
 import 'package:local_lens/features/ward/domain/local_talk_post.dart';
@@ -372,6 +374,7 @@ void main() {
   }) {
     return ProviderScope(
       overrides: [
+        fakeVoterLocationOverride,
         feedRepositoryProvider.overrideWithValue(feedRepo),
         wardRepositoryProvider.overrideWithValue(wardRepo ?? _FakeWardRepository()),
         if (session != null)

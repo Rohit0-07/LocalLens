@@ -28,6 +28,23 @@ final singleIssueProvider =
   return repo.fetchIssue(issueId);
 });
 
+/// Fetches the voter's own device location, showing a clear snackbar and
+/// returning null when unavailable so callers skip the request entirely
+/// (never fall back to the issue's coordinates).
+Future<({double lat, double lng})?> _resolveVoterLocation(
+  BuildContext context,
+  WidgetRef ref,
+) async {
+  final coords = await ref.read(voterLocationProvider)();
+  if (coords != null) return coords;
+  if (context.mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(context.tr('location_unavailable'))),
+    );
+  }
+  return null;
+}
+
 class IssueDetailScreen extends ConsumerWidget {
   const IssueDetailScreen({
     super.key,
@@ -230,13 +247,15 @@ class IssueDetailScreen extends ConsumerWidget {
                     OutlinedButton.icon(
                       key: Key('upvote_button_${issue.id}'),
                       onPressed: () async {
+                        final coords = await _resolveVoterLocation(context, ref);
+                        if (coords == null) return;
                         try {
                           await ref
                               .read(multiTypeFeedProvider.notifier)
                               .toggleUpvote(
                                 issue.id,
-                                issue.latitude,
-                                issue.longitude,
+                                coords.lat,
+                                coords.lng,
                                 currentlyUpvoted: issue.hasUpvoted,
                               );
                           ref.invalidate(singleIssueProvider(issueId));
@@ -470,15 +489,17 @@ class _CommunityVerificationWidget extends ConsumerWidget {
                       icon: const Icon(Icons.check_circle_outline,
                           color: AppColors.resolved),
                       label: Text(context.tr('quorum_confirm')),
-                      onPressed: () async {
-                        final repo = ref.read(feedRepositoryProvider);
-                        try {
-                          await repo.voteQuorum(
-                            issueId: issueId,
-                            vote: 'confirm',
-                            latitude: issue.latitude,
-                            longitude: issue.longitude,
-                          );
+                       onPressed: () async {
+                         final coords = await _resolveVoterLocation(context, ref);
+                         if (coords == null) return;
+                         final repo = ref.read(feedRepositoryProvider);
+                         try {
+                           await repo.voteQuorum(
+                             issueId: issueId,
+                             vote: 'confirm',
+                             latitude: coords.lat,
+                             longitude: coords.lng,
+                           );
                           ref.invalidate(singleIssueProvider(issueId));
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
@@ -513,15 +534,17 @@ class _CommunityVerificationWidget extends ConsumerWidget {
                       icon: const Icon(Icons.highlight_off_rounded,
                           color: AppColors.urgent),
                       label: Text(context.tr('quorum_dispute')),
-                      onPressed: () async {
-                        final repo = ref.read(feedRepositoryProvider);
-                        try {
-                          await repo.voteQuorum(
-                            issueId: issueId,
-                            vote: 'dispute',
-                            latitude: issue.latitude,
-                            longitude: issue.longitude,
-                          );
+                       onPressed: () async {
+                         final coords = await _resolveVoterLocation(context, ref);
+                         if (coords == null) return;
+                         final repo = ref.read(feedRepositoryProvider);
+                         try {
+                           await repo.voteQuorum(
+                             issueId: issueId,
+                             vote: 'dispute',
+                             latitude: coords.lat,
+                             longitude: coords.lng,
+                           );
                           ref.invalidate(singleIssueProvider(issueId));
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(

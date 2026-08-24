@@ -50,14 +50,16 @@ final notificationsControllerProvider =
 );
 
 final unreadNotificationCountProvider = Provider<int>((ref) {
-  final state = ref.watch(notificationsControllerProvider);
-  return state.unreadCount;
+  return ref.watch(
+    notificationsControllerProvider.select((state) => state.unreadCount),
+  );
 });
 
 class NotificationsController extends Notifier<NotificationsState> {
   @override
   NotificationsState build() {
-    final session = ref.read(sessionProvider);
+    // watch (not read) so sign-in/out rebuilds the controller.
+    final session = ref.watch(sessionProvider);
     if (session == null || session.isGuest) {
       return const NotificationsState(isLoading: false);
     }
@@ -103,7 +105,18 @@ class NotificationsController extends Notifier<NotificationsState> {
       final api = ref.read(notificationsApiProvider);
       final updated = await api.markAsRead(notificationId);
 
-      final newUnreadCount = (state.unreadCount - 1).clamp(0, 999);
+      // Only decrement when the tapped item was actually unread.
+      NotificationItem? previous;
+      for (final item in state.notifications) {
+        if (item.id == notificationId) {
+          previous = item;
+          break;
+        }
+      }
+      final wasUnread = previous != null && !previous.isRead;
+      final newUnreadCount = wasUnread
+          ? (state.unreadCount - 1).clamp(0, 999)
+          : state.unreadCount;
       if (state.filter == NotificationFilter.unread) {
         // Read items vanish from the unread-only view immediately.
         state = state.copyWith(

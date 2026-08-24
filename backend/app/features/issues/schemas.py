@@ -1,4 +1,3 @@
-from datetime import datetime
 from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -49,7 +48,7 @@ class FlaggedIssueItem(BaseModel):
     issue_id: int
     title: str
     description: str
-    reporter_id: int
+    reporter_id: int | None = None
     flag_count: int
     categories: list[str]
     is_hidden: bool

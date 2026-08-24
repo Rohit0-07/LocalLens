@@ -6,6 +6,8 @@ import 'package:local_lens/features/feed/domain/feed_item.dart';
 import 'package:local_lens/features/feed/domain/feed_repository.dart';
 import 'package:local_lens/features/feed/domain/issue.dart';
 import 'package:local_lens/features/feed/presentation/feed_providers.dart';
+
+import '../../helpers.dart';
 import 'package:local_lens/features/feed/presentation/widgets/issue_card.dart';
 import 'package:local_lens/shared/widgets/media_preview_widget.dart';
 import 'package:local_lens/shared/widgets/status_badge.dart';
@@ -183,7 +185,10 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [feedRepositoryProvider.overrideWithValue(repo)],
+          overrides: [
+            fakeVoterLocationOverride,
+            feedRepositoryProvider.overrideWithValue(repo),
+          ],
           child: MaterialApp(
             home: Scaffold(
               body: IssueCard(issue: issue),
@@ -212,7 +217,10 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [feedRepositoryProvider.overrideWithValue(repo)],
+          overrides: [
+            fakeVoterLocationOverride,
+            feedRepositoryProvider.overrideWithValue(repo),
+          ],
           child: MaterialApp(
             home: Scaffold(
               body: IssueCard(issue: issue),
@@ -233,7 +241,10 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [feedRepositoryProvider.overrideWithValue(repo)],
+          overrides: [
+            fakeVoterLocationOverride,
+            feedRepositoryProvider.overrideWithValue(repo),
+          ],
           child: MaterialApp(
             home: Scaffold(
               body: IssueCard(issue: issue),
@@ -256,7 +267,10 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [feedRepositoryProvider.overrideWithValue(repo)],
+          overrides: [
+            fakeVoterLocationOverride,
+            feedRepositoryProvider.overrideWithValue(repo),
+          ],
           child: MaterialApp(
             home: Scaffold(
               body: IssueCard(issue: issue),
@@ -295,7 +309,10 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [feedRepositoryProvider.overrideWithValue(repo)],
+          overrides: [
+            fakeVoterLocationOverride,
+            feedRepositoryProvider.overrideWithValue(repo),
+          ],
           child: MaterialApp(
             home: Scaffold(
               body: IssueCard(issue: issue),
@@ -338,7 +355,10 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [feedRepositoryProvider.overrideWithValue(repo)],
+          overrides: [
+            fakeVoterLocationOverride,
+            feedRepositoryProvider.overrideWithValue(repo),
+          ],
           child: MaterialApp(
             home: Scaffold(
               body: IssueCard(issue: issue),
@@ -376,7 +396,10 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [feedRepositoryProvider.overrideWithValue(repo)],
+          overrides: [
+            fakeVoterLocationOverride,
+            feedRepositoryProvider.overrideWithValue(repo),
+          ],
           child: MaterialApp(
             home: Scaffold(
               body: IssueCard(issue: issue),

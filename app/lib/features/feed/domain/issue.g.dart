@@ -40,7 +40,7 @@ _QuorumVoter _$QuorumVoterFromJson(Map<String, dynamic> json) => _QuorumVoter(
   displayName: json['display_name'] as String?,
   vote: json['vote'] as String,
   reason: json['reason'] as String?,
-  isVerifiedNearby: json['is_verified_nearby'] as bool? ?? true,
+  isVerifiedNearby: json['is_nearby'] as bool? ?? true,
   createdAt: DateTime.parse(json['created_at'] as String),
 );
 
@@ -51,7 +51,7 @@ Map<String, dynamic> _$QuorumVoterToJson(_QuorumVoter instance) =>
       'display_name': instance.displayName,
       'vote': instance.vote,
       'reason': instance.reason,
-      'is_verified_nearby': instance.isVerifiedNearby,
+      'is_nearby': instance.isVerifiedNearby,
       'created_at': instance.createdAt.toIso8601String(),
     };
 
@@ -59,12 +59,13 @@ _IssueTimelineEvent _$IssueTimelineEventFromJson(Map<String, dynamic> json) =>
     _IssueTimelineEvent(
       eventType: json['event_type'] as String,
       title: json['title'] as String,
-      description: json['description'] as String,
-      timestamp: DateTime.parse(json['timestamp'] as String),
-      actor: json['actor'] as String?,
+      description: json['description'] as String?,
+      createdAt: DateTime.parse(json['created_at'] as String),
+      actorName: json['actor_name'] as String?,
+      actorHandle: json['actor_handle'] as String?,
       actorRole: json['actor_role'] as String?,
+      isUnclaimed: json['is_unclaimed'] as bool? ?? false,
       mediaUrl: json['media_url'] as String?,
-      metadata: json['metadata'] as Map<String, dynamic>?,
     );
 
 Map<String, dynamic> _$IssueTimelineEventToJson(_IssueTimelineEvent instance) =>
@@ -72,11 +73,12 @@ Map<String, dynamic> _$IssueTimelineEventToJson(_IssueTimelineEvent instance) =>
       'event_type': instance.eventType,
       'title': instance.title,
       'description': instance.description,
-      'timestamp': instance.timestamp.toIso8601String(),
-      'actor': instance.actor,
+      'created_at': instance.createdAt.toIso8601String(),
+      'actor_name': instance.actorName,
+      'actor_handle': instance.actorHandle,
       'actor_role': instance.actorRole,
+      'is_unclaimed': instance.isUnclaimed,
       'media_url': instance.mediaUrl,
-      'metadata': instance.metadata,
     };
 
 _IssueTimelineData _$IssueTimelineDataFromJson(Map<String, dynamic> json) =>
@@ -137,6 +139,7 @@ _Issue _$IssueFromJson(Map<String, dynamic> json) => _Issue(
   resolutionProof: json['resolution_proof'] as String?,
   resolutionNotes: json['resolution_notes'] as String?,
   upvotesCount: (json['upvotes_count'] as num?)?.toInt() ?? 0,
+  commentsCount: (json['comments_count'] as num?)?.toInt() ?? 0,
   confirmationsCount: (json['confirmations_count'] as num?)?.toInt() ?? 0,
   disputesCount: (json['disputes_count'] as num?)?.toInt() ?? 0,
   hasUpvoted: json['has_upvoted'] as bool? ?? false,
@@ -178,6 +181,7 @@ Map<String, dynamic> _$IssueToJson(_Issue instance) => <String, dynamic>{
   'resolution_proof': instance.resolutionProof,
   'resolution_notes': instance.resolutionNotes,
   'upvotes_count': instance.upvotesCount,
+  'comments_count': instance.commentsCount,
   'confirmations_count': instance.confirmationsCount,
   'disputes_count': instance.disputesCount,
   'has_upvoted': instance.hasUpvoted,

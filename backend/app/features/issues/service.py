@@ -1,7 +1,10 @@
 import json
 from datetime import UTC, datetime, timedelta
+from typing import Any, cast
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import delete, func, or_, select, update
+from sqlalchemy.engine import CursorResult
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -41,13 +44,19 @@ from app.features.issues.schemas import (
     NearDuplicateOut,
     QuorumVoterOut,
     WinOut,
-    WrongAssignmentReportCreate,
-    WrongAssignmentReportOut,
 )
 from app.features.representatives.models import OfficialResponse, RepresentativeProfile
 from app.features.wards.models import Ward
 
 flag_rate_limiter = SlidingWindowRateLimiter(max_requests=5, window_seconds=600)
+
+#: Over-fetch multiplier for radius-filtered listings: fetch a bounded
+#: superset, apply the exact haversine/shield checks in Python, then slice
+#: the page once (see search/service.py for the same pattern).
+_GEO_OVERFETCH_FACTOR = 6
+
+#: Default cap for the threaded comments list so payloads stay bounded.
+_MAX_COMMENTS_PER_REQUEST = 200
 
 
 def _utc_now() -> datetime:
@@ -108,6 +117,9 @@ async def _reloaded_issue(session: AsyncSession, issue_id: int) -> Issue:
             selectinload(Issue.assigned_representative).selectinload(RepresentativeProfile.user),
         )
         .where(Issue.id == issue_id)
+        # Refresh identity-mapped instances so atomically-updated counter
+        # columns (UPDATE ... SET x = x + 1) are reflected in-memory.
+        .execution_options(populate_existing=True)
     )
     return result.scalar_one()
 
@@ -384,31 +396,24 @@ async def list_issues_near(
     if status_filter:
         statement = statement.where(Issue.status == status_filter)
     if created_before is not None:
-        statement = statement.where(Issue.created_at < created_before)
+        statement = statement.where(Issue.created_at <= created_before)
     statement = statement.options(
         selectinload(Issue.reporter),
         selectinload(Issue.assigned_representative).selectinload(RepresentativeProfile.user),
     )
-    statement = statement.order_by(Issue.created_at.desc()).limit(limit * 6).offset(offset)
+    statement = statement.order_by(Issue.created_at.desc()).limit(
+        (offset + limit) * _GEO_OVERFETCH_FACTOR
+    )
     result = await session.execute(statement)
     issues = list(result.scalars().all())
 
-    # Evaluate escalation on fetched issues
-    now = _utc_now()
-    modified = False
+    # Filter out shielded issues unless resolved, then apply the exact radius.
     filtered_issues: list[Issue] = []
-
     for issue in issues:
-        if evaluate_escalation(issue, now):
-            modified = True
-        # Filter out shielded issues unless resolved
         if issue.is_shielded and issue.status != "resolved":
             continue
         if haversine_km(latitude, longitude, issue.latitude, issue.longitude) <= radius_km:
             filtered_issues.append(issue)
-
-    if modified:
-        await session.commit()
 
     return filtered_issues[offset : offset + limit]
 
@@ -424,10 +429,6 @@ async def get_issue(session: AsyncSession, issue_id: int) -> Issue | None:
         .where(Issue.id == issue_id)
     )
     issue = result.scalar_one_or_none()
-    if issue is not None:
-        if evaluate_escalation(issue, _utc_now()):
-            await session.commit()
-            await session.refresh(issue)
     return issue
 
 
@@ -558,17 +559,32 @@ async def vote_quorum(
     session.add(quorum_vote)
 
     if vote == "confirm":
+        await session.execute(
+            update(Issue)
+            .where(Issue.id == issue_id)
+            .values(confirmations_count=Issue.confirmations_count + 1)
+            .execution_options(synchronize_session=False)
+        )
         issue.confirmations_count += 1
         if issue.confirmations_count >= 3:
             issue.status = "resolved"
             issue.resolved_at = _utc_now()
             await create_win_for_issue(session, issue)
     elif vote == "dispute":
-        issue.disputes_count += 1
-        if issue.disputes_count >= 1:
+        await session.execute(
+            update(Issue)
+            .where(Issue.id == issue_id)
+            .values(disputes_count=Issue.disputes_count + 1)
+            .execution_options(synchronize_session=False)
+        )
+        if issue.disputes_count + 1 >= 1:
             issue.status = "disputed"
 
-    await session.commit()
+    try:
+        await session.commit()
+    except IntegrityError:
+        await session.rollback()
+        raise AppError("Already voted on this quorum", status_code=400, code="already_voted") from None
     return await _reloaded_issue(session, issue_id)
 
 
@@ -614,20 +630,17 @@ async def create_win_for_issue(session: AsyncSession, issue: Issue) -> Win:
         credits_list.append(f"{issue.confirmations_count} Community Verifiers")
 
     before_url = None
-    try:
-        from app.features.media.models import Media
+    from app.features.media.models import Media
 
-        media_stmt = (
-            select(Media)
-            .where(Media.user_id == str(issue.reporter_id))
-            .order_by(Media.created_at.asc())
-        )
-        media_res = await session.execute(media_stmt)
-        first_media = media_res.scalars().first()
-        if first_media:
-            before_url = first_media.url
-    except Exception:
-        pass
+    media_stmt = (
+        select(Media)
+        .where(Media.issue_id == issue.id)
+        .order_by(Media.created_at.asc())
+    )
+    media_res = await session.execute(media_stmt)
+    first_media = media_res.scalars().first()
+    if first_media:
+        before_url = first_media.url
 
     after_url = issue.resolution_proof
 
@@ -685,7 +698,7 @@ async def list_wins_near(
 ) -> list[Win]:
     stmt = select(Win)
     if created_before is not None:
-        stmt = stmt.where(Win.created_at < created_before)
+        stmt = stmt.where(Win.created_at <= created_before)
     stmt = stmt.order_by(Win.created_at.desc()).limit(limit * 6)
     result = await session.execute(stmt)
     wins = list(result.scalars().all())
@@ -738,22 +751,43 @@ def evaluate_escalation(issue: Issue, now: datetime | None = None) -> bool:
 
 
 async def evaluate_all_escalations(session: AsyncSession) -> int:
+    """Set-based escalation sweep (same semantics as evaluate_escalation).
+
+    Two bulk UPDATEs replace per-row hydration:
+    1. forwarded: active issues whose acknowledged_at-or-created_at is older
+       than 7 days (checked first, matching the early-return order).
+    2. escalating: unacknowledged issues older than 24 hours, preserving the
+       original escalated_at side effect via COALESCE.
+    """
     now = _utc_now()
-    result = await session.execute(
-        select(Issue).where(
+    forward_res = await session.execute(
+        update(Issue)
+        .where(
             Issue.status.in_(
                 ["unacknowledged", "open", "under_review", "acknowledged", "escalating"]
-            )
+            ),
+            func.coalesce(Issue.acknowledged_at, Issue.created_at)
+            <= now - timedelta(days=7),
         )
+        .values(status="forwarded")
+        .execution_options(synchronize_session=False)
     )
-    issues = list(result.scalars().all())
-    count = 0
-    for issue in issues:
-        if evaluate_escalation(issue, now):
-            count += 1
+    escalate_res = await session.execute(
+        update(Issue)
+        .where(
+            Issue.status.in_(["unacknowledged", "open"]),
+            Issue.acknowledged_at.is_(None),
+            Issue.created_at <= now - timedelta(hours=24),
+        )
+        .values(status="escalating", escalated_at=func.coalesce(Issue.escalated_at, now))
+        .execution_options(synchronize_session=False)
+    )
+    count = cast(CursorResult[Any], forward_res).rowcount + cast(
+        CursorResult[Any], escalate_res
+    ).rowcount
     if count > 0:
         await session.commit()
-    return count
+    return int(count)
 
 
 async def upvote_issue(
@@ -792,8 +826,17 @@ async def upvote_issue(
 
     session.add(Upvote(issue_id=issue_id, user_id=user_id))
     session.add(UpvoteRateLimit(user_id=user_id))
-    issue.upvotes_count += 1
-    await session.commit()
+    await session.execute(
+        update(Issue)
+        .where(Issue.id == issue_id)
+        .values(upvotes_count=Issue.upvotes_count + 1)
+        .execution_options(synchronize_session=False)
+    )
+    try:
+        await session.commit()
+    except IntegrityError:
+        await session.rollback()
+        raise AppError("Already upvoted this issue", status_code=400, code="already_upvoted") from None
     return await _reloaded_issue(session, issue_id)
 
 
@@ -892,12 +935,18 @@ async def get_comments(
     session: AsyncSession,
     issue_id: int,
     user_id: int | None = None,
+    limit: int = _MAX_COMMENTS_PER_REQUEST,
 ) -> list[CommentResponse]:
     issue = await session.get(Issue, issue_id)
     if issue is None:
         raise AppError("Issue not found", status_code=404, code="not_found")
 
-    stmt = select(Comment).where(Comment.issue_id == issue_id).order_by(Comment.created_at.asc())
+    stmt = (
+        select(Comment)
+        .where(Comment.issue_id == issue_id)
+        .order_by(Comment.created_at.asc())
+        .limit(limit)
+    )
     res = await session.execute(stmt)
     comments = list(res.scalars().all())
 
@@ -953,19 +1002,26 @@ async def delete_comment(
     all_comments_res = await session.execute(select(Comment).where(Comment.issue_id == issue_id))
     all_comments = list(all_comments_res.scalars().all())
 
+    # Single O(N) graph walk over a parent -> children index, then one bulk
+    # DELETE instead of per-row deletes.
+    child_ids_by_parent: dict[str | None, list[str]] = {}
+    for c in all_comments:
+        child_ids_by_parent.setdefault(c.parent_id, []).append(c.id)
+
     ids_to_delete = {comment_id}
-    changed = True
-    while changed:
-        changed = False
-        for c in all_comments:
-            if c.parent_id in ids_to_delete and c.id not in ids_to_delete:
-                ids_to_delete.add(c.id)
-                changed = True
+    stack = [comment_id]
+    while stack:
+        for child_id in child_ids_by_parent.get(stack.pop(), []):
+            if child_id not in ids_to_delete:
+                ids_to_delete.add(child_id)
+                stack.append(child_id)
 
     deleted_count = len(ids_to_delete)
-    for c in all_comments:
-        if c.id in ids_to_delete:
-            await session.delete(c)
+    await session.execute(
+        delete(Comment).where(Comment.id.in_(ids_to_delete)).execution_options(
+            synchronize_session=False
+        )
+    )
 
     issue.comments_count = max(0, (issue.comments_count or 0) - deleted_count)
     await session.commit()
@@ -1073,11 +1129,21 @@ async def get_flagged_queue(
     result = await db.execute(stmt_paginated)
     issues = list(result.scalars().all())
 
+    # One IN query for the page's flags instead of one query per issue.
+    issue_ids = [issue.id for issue in issues]
+    flags_by_issue: dict[int, list[Flag]] = {}
+    if issue_ids:
+        flags_stmt = (
+            select(Flag)
+            .where(Flag.issue_id.in_(issue_ids))
+            .order_by(Flag.created_at.desc())
+        )
+        for flag in (await db.execute(flags_stmt)).scalars():
+            flags_by_issue.setdefault(flag.issue_id, []).append(flag)
+
     items: list[FlaggedIssueItem] = []
     for issue in issues:
-        flags_stmt = select(Flag).where(Flag.issue_id == issue.id).order_by(Flag.created_at.desc())
-        flags_res = await db.execute(flags_stmt)
-        flags = list(flags_res.scalars().all())
+        flags = flags_by_issue.get(issue.id, [])
 
         categories = list({f.category for f in flags})
         latest_flag_at = flags[0].created_at if flags else issue.created_at
@@ -1128,22 +1194,22 @@ async def moderate_issue(
         msg = "Issue hidden successfully."
     elif action_val == "ban_reporter":
         issue.is_hidden = True
-        reporter = await db.get(User, issue.reporter_id)
-        if reporter:
-            reporter.is_banned = True
-            reporter_banned = True
+        if issue.reporter_id is not None:
+            reporter = await db.get(User, issue.reporter_id)
+            if reporter:
+                reporter.is_banned = True
+                reporter_banned = True
         msg = "Issue hidden and reporter banned."
     else:
         raise AppError(
             status_code=400, error_code="invalid_action", detail="Invalid moderation action."
         )
 
-    moderated_by_id = admin_user.id if isinstance(admin_user.id, int) else 1
     audit = ModerationAudit(
         issue_id=issue_id,
         action=action_val,
         reason=action_in.reason,
-        moderated_by=moderated_by_id,
+        moderated_by=admin_user.id,
     )
     db.add(audit)
     await db.commit()
@@ -1226,12 +1292,11 @@ async def admin_reassign_issue(
                 )
             issue.assigned_representative_id = matched_rep.id
 
-    moderator_id = admin_user.id if isinstance(admin_user.id, int) else 1
     audit = ModerationAudit(
         issue_id=issue_id,
         action="reassign",
         reason=reason or f"Reassigned ward={issue.ward} category={issue.category}",
-        moderated_by=moderator_id,
+        moderated_by=admin_user.id,
     )
     session.add(audit)
     await session.commit()

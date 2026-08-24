@@ -7,11 +7,17 @@ from app.features.issues import service as issues_service
 from app.features.wards import service as wards_service
 
 
-def _parse_cursor(cursor: str | None) -> datetime | None:
-    """Parses an ISO-8601 cursor into a naive-UTC datetime, or None."""
+def _parse_cursor(cursor: str | None) -> tuple[datetime, int] | None:
+    """Parses a cursor into (naive-UTC datetime, tiebreaker id).
+
+    Accepts either a bare ISO-8601 datetime or an extended
+    ``<iso>|<last_item_id>`` form; the id lets items sharing the cursor
+    timestamp paginate without being skipped or duplicated. Returns None for
+    empty/unparseable cursors.
+    """
     if not cursor:
         return None
-    value = cursor
+    value, _, raw_id = cursor.partition("|")
     if value.endswith("Z"):
         value = f"{value[:-1]}+00:00"
     try:
@@ -20,7 +26,11 @@ def _parse_cursor(cursor: str | None) -> datetime | None:
         return None
     if parsed.tzinfo is not None:
         parsed = parsed.astimezone(UTC).replace(tzinfo=None)
-    return parsed
+    try:
+        last_id = int(raw_id)
+    except ValueError:
+        last_id = -1
+    return parsed, last_id
 
 
 #: Half the Earth's circumference plus a margin: a radius that no point on
@@ -37,7 +47,7 @@ async def get_multi_type_feed(
     feed_type: str = "all",
     cursor: str | None = None,
     limit: int = 20,
-    jwt_secret: str = "secret",
+    anon_hmac_secret: str = "secret",
     user_id: int | None = None,
 ) -> list[dict[str, Any]]:
     # No coordinates means "all wards": scope the query to the whole planet
@@ -46,7 +56,7 @@ async def get_multi_type_feed(
         latitude, longitude = 0.0, 0.0
         radius_km = _GLOBAL_RADIUS_KM
 
-    cursor_dt = _parse_cursor(cursor)
+    parsed_cursor = _parse_cursor(cursor)
     # Fetch a superset per type so cursor pages advance past earlier per-type
     # windows instead of silently dropping items on later pages.
     per_type_limit = max(limit * 5, 40)
@@ -63,7 +73,7 @@ async def get_multi_type_feed(
             status_filter=None,
             limit=per_type_limit,
             offset=0,
-            created_before=cursor_dt,
+            created_before=parsed_cursor[0] if parsed_cursor else None,
         )
         user_upvoted_ids = set()
         if user_id is not None and issues:
@@ -73,7 +83,7 @@ async def get_multi_type_feed(
         for issue in issues:
             issue_out: Any = issues_service.to_issue_out(
                 issue,
-                jwt_secret,
+                anon_hmac_secret,
                 user_id=user_id,
                 user_upvoted_ids=user_upvoted_ids,
             )
@@ -90,7 +100,7 @@ async def get_multi_type_feed(
             radius_km=radius_km,
             limit=per_type_limit,
             offset=0,
-            created_before=cursor_dt,
+            created_before=parsed_cursor[0] if parsed_cursor else None,
         )
         for win in wins:
             win_out: Any = issues_service.to_win_out(win)
@@ -107,7 +117,7 @@ async def get_multi_type_feed(
             radius_km=radius_km,
             limit=per_type_limit,
             offset=0,
-            created_before=cursor_dt,
+            created_before=parsed_cursor[0] if parsed_cursor else None,
         )
         for notice in notices:
             notice_out: Any = wards_service.to_notice_out(notice)
@@ -124,7 +134,7 @@ async def get_multi_type_feed(
             radius_km=radius_km,
             limit=per_type_limit,
             offset=0,
-            created_before=cursor_dt,
+            created_before=parsed_cursor[0] if parsed_cursor else None,
         )
         for post in talk_posts:
             post_out: Any = wards_service.to_local_talk_post_out(post)
@@ -133,19 +143,36 @@ async def get_multi_type_feed(
             items.append(item_dict)
 
     # Sort items by created_at descending
-    def get_sort_key(item: dict[str, Any]) -> str:
+    _SORT_MIN = datetime.min
+
+    def get_sort_key(item: dict[str, Any]) -> datetime:
         val = item.get("created_at")
-        if isinstance(val, datetime):
-            return val.isoformat()
-        return str(val or "")
+        if not isinstance(val, str):
+            return _SORT_MIN
+        try:
+            parsed = datetime.fromisoformat(val.replace("Z", "+00:00"))
+        except ValueError:
+            return _SORT_MIN
+        if parsed.tzinfo is not None:
+            parsed = parsed.astimezone(UTC).replace(tzinfo=None)
+        return parsed
 
     items.sort(key=get_sort_key, reverse=True)
 
     # Apply cursor pagination as a safety net (per-type queries already
-    # advanced past the cursor). Compare against the normalized, tz-free
-    # cursor so '...000Z' doesn't survive string comparison.
-    if cursor_dt is not None:
-        cursor_key = cursor_dt.isoformat()
-        items = [i for i in items if get_sort_key(i) < cursor_key]
+    # advanced past the cursor). Compare (created_at, id) tuples so items
+    # sharing the cursor timestamp are neither skipped nor re-served; a bare
+    # ISO cursor (no "|id") keeps strict less-than for compatibility.
+    if parsed_cursor is not None:
+        cursor_dt, cursor_id = parsed_cursor
+
+        def before_cursor(item: dict[str, Any]) -> bool:
+            key = get_sort_key(item)
+            if key != cursor_dt:
+                return key < cursor_dt
+            item_id = item.get("id")
+            return isinstance(item_id, int) and item_id < cursor_id
+
+        items = [i for i in items if before_cursor(i)]
 
     return items[:limit]

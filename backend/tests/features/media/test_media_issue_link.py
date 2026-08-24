@@ -8,17 +8,21 @@ Covers:
 """
 
 import base64
+from io import BytesIO
 
 import httpx
 import pytest
 from app.features.media.models import Media
+from PIL import Image
 from sqlalchemy import select
 
 pytestmark = pytest.mark.asyncio
 
 
 async def _upload_media(client: httpx.AsyncClient, headers: dict[str, str]) -> dict:
-    b64 = base64.b64encode(b"issue_link_media_bytes").decode("utf-8")
+    buffer = BytesIO()
+    Image.new("RGB", (64, 64), color=(130, 40, 90)).save(buffer, format="JPEG")
+    b64 = base64.b64encode(buffer.getvalue()).decode("utf-8")
     res = await client.post(
         "/api/v1/media/upload",
         json={

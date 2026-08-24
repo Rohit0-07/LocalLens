@@ -27,6 +27,11 @@ from app.features.wards.schemas import (
 
 talk_rate_limiter = SlidingWindowRateLimiter(max_requests=10, window_seconds=300)
 
+#: Over-fetch multiplier for radius-filtered listings: fetch a bounded
+#: superset, apply the exact haversine check in Python, then slice the page
+#: once (see issues/service.py for the same pattern).
+_GEO_OVERFETCH_FACTOR = 6
+
 PROFANITY_WORDS = {
     "badword",
     "abuse",
@@ -373,8 +378,10 @@ async def list_all_talk_posts_near(
 ) -> list[LocalTalkPost]:
     stmt = select(LocalTalkPost)
     if created_before is not None:
-        stmt = stmt.where(LocalTalkPost.created_at < created_before)
-    stmt = stmt.order_by(LocalTalkPost.created_at.desc()).limit(limit * 6)
+        stmt = stmt.where(LocalTalkPost.created_at <= created_before)
+    stmt = stmt.order_by(LocalTalkPost.created_at.desc()).limit(
+        (offset + limit) * _GEO_OVERFETCH_FACTOR
+    )
     res = await session.execute(stmt)
     posts = list(res.scalars().all())
 
@@ -385,8 +392,6 @@ async def list_all_talk_posts_near(
                 filtered.append(p)
         else:
             filtered.append(p)
-        if len(filtered) >= limit + offset:
-            break
     return filtered[offset : offset + limit]
 
 
@@ -401,8 +406,10 @@ async def list_notices_near(
 ) -> list[Notice]:
     stmt = select(Notice)
     if created_before is not None:
-        stmt = stmt.where(Notice.created_at < created_before)
-    stmt = stmt.order_by(Notice.created_at.desc()).limit(limit * 6)
+        stmt = stmt.where(Notice.created_at <= created_before)
+    stmt = stmt.order_by(Notice.created_at.desc()).limit(
+        (offset + limit) * _GEO_OVERFETCH_FACTOR
+    )
     res = await session.execute(stmt)
     notices = list(res.scalars().all())
 
@@ -410,8 +417,6 @@ async def list_notices_near(
     for n in notices:
         if haversine_km(latitude, longitude, n.latitude, n.longitude) <= radius_km:
             filtered.append(n)
-            if len(filtered) >= limit + offset:
-                break
     return filtered[offset : offset + limit]
 
 

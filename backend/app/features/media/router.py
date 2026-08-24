@@ -1,11 +1,10 @@
+import asyncio
 import base64
-import typing
 from datetime import datetime
 from pathlib import Path
 
 from fastapi import (
     APIRouter,
-    Depends,
     File,
     Form,
     HTTPException,
@@ -15,7 +14,7 @@ from fastapi import (
 )
 from fastapi.responses import FileResponse
 
-from app.api.deps import CurrentUser, SessionDep, get_optional_current_user
+from app.api.deps import CurrentUser, SessionDep
 from app.core.exceptions import AppError
 from app.features.media import service
 from app.features.media.schemas import MediaDeleteOut, MediaUploadOut
@@ -26,6 +25,24 @@ from app.features.media.service import (
 
 router = APIRouter()
 
+_UPLOAD_CHUNK_SIZE = 1024 * 1024
+
+
+async def _read_file_with_limit(file: UploadFile) -> bytes:
+    """Read an UploadFile in chunks, rejecting payloads over the max size."""
+    chunks: list[bytes] = []
+    total = 0
+    while chunk := await file.read(_UPLOAD_CHUNK_SIZE):
+        total += len(chunk)
+        if total > service.MAX_UPLOAD_BYTES:
+            raise AppError(
+                "Media exceeds the maximum allowed size of 10MB",
+                status_code=413,
+                code="media_too_large",
+            )
+        chunks.append(chunk)
+    return b"".join(chunks)
+
 
 @router.post(
     "/upload",
@@ -35,6 +52,7 @@ router = APIRouter()
 async def upload_media(
     request: Request,
     db: SessionDep,
+    current_user: CurrentUser,
     file: UploadFile | None = File(None),
     base64_payload: str | None = Form(None),
     is_in_app_camera: bool = Form(False),
@@ -42,7 +60,6 @@ async def upload_media(
     captured_lng: float | None = Form(None),
     is_fuzzed: bool = Form(False),
     captured_at: datetime | None = Form(None),
-    current_user: typing.Any = Depends(get_optional_current_user),
 ) -> MediaUploadOut:
     image_bytes: bytes | None = None
     content_type = request.headers.get("content-type", "")
@@ -65,7 +82,7 @@ async def upload_media(
             pass
 
     if file:
-        image_bytes = await file.read()
+        image_bytes = await _read_file_with_limit(file)
     elif base64_payload:
         clean_payload = base64_payload
         if "," in clean_payload:
@@ -77,6 +94,12 @@ async def upload_media(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid base64 payload",
             ) from None
+        if len(image_bytes) > service.MAX_UPLOAD_BYTES:
+            raise AppError(
+                "Media exceeds the maximum allowed size of 10MB",
+                status_code=413,
+                code="media_too_large",
+            )
 
     if not image_bytes:
         raise HTTPException(
@@ -84,7 +107,7 @@ async def upload_media(
             detail="No media file or base64 payload provided",
         )
 
-    user_id = current_user.id if current_user else None
+    user_id = current_user.id
 
     media = await create_media_record(
         db=db,
@@ -123,7 +146,7 @@ async def get_media_file(filename: str) -> FileResponse:
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid filename",
         )
-    file_path = find_media_path(clean_name)
+    file_path = await asyncio.to_thread(find_media_path, clean_name)
     if not file_path or not file_path.exists():
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")
-    return FileResponse(file_path)
+    return FileResponse(file_path, headers={"X-Content-Type-Options": "nosniff"})

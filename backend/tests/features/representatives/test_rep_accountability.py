@@ -342,7 +342,7 @@ async def test_be_acc_03_rbac_and_by_user_errors(
     by-user for a non-rep citizen -> 404 with code rep_not_found; by-user for
     a nonexistent user id -> 404; guest (no auth) by-user for a rep -> 200.
     """
-    rep_headers, rep_user_id, _ = await _setup_representative(
+    _rep_headers, rep_user_id, _ = await _setup_representative(
         app, client, phone="+919876543103", ward="Ward 45, Urban Central"
     )
 

@@ -476,13 +476,25 @@ class IssueCard extends ConsumerWidget {
                         : Colors.transparent,
                     label: Text('${activeIssue.upvotesCount}'),
                     onTap: () async {
+                      final coords = await ref.read(voterLocationProvider)();
+                      if (coords == null) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content:
+                                  Text(context.tr('location_unavailable')),
+                            ),
+                          );
+                        }
+                        return;
+                      }
                       try {
                         await ref
                             .read(multiTypeFeedProvider.notifier)
                             .toggleUpvote(
                               activeIssue.id,
-                              activeIssue.latitude,
-                              activeIssue.longitude,
+                              coords.lat,
+                              coords.lng,
                               currentlyUpvoted: activeIssue.hasUpvoted,
                             );
                       } catch (err) {
@@ -501,7 +513,10 @@ class IssueCard extends ConsumerWidget {
                     key: Key('comment_button_${activeIssue.id}'),
                     icon: Icons.chat_bubble_outline_rounded,
                     color: colorScheme.onSurfaceVariant,
-                    label: CommentCount(issueId: activeIssue.id),
+                    label: CommentCount(
+                      issueId: activeIssue.id,
+                      count: activeIssue.commentsCount,
+                    ),
                     onTap: () => _showCommentsModal(context, activeIssue),
                   ),
                   const Spacer(),

@@ -160,6 +160,7 @@ async def test_guest_token_rejected_on_write_endpoints(client: httpx.AsyncClient
     # 2. Upvote issue restricted
     res_upvote = await client.post(
         "/api/v1/issues/1/upvote",
+        json={"latitude": 19.1136, "longitude": 72.8697},
         headers=guest_headers,
     )
     assert res_upvote.status_code == 403

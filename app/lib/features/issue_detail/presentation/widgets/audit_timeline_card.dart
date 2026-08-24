@@ -43,16 +43,17 @@ class _AuditTimelineCardState extends State<AuditTimelineCard> {
   }
 
   /// Deadline for the currently-active step, used to render a live
-  /// countdown derived from the report timestamp per the 24h/72h/7d cadence.
+  /// countdown matching the backend cadence: 24h to escalate, 7d quorum
+  /// expiry (and auto-forward at 7d).
   DateTime? _activeDeadline(String status) {
     final createdAt = widget.issue.createdAt;
     switch (status) {
       case 'escalating':
-        return createdAt.add(const Duration(hours: 72));
+        return createdAt.add(const Duration(hours: 24));
       case 'forwarded':
         return createdAt.add(const Duration(days: 7));
       case 'pending_quorum':
-        return createdAt.add(const Duration(days: 3));
+        return createdAt.add(const Duration(days: 7));
       default:
         return null;
     }

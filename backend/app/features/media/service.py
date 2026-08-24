@@ -1,3 +1,4 @@
+import asyncio
 import hashlib
 import uuid
 from datetime import UTC, datetime
@@ -8,6 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AppError
 from app.features.media.models import Media
+
+MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 
 _BACKEND_DIR = Path(__file__).resolve().parent.parent.parent.parent
 UPLOAD_DIR = _BACKEND_DIR / "uploads" / "media"
@@ -138,6 +141,41 @@ def embed_exif_gps(
         return image_bytes
 
 
+def validate_and_reencode_image(image_bytes: bytes) -> bytes:
+    """Validate that ``image_bytes`` decode as an image and return sanitized JPEG bytes.
+
+    Raises ``AppError`` (400, ``invalid_image``) for non-image payloads or
+    undecodable data. Re-encoding guarantees downstream EXIF embedding and
+    thumbnail generation operate on a well-formed JPEG.
+    """
+    try:
+        from PIL import Image
+
+        with Image.open(BytesIO(image_bytes)) as img:
+            img.verify()
+        with Image.open(BytesIO(image_bytes)) as opened:
+            rgb = opened.convert("RGB") if opened.mode != "RGB" else opened
+            output = BytesIO()
+            rgb.save(output, format="JPEG")
+            return output.getvalue()
+    except Exception:
+        raise AppError(
+            "Uploaded file is not a valid image",
+            status_code=400,
+            code="invalid_image",
+        ) from None
+
+
+def _write_thumbnail(image_bytes: bytes, thumb_path: Path) -> None:
+    """Generate and save a 300px JPEG thumbnail for the given image bytes."""
+    from PIL import Image
+
+    with Image.open(BytesIO(image_bytes)) as img:
+        thumb = img.convert("RGB") if img.mode != "RGB" else img
+        thumb.thumbnail((300, 300))
+        thumb.save(thumb_path, format="JPEG")
+
+
 async def create_media_record(
     db: AsyncSession,
     image_bytes: bytes,
@@ -149,6 +187,7 @@ async def create_media_record(
     captured_at: datetime | None = None,
 ) -> Media:
     """Process uploaded media bytes, compute hash, handle fuzzing/verification, and save record."""
+    image_bytes = await asyncio.to_thread(validate_and_reencode_image, image_bytes)
     media_id = str(uuid.uuid4())
     derived_hash = derive_media_hash(image_bytes, user_id)
 
@@ -163,19 +202,11 @@ async def create_media_record(
     file_path = UPLOAD_DIR / filename
     thumb_path = UPLOAD_DIR / thumb_filename
 
-    file_bytes = embed_exif_gps(image_bytes, captured_lat, captured_lng, captured_at)
-    file_path.write_bytes(file_bytes)
-
-    try:
-        from PIL import Image  # type: ignore
-
-        img = Image.open(BytesIO(image_bytes))
-        if img.mode in ("RGBA", "P"):
-            img = img.convert("RGB")
-        img.thumbnail((300, 300))
-        img.save(thumb_path, format="JPEG")
-    except Exception:
-        thumb_path.write_bytes(image_bytes)
+    file_bytes = await asyncio.to_thread(
+        embed_exif_gps, image_bytes, captured_lat, captured_lng, captured_at
+    )
+    await asyncio.to_thread(file_path.write_bytes, file_bytes)
+    await asyncio.to_thread(_write_thumbnail, image_bytes, thumb_path)
 
     url = f"/api/v1/media/files/{filename}"
     thumbnail_url = f"/api/v1/media/files/{thumb_filename}"

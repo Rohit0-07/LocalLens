@@ -8,6 +8,27 @@ import '../domain/captured_media.dart';
 import '../domain/compose_draft.dart';
 import 'media_service.dart';
 
+/// Media uploaded during a previous flush attempt of the same draft, persisted
+/// so retries skip re-upload instead of creating duplicate server rows.
+class _UploadedMedia {
+  const _UploadedMedia(this.id, this.url);
+
+  final String id;
+  final String url;
+
+  Map<String, String> toJson() => {'id': id, 'url': url};
+
+  static _UploadedMedia? fromJson(Object? json) {
+    if (json is! Map) return null;
+    final id = json['id'];
+    final url = json['url'];
+    if (id is String && id.isNotEmpty && url is String && url.isNotEmpty) {
+      return _UploadedMedia(id, url);
+    }
+    return null;
+  }
+}
+
 class OfflineOutboxQueue {
   OfflineOutboxQueue(this._localStore, this._feedRepository, this._mediaService);
 
@@ -17,6 +38,7 @@ class OfflineOutboxQueue {
 
   static const String _outboxKey = 'locallens_outbox_queue_v1';
   static const String _attemptsKey = 'locallens_outbox_attempts_v1';
+  static const String _uploadsKey = 'locallens_outbox_uploads_v1';
   static const int _maxAttempts = 5;
 
   int get pendingCount => getPendingQueue().length;
@@ -37,6 +59,7 @@ class OfflineOutboxQueue {
     if (queue.isEmpty) return 0;
 
     final attempts = _loadAttempts();
+    final uploads = _loadUploads();
 
     int successCount = 0;
     final remaining = <ComposeDraft>[];
@@ -45,13 +68,31 @@ class OfflineOutboxQueue {
       if ((attempts[draft.id] ?? 0) >= _maxAttempts) {
         // Permanently failing draft; drop it rather than retry forever.
         attempts.remove(draft.id);
+        await _deleteUnlinkedMedia(uploads.remove(draft.id) ?? <_UploadedMedia?>[]);
         continue;
       }
       try {
         final coords = _resolveCoords(draft);
+        final uploaded = uploads.putIfAbsent(
+          draft.id,
+          () => List<_UploadedMedia?>.filled(
+            draft.media.length,
+            null,
+            growable: true,
+          ),
+        );
         final mediaUrls = <String>[];
-        for (final media in draft.media) {
-          final result = await _uploadMedia(media, draft.isFuzzed);
+        for (var i = 0; i < draft.media.length; i++) {
+          final existing = i < uploaded.length ? uploaded[i] : null;
+          if (existing != null) {
+            mediaUrls.add(existing.url);
+            continue;
+          }
+          final result = await _uploadMedia(draft.media[i], draft.isFuzzed);
+          while (uploaded.length <= i) {
+            uploaded.add(null);
+          }
+          uploaded[i] = _UploadedMedia(result.id, result.url);
           mediaUrls.add(result.url);
         }
         await _feedRepository.createIssue(
@@ -65,18 +106,24 @@ class OfflineOutboxQueue {
           isShielded: draft.isShielded,
           mediaUrls: mediaUrls,
         );
+        uploads.remove(draft.id);
         attempts.remove(draft.id);
         successCount++;
       } catch (_) {
         attempts[draft.id] = (attempts[draft.id] ?? 0) + 1;
         if ((attempts[draft.id] ?? 0) < _maxAttempts) {
           remaining.add(draft);
+        } else {
+          // Draft exceeded its retry budget; roll back media that were
+          // uploaded but never linked to an issue, mirroring the direct path.
+          await _deleteUnlinkedMedia(uploads.remove(draft.id) ?? <_UploadedMedia?>[]);
         }
       }
     }
 
     await _saveQueue(remaining);
     await _saveAttempts(attempts);
+    await _saveUploads(uploads);
     return successCount;
   }
 
@@ -94,6 +141,47 @@ class OfflineOutboxQueue {
 
   Future<void> _saveAttempts(Map<String, int> attempts) async {
     await _localStore.setString(_attemptsKey, jsonEncode(attempts));
+  }
+
+  Map<String, List<_UploadedMedia?>> _loadUploads() {
+    final raw = _localStore.getString(_uploadsKey);
+    if (raw == null || raw.isEmpty) return {};
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map) return {};
+      return decoded.map(
+        (k, v) => MapEntry(
+          k as String,
+          (v as List<Object?>?)
+                  ?.map(_UploadedMedia.fromJson)
+                  .toList() ??
+              <_UploadedMedia?>[],
+        ),
+      );
+    } catch (_) {
+      return {};
+    }
+  }
+
+  Future<void> _saveUploads(Map<String, List<_UploadedMedia?>> uploads) async {
+    await _localStore.setString(
+      _uploadsKey,
+      jsonEncode(uploads.map(
+        (k, v) => MapEntry(k, v.map((e) => e?.toJson()).toList()),
+      )),
+    );
+  }
+
+  /// Deletes server media rows that were uploaded but never linked to an
+  /// issue, mirroring the direct-publish path's rollback.
+  Future<void> _deleteUnlinkedMedia(List<_UploadedMedia?> uploaded) async {
+    for (final entry in uploaded) {
+      final id = entry?.id;
+      if (id == null || id.isEmpty) continue;
+      try {
+        await _mediaService.deleteMedia(id);
+      } catch (_) {}
+    }
   }
 
   List<ComposeDraft> getPendingQueue() {

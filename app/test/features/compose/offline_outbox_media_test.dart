@@ -181,6 +181,41 @@ class TrackingFeedRepository extends FakeFeedRepository {
   }
 }
 
+/// Fails the first [remainingFailures] createIssue calls to simulate an
+/// offline flap mid-flush.
+class FlakyFeedRepository extends TrackingFeedRepository {
+  int remainingFailures = 0;
+
+  @override
+  Future<Issue> createIssue({
+    required String title,
+    required String description,
+    required String category,
+    required double latitude,
+    required double longitude,
+    required bool isAnonymous,
+    bool isFuzzed = false,
+    bool isShielded = false,
+    List<String> mediaUrls = const [],
+  }) async {
+    if (remainingFailures > 0) {
+      remainingFailures--;
+      throw Exception('offline flap');
+    }
+    return super.createIssue(
+      title: title,
+      description: description,
+      category: category,
+      latitude: latitude,
+      longitude: longitude,
+      isAnonymous: isAnonymous,
+      isFuzzed: isFuzzed,
+      isShielded: isShielded,
+      mediaUrls: mediaUrls,
+    );
+  }
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -242,5 +277,64 @@ void main() {
     ]);
     expect(issue.latitude, 19.11);
     expect(issue.longitude, 72.87);
+  });
+
+  test('flush retry after failed createIssue does not re-upload media',
+      () async {
+    final store = MemoryLocalStore();
+    final feedRepository = FlakyFeedRepository()..remainingFailures = 1;
+    final mediaService = FakeMediaService();
+    final outbox = OfflineOutboxQueue(store, feedRepository, mediaService);
+
+    final draft = ComposeDraft(
+      id: 'draft_1',
+      title: 'Pothole near bus stop',
+      media: [
+        CapturedMedia(bytesBase64: 'aGVsbG8=', capturedLat: 19.11, capturedLng: 72.87),
+        CapturedMedia(bytesBase64: 'd29ybGQ='),
+      ],
+    );
+    await outbox.enqueue(draft);
+
+    // First flush: uploads succeed, createIssue fails (offline flap).
+    expect(await outbox.flush(), 0);
+    expect(outbox.getPendingQueue(), hasLength(1));
+    expect(mediaService.uploadCalls, hasLength(2));
+    expect(feedRepository.createIssueCalls, isEmpty);
+
+    // Second flush: createIssue succeeds; no re-upload, same URLs reused.
+    feedRepository.remainingFailures = 0;
+    expect(await outbox.flush(), 1);
+    expect(outbox.getPendingQueue(), isEmpty);
+    expect(mediaService.uploadCalls, hasLength(2));
+    expect(feedRepository.createIssueCalls, hasLength(1));
+    expect(feedRepository.createIssueCalls.single.mediaUrls, [
+      mediaService.uploadCalls[0].url,
+      mediaService.uploadCalls[1].url,
+    ]);
+  });
+
+  test('permanently failing draft is dropped and uploaded media deleted',
+      () async {
+    final store = MemoryLocalStore();
+    final feedRepository = FlakyFeedRepository()..remainingFailures = 1000;
+    final mediaService = FakeMediaService();
+    final outbox = OfflineOutboxQueue(store, feedRepository, mediaService);
+
+    await outbox.enqueue(ComposeDraft(
+      id: 'draft_2',
+      title: 'Overflowing drain',
+      media: [CapturedMedia(bytesBase64: 'aGVsbG8=')],
+    ));
+
+    for (var i = 0; i < 5; i++) {
+      await outbox.flush();
+    }
+
+    // Draft exceeded its retry budget and was dropped; the uploaded-but-
+    // unlinked media row is rolled back like the direct-publish path.
+    expect(outbox.getPendingQueue(), isEmpty);
+    expect(mediaService.uploadCalls, hasLength(1));
+    expect(mediaService.deleteCalls, ['media_1']);
   });
 }

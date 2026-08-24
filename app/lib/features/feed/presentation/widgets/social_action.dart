@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../issue_detail/data/issue_detail_api.dart';
 import '../../../issue_detail/presentation/controllers/issue_detail_controller.dart';
 
 /// Icon + label tap target used in the footer action row of feed cards
@@ -63,16 +64,38 @@ class SocialAction extends StatelessWidget {
   }
 }
 
-/// Live comment count for an issue, shown next to the comment action.
+/// Comment count for an issue, shown next to the comment action.
+///
+/// Prefers the server-provided `comments_count` (which includes replies).
+/// When no server count is available (e.g. win cards), falls back to counting
+/// the loaded comment tree so replies are included there as well.
 class CommentCount extends ConsumerWidget {
-  const CommentCount({super.key, required this.issueId});
+  const CommentCount({super.key, required this.issueId, this.count});
 
   final int issueId;
 
+  /// Server-provided total from `Issue.commentsCount`, when available.
+  final int? count;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final asyncComments = ref.watch(commentsProvider(issueId));
-    final count = asyncComments.asData?.value.length ?? 0;
-    return Text('$count');
+    final resolved =
+        count ?? _treeTotal(ref.watch(commentsProvider(issueId)));
+    return Text('$resolved');
+  }
+
+  int _treeTotal(AsyncValue<List<Comment>> asyncComments) {
+    final comments = asyncComments.asData?.value;
+    if (comments == null) return 0;
+    var total = 0;
+    void walk(List<Comment> list) {
+      for (final c in list) {
+        total++;
+        walk(c.replies);
+      }
+    }
+
+    walk(comments);
+    return total;
   }
 }
