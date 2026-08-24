@@ -102,16 +102,16 @@ void main() {
     // Scroll down (reverse) — header should slide out, only cards remain
     await tester.drag(find.byType(ListView), const Offset(0, -300));
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 220));
+    await tester.pump(const Duration(milliseconds: 550));
     await tester.pumpAndSettle();
 
     slide = tester.widget<AnimatedSlide>(find.byKey(const Key('feedHeader')));
-    expect(slide.offset, const Offset(0, -1.5));
+    expect(slide.offset, const Offset(0, -1.0));
 
     // Scroll up (forward) — header snaps back
     await tester.drag(find.byType(ListView), const Offset(0, 300));
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 220));
+    await tester.pump(const Duration(milliseconds: 550));
     await tester.pumpAndSettle();
 
     slide = tester.widget<AnimatedSlide>(find.byKey(const Key('feedHeader')));

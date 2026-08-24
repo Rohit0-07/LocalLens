@@ -28,13 +28,53 @@ class FeedScreen extends ConsumerStatefulWidget {
 
 class _FeedScreenState extends ConsumerState<FeedScreen> {
   bool _showHeader = true;
+  double _accumulatedDy = 0;
 
-  bool _onUserScroll(UserScrollNotification notification) {
-    final dir = notification.direction;
-    if (dir == ScrollDirection.reverse && _showHeader) {
-      setState(() => _showHeader = false);
-    } else if (dir == ScrollDirection.forward && !_showHeader) {
-      setState(() => _showHeader = true);
+  // Thresholds tuned for smoothness – higher show threshold prevents slight bounce:
+  // - hide after ~56px of continuous downward drag
+  // - show after ~84px of continuous upward drag (slight up won't trigger)
+  static const double _hideThreshold = 56;
+  static const double _showThreshold = 84;
+
+  bool _onScroll(ScrollNotification notification) {
+    if (notification.metrics.axis != Axis.vertical) return false;
+
+    // Always show when at the very top (overscroll / bounce area).
+    if (notification.metrics.pixels <= 0) {
+      if (!_showHeader) setState(() => _showHeader = true);
+      _accumulatedDy = 0;
+      return false;
+    }
+
+    if (notification is ScrollUpdateNotification) {
+      final delta = notification.scrollDelta ?? 0;
+      if (delta == 0) return false;
+
+      // Direction flipped → reset accumulation (prevents tiny jitter from adding up)
+      if ((_accumulatedDy > 0 && delta < 0) ||
+          (_accumulatedDy < 0 && delta > 0)) {
+        _accumulatedDy = delta;
+      } else {
+        _accumulatedDy += delta;
+      }
+
+      if (_accumulatedDy > _hideThreshold && _showHeader) {
+        setState(() {
+          _showHeader = false;
+          _accumulatedDy = 0;
+        });
+      } else if (_accumulatedDy < -_showThreshold && !_showHeader) {
+        setState(() {
+          _showHeader = true;
+          _accumulatedDy = 0;
+        });
+      }
+    } else if (notification is ScrollEndNotification) {
+      // Idle → reset so next gesture starts fresh; don't auto-show/hide here.
+      _accumulatedDy = 0;
+    } else if (notification is UserScrollNotification &&
+        notification.direction == ScrollDirection.idle) {
+      _accumulatedDy = 0;
     }
     return false;
   }
@@ -217,22 +257,22 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
       body: Column(
         children: [
           AnimatedContainer(
-            duration: const Duration(milliseconds: 220),
-            curve: Curves.easeOut,
+            duration: const Duration(milliseconds: 550),
+            curve: Curves.easeInOutCubic,
             height: _showHeader ? null : 0,
             child: ClipRect(
               child: AnimatedSlide(
                 key: const Key('feedHeader'),
-                duration: const Duration(milliseconds: 220),
-                curve: Curves.easeOut,
-                offset: _showHeader ? Offset.zero : const Offset(0, -1.5),
+                duration: const Duration(milliseconds: 550),
+                curve: Curves.easeInOutCubic,
+                offset: _showHeader ? Offset.zero : const Offset(0, -1.0),
                 child: header,
               ),
             ),
           ),
           Expanded(
-            child: NotificationListener<UserScrollNotification>(
-              onNotification: _onUserScroll,
+            child: NotificationListener<ScrollNotification>(
+              onNotification: _onScroll,
               child: feedAsync.when(
                 loading: () => const Padding(
                   padding: EdgeInsets.all(16),

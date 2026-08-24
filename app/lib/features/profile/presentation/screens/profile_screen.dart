@@ -222,53 +222,65 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             ),
                             if (!profile.isGuest) ...[
                               const SizedBox(height: 6),
-                              Wrap(
-                                spacing: 8,
-                                runSpacing: 4,
-                                crossAxisAlignment: WrapCrossAlignment.center,
+                              Row(
                                 children: [
                                   ProfileRoleBadge(
                                     key: const Key('profileRoleBadge'),
                                     role: profile.role,
                                   ),
                                   if (profile.ward != null &&
-                                      profile.ward!.isNotEmpty)
-                                    Chip(
-                                      key: const Key('profileWardChip'),
-                                      visualDensity: VisualDensity.compact,
-                                      avatar: const Icon(
-                                        Icons.location_on_outlined,
-                                        size: 14,
+                                      profile.ward!.isNotEmpty) ...[
+                                    const SizedBox(width: 8),
+                                    Flexible(
+                                      child: Chip(
+                                        key: const Key('profileWardChip'),
+                                        visualDensity: VisualDensity.compact,
+                                        avatar: const Icon(
+                                          Icons.location_on_outlined,
+                                          size: 14,
+                                        ),
+                                        label: Text(
+                                          profile.ward!,
+                                          style: theme.textTheme.labelSmall
+                                              ?.copyWith(
+                                                color: colorScheme
+                                                    .onSurfaceVariant,
+                                              ),
+                                          overflow: TextOverflow.ellipsis,
+                                          maxLines: 1,
+                                        ),
+                                        backgroundColor:
+                                            colorScheme.surfaceContainerHigh,
+                                        side: BorderSide.none,
                                       ),
-                                      label: Text(
-                                        profile.ward!,
-                                        style: theme.textTheme.labelSmall
-                                            ?.copyWith(
-                                              color:
-                                                  colorScheme.onSurfaceVariant,
-                                            ),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                      backgroundColor:
-                                          colorScheme.surfaceContainerHigh,
-                                      side: BorderSide.none,
                                     ),
+                                  ],
                                 ],
                               ),
                             ],
                             _buildBioSection(profile),
                             const SizedBox(height: 4),
-                            Chip(
-                              visualDensity: VisualDensity.compact,
-                              avatar: const Icon(Icons.fingerprint, size: 14),
-                              label: Text(
-                                'Anon ID: ${_truncateAnonId(profile.anonId)}',
-                                style: theme.textTheme.labelSmall?.copyWith(
-                                  fontFamily: 'monospace',
+                            Row(
+                              children: [
+                                Flexible(
+                                  child: Chip(
+                                    visualDensity: VisualDensity.compact,
+                                    avatar:
+                                        const Icon(Icons.fingerprint, size: 14),
+                                    label: Text(
+                                      'Anon ID: ${_truncateAnonId(profile.anonId)}',
+                                      style: theme.textTheme.labelSmall
+                                          ?.copyWith(
+                                        fontFamily: 'monospace',
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                      maxLines: 1,
+                                    ),
+                                    backgroundColor:
+                                        colorScheme.surfaceContainerHigh,
+                                  ),
                                 ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              backgroundColor: colorScheme.surfaceContainerHigh,
+                              ],
                             ),
                             if (!profile.isGuest) ...[
                               const SizedBox(height: 8),
@@ -536,16 +548,19 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
                   // ── My Reported Issues & Activity Section ─────────────
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        'My Reported Issues & Activity',
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0.1,
+                      Expanded(
+                        child: Text(
+                          'My Reported Issues & Activity',
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.1,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
                         ),
-                        overflow: TextOverflow.ellipsis,
                       ),
+                      const SizedBox(width: 8),
                       if (!profile.isGuest)
                         TextButton.icon(
                           onPressed: () => context.push(RoutePaths.compose),
